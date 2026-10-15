@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+const alice='11111111-1111-4111-8111-111111111111',bob='22222222-2222-4222-8222-222222222222';
+test('real PostgreSQL policies protect private membership, invite attempts and each rider stream',async()=>{
+ const db=new PGlite();try{
+ await db.exec(`create role anon;create role authenticated;create schema auth;create schema realtime;
+ create table auth.users(id uuid primary key,email text);
+ create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+ create function realtime.topic() returns text language sql stable as $$ select current_setting('realtime.topic',true) $$;
+ create table realtime.messages(id uuid default gen_random_uuid(),extension text,topic text);
+ alter table realtime.messages enable row level security;
+ grant usage on schema public,auth,realtime to authenticated;
+ grant select,insert on realtime.messages to authenticated;
+ insert into auth.users values('${alice}','alice@example.test'),('${bob}','bob@example.test');`);
+ const migration=await readFile(new URL('../supabase/migrations/001_boating_worlds.sql',import.meta.url),'utf8');await db.exec(migration);await db.exec(migration);
+ const asUser=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
+ const rpc=async(name,args=[])=>{const r=await db.query(`select to_jsonb(public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')})) result`,args);return r.rows[0].result;};
+ await asUser(alice);assert.equal((await rpc('ensure_pilot',['River Rat'])).nickname,'River Rat');
+ await assert.rejects(rpc('ensure_pilot',['<script>']));
+ const room=await rpc('create_boating_room');assert.match(room.code,/^[A-F0-9]{12}$/);assert.equal(await rpc('boating_access',[room.id]),true);
+ await db.query("select set_config('realtime.topic',$1,false)",[`estuary:pilot:${room.id}:${alice}`]);
+ await db.exec("insert into realtime.messages(extension)values('broadcast')");
+ await asUser(bob);assert.equal((await db.query('select * from public.boating_rooms')).rows.length,0);assert.equal(await rpc('boating_access',[room.id]),false);
+ await db.query("select set_config('realtime.topic',$1,false)",[`estuary:pilot:${room.id}:${alice}`]);assert.equal((await db.query('select * from realtime.messages')).rows.length,0);
+ await assert.rejects(db.exec("insert into realtime.messages(extension)values('broadcast')"));
+ const joined=await rpc('join_boating_room',[room.code.match(/.{4}/g).join('-')]);assert.equal(joined.id,room.id);assert.equal((await db.query('select * from realtime.messages')).rows.length,1);
+ await assert.rejects(db.exec("insert into realtime.messages(extension)values('broadcast')"));
+ await db.query("select set_config('realtime.topic',$1,false)",[`estuary:pilot:${room.id}:${bob}`]);await db.exec("insert into realtime.messages(extension)values('broadcast')");
+ await db.query("select set_config('realtime.topic',$1,false)",[`estuary:world:${room.id}`]);await db.exec("insert into realtime.messages(extension)values('presence')");await assert.rejects(db.exec("insert into realtime.messages(extension)values('broadcast')"));
+ await rpc('leave_boating_room',[room.id]);assert.equal(await rpc('boating_access',[room.id]),false);
+ for(let i=0;i<12;i++)await rpc('join_boating_room',['000000000000']);assert.match((await rpc('join_boating_room',[room.code])).error,/Too many/);
+ await asUser(alice);await rpc('create_boating_room');await rpc('create_boating_room');assert.match((await rpc('create_boating_room')).error,/three active/);
+ await db.exec('reset role');await db.query("update public.boating_rooms set expires_at=now()-interval '1 hour' where id=$1",[room.id]);
+ await asUser(alice);assert.equal(await rpc('boating_access',[room.id]),false);
+ assert.equal((await db.query('select * from public.pilots')).rows[0].nickname,'River Rat');
+ await db.exec('reset role');await db.exec('set role anon');await assert.rejects(rpc('create_boating_room'));await assert.rejects(db.query('select * from public.pilots'));
+ }finally{await db.close();}
+});

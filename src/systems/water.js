@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { WAVES, WORLD, WAVE_FIELD, seaAmplitude } from '../config.js';
-import { WAVE_GLSL } from '../ocean.js';
+import { WAVE_GLSL, wavePhases } from '../ocean.js';
 import { lands } from './environment.js';
 import { SUN_DIRECTION } from './atmosphere.js';
 export { Spray } from './spray.js';
@@ -44,20 +44,20 @@ export class Water {
     field.minFilter=field.magFilter=THREE.LinearFilter;field.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({
       uniforms:{
-        uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
+        uWindPhase:{value:new THREE.Vector3()},uSwellPhase:{value:new THREE.Vector3()},uGroupPhase:{value:0},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
         uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
         uReflection:{value:null},uReflectionMatrix:{value:new THREE.Matrix4()},uReflect:{value:0},
         uHull:{value:new THREE.Vector4(0,0,1,2)},uHeading:{value:0},uContact:{value:1},
       },
       vertexShader:`
-        uniform float uSea;uniform float uTime;uniform vec4 uMapBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
+        uniform vec3 uWindPhase;uniform vec3 uSwellPhase;uniform float uGroupPhase;uniform float uSea;uniform float uTime;uniform vec4 uMapBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;
         ${WAVE_GLSL}
         void main(){
           vec3 p=position;p.xz+=uCenter;
           vec2 uv=(clamp((p.xz-uMapBounds.xy)/uMapBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;
           float chop=texture2D(uWaveField,uv).r;vOcean=smoothstep(.48,.94,chop);
-          vec3 w=oceanWave(p.xz,uTime,uSea,chop);vBank=entranceShoal(p.xz);p.y=w.x;
+          vec3 w=oceanWavePhased(p.xz,uSea,chop,uWindPhase,uSwellPhase,uGroupPhase);vBank=entranceShoal(p.xz);p.y=w.x;
           vWorld=p;vNormal=normalize(vec3(-w.y,1.,-w.z));
           vReflection=uReflectionMatrix*vec4(p.x,-p.z,0.,1.);
           gl_Position=projectionMatrix*viewMatrix*vec4(p,1.);
@@ -135,7 +135,7 @@ export class Water {
     this.material.uniforms.uReflect.value=0;
   }
   update(t,x,z,v) {
-    const u=this.material.uniforms;u.uTime.value=t;u.uSea.value=seaAmplitude(t);u.uCenter.value.set(x,z);
+    const u=this.material.uniforms,phases=wavePhases(t);u.uWindPhase.value.fromArray(phases.wind);u.uSwellPhase.value.fromArray(phases.swell);u.uGroupPhase.value=phases.group;u.uTime.value=t%(Math.PI*20000);u.uSea.value=seaAmplitude(t);u.uCenter.value.set(x,z);
     if(v){u.uHull.value.set(x,z,v.config.width*.72,v.config.length*.62);u.uHeading.value=v.heading;u.uContact.value=v.airborne?Math.max(0,1-v.y/4):1;}
   }
   reflect(renderer,camera) {

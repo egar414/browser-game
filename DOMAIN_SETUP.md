@@ -1,7 +1,7 @@
 # Estuary Rats address
 
 Current published game:
-https://egar414.github.io/browser-game/?v=c47589b
+https://egar414.github.io/browser-game/?v=2c9e648
 
 Requested free game-name address:
 https://egar414.github.io/estuary-rats/

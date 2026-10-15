@@ -54,7 +54,7 @@ export class UI {
   toast(title,subtitle='') { const el=document.getElementById('toast');el.querySelector('strong').textContent=title;el.querySelector('span').textContent=subtitle;this.show('toast',true);this.toastTimer=4.8; }
   ready() {document.getElementById('loading').textContent='READY TO ROAM · NO ACCOUNTS. NO RULEBOOK.';}
   error(message) {document.getElementById('error-message').textContent=message;this.show('error',true);}
-  update(dt,v,a,fps,quality,battle={active:false},sea=null,targets=[]) {
+  update(dt,v,a,fps,quality,battle={active:false},sea=null,targets=[],riders=[]) {
     this.toastTimer-=dt;if(this.toastTimer<=0)this.show('toast',false);
     document.getElementById('speed').textContent=Math.round(v.speed*3.6);
     document.getElementById('throttle').style.width=`${Math.abs(v.throttle)*100}%`;
@@ -77,9 +77,9 @@ export class UI {
     const nearby=targets.filter(t=>Math.hypot(t.x-v.x,t.z-v.z)<80).sort((a,b)=>Math.hypot(a.x-v.x,a.z-v.z)-Math.hypot(b.x-v.x,b.z-v.z))[0];
     this.show('target-hint',!!nearby&&!a.race&&!battle.active);
     document.getElementById('target-hint').textContent=nearby?nearby.armed?`SPRAY TARGET · ${Math.round(nearby.soak*100)}% SOAKED · CARVE ALONGSIDE`:'TARGET SOAKED · FIND THE NEXT BULLSEYE':'';
-    this.drawMap(v,a,battle,targets);
+    this.drawMap(v,a,battle,targets,riders);
   }
-  drawMap(v,a,battle,targets=[]) {
+  drawMap(v,a,battle,targets=[],riders=[]) {
     const c=this.map,s=240/Math.max(WORLD.maxX-WORLD.minX,WORLD.maxZ-WORLD.minZ);
     const X=x=>130+(x-(WORLD.minX+WORLD.maxX)/2)*s,Z=z=>130+(z-(WORLD.minZ+WORLD.maxZ)/2)*s;
     c.fillStyle='#17484a';c.fillRect(0,0,260,260);
@@ -91,6 +91,7 @@ export class UI {
     for(const t of targets){c.fillStyle=t.armed?'#e98754':'#7bcbab';c.beginPath();c.arc(X(t.x),Z(t.z),2.5,0,Math.PI*2);c.fill();}
     if(a.race){c.strokeStyle='#edbd5780';c.setLineDash([3,4]);c.beginPath();RACE.forEach((p,i)=>c[i?'lineTo':'moveTo'](X(p[0]),Z(p[1])));c.stroke();c.setLineDash([]);const p=RACE[a.race.index];c.beginPath();c.arc(X(p[0]),Z(p[1]),5,0,Math.PI*2);c.fill();}
     if(battle?.active){c.fillStyle='#f17e57';for(const t of battle.targets){c.beginPath();c.arc(X(t.x),Z(t.z),3,0,Math.PI*2);c.fill();}}
+    c.fillStyle='#a4e5de';for(const rider of riders){c.beginPath();c.arc(X(rider.x),Z(rider.z),3,0,Math.PI*2);c.fill();}
     c.save();c.translate(X(v.x),Z(v.z));c.rotate(-v.heading+Math.PI);c.fillStyle='#f8f3df';c.strokeStyle='#153b3d';c.lineWidth=2;c.beginPath();c.moveTo(0,-7);c.lineTo(4,5);c.lineTo(0,3);c.lineTo(-4,5);c.closePath();c.fill();c.stroke();c.restore();
   }
 }

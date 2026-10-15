@@ -1,7 +1,11 @@
 import * as THREE from 'three';
+import {onlineClient} from './online/config.js';
+import {OnlineSession} from './online/session.js';
+import {OnlinePanel} from './online/panel.js';
+import {RemoteFleet} from './online/fleet.js';
 import { createAtmosphere, SUN_DIRECTION } from './systems/atmosphere.js';
 import './style.css';
-import { FIXED_STEP, VEHICLES, QUALITY, RIDE_MODES, setSeaState, SEA_STATES, setWeatherClock, oceanReport } from './config.js';
+import { FIXED_STEP, SPAWN, VEHICLES, QUALITY, RIDE_MODES, setSeaState, SEA_STATES, setWeatherClock, oceanReport } from './config.js';
 import { VehiclePhysics } from './vehicles/physics.js';
 import { makeVehicle, loadCraftAssets } from './vehicles/models.js';
 import { buildEnvironment, collision, ramps, solids } from './systems/environment.js';
@@ -18,7 +22,7 @@ import { CanalPlayground } from './systems/canal-targets.js';
 import { Activities } from './systems/activities.js';
 
 const settings=loadSettings();validLoadout(settings);setSeaState(settings.seaState,0,true);let state='home',controlsFrom='home',ready=false,renderer,model,water,spray,environment,qualityName='Medium';
-let playground;
+let playground,onlinePanel,onlineReturnToRide=false,usingSharedSea=false;
 let simulationTime=0,accumulator=0,last=performance.now(),fps=60,frameCount=0,fpsTime=0,uiTime=0,lowFrames=0;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#9bbdc7');scene.fog=new THREE.FogExp2('#a2b9bd',.00082);
 const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,2200);
@@ -34,6 +38,7 @@ function setRideMode(mode){vehicle.setMode(mode);settings.rideMode=vehicle.rideM
 function persistTrim(){const key=vehicle.type==='ski'?'trimSki':'trimCat';if(settings[key]!==vehicle.trimDegrees){settings[key]=vehicle.trimDegrees;saveSettings(settings);}}
 const input=new Input(code=>{
   if(code==='Blur'){if(state==='playing')pause();return;}
+  if(code==='Escape'&&onlinePanel?.visible){onlinePanel.close();return;}
   if(code==='Escape'){if(state==='controls')closeControls();else if(state==='paused')resume();else pause();return;}
   if(code==='KeyH'){showControls();return;}
   if(code==='KeyM'){mute();return;}
@@ -51,7 +56,7 @@ const ui=new UI(settings,{
   vehicle(type){settings.vehicle=type;saveSettings(settings);vehicle.setType(type);vehicle.setTrim(settings[type==='ski'?'trimSki':'trimCat']);replaceModel();ui.selectVehicle();chase.reset();},
   colour(index){settings.colour=index;saveSettings(settings);replaceModel();ui.selectVehicle();},
   loadout(key,value){const options=key==='design'?DESIGNS:TUNING;if(!options[value]||!hasUnlock(settings,options[value]))return;settings[key]=value;vehicle.tuning=settings.tuning;saveSettings(settings);replaceModel();ui.selectVehicle();},
-  setting(key,value){if(key==='seaState'){settings.seaState=value;setSeaState(value,simulationTime);saveSettings(settings);ui.toast(SEA_STATES[value].name,'Water conditions change smoothly. Faster crests can launch wave hops.');return;}if(key==='rideMode'){setRideMode(value);return;}settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
+  setting(key,value){if(key==='seaState'){settings.seaState=value;setSeaState(value,waveClock());saveSettings(settings);ui.toast(SEA_STATES[value].name,'Water conditions change smoothly. Faster crests can launch wave hops.');return;}if(key==='rideMode'){setRideMode(value);return;}settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
   race(){if(state==='playing'){battle.cancel();activities.startRace(vehicle);}},challenge(){if(state==='playing'){battle.cancel();activities.startChallenge();}},battle:startBattle,
 });
 new TouchControls(input);
@@ -60,6 +65,19 @@ const battle=new SprayBattle(scene,event=>{
   if(event.type==='score')activities.event(event);
   else{if(event.type==='battle-sink'){activities.combo=0;activities.comboTime=0;input.clear();}if(event.type==='battle-recover'){input.clear();spray?.clear();}ui.toast(event.label,event.detail);}
 });
+let onlineBackend=null,onlineSetupError='';try{onlineBackend=onlineClient();}catch(error){onlineSetupError=error.message;}
+const fleet=new RemoteFleet(scene);
+const online=new OnlineSession(onlineBackend,{
+ onStatus(status){onlinePanel?.render(status);},
+ onRecovery(){onlinePanel?.open(true);},
+ onWorld(){if(state==='playing'||state==='paused'){let seed=0;for(const c of online.session.user.id)seed=(seed*31+c.charCodeAt(0))>>>0;const angle=seed/4294967296*Math.PI*2;vehicle.safe={x:SPAWN.x+Math.sin(angle)*6,z:SPAWN.z+Math.cos(angle)*6,heading:SPAWN.heading};vehicle.recover();spray?.clear();chase.reset();battle.cancel();activities.cancel();}},
+ onPose(id,pose,nickname){fleet.receive(id,pose,nickname);},onRemove(id){fleet.remove(id);},onClear(){fleet.clear();},
+});
+onlinePanel=new OnlinePanel(online,{open(){onlineReturnToRide=state==='playing';input.clear();if(onlineReturnToRide)pause();},close(){input.clear();if(onlineReturnToRide)resume();onlineReturnToRide=false;}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)online.suspend().catch(()=>{});else online.resumeNetwork().catch(e=>online.notify(e.message));});
+if(onlineSetupError)online.notify(onlineSetupError);
+else online.init().catch(()=>online.notify('Could not connect to accounts. Single-player still works.'));
+function waveClock(){return usingSharedSea?online.now():simulationTime;}
 function startBattle(){if(state!=='playing')return;activities.cancel();battle.start(vehicle);}
 function replaceModel(){
   if(model){scene.remove(model);model.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material?.map)o.material.map.dispose();});}
@@ -75,8 +93,8 @@ function applyQuality(force){
 }
 function pause(){if(state!=='playing')return;persistTrim();state='paused';input.clear();ui.show('pause',true);}
 function resume(){if(!ready)return;state='playing';input.clear();audio.start();ui.show('pause',false);ui.show('controls',false);last=performance.now();}
-function play(){if(!ready)return;home(false);state='playing';vehicle.recover();spray?.clear();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);ui.toast('Launched beside The Wharf',isTouchDevice()?'Hold GO to drive · arrows steer · tap LIFT for bow rides':'WASD to drive · T riding mode · Q/E trim · H for moves');}
-function home(show=true){if(!show)return;ui.updateGarage();state='home';battle.cancel();activities.cancel();input.clear();vehicle.recover();spray?.clear();chase.reset();ui.show('home',true);ui.show('hud',false);ui.show('pause',false);}
+function play(){if(!ready)return;online.play().catch(e=>online.notify(e.message));home(false);state='playing';vehicle.recover();spray?.clear();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);ui.toast('Launched beside The Wharf',isTouchDevice()?'Hold GO to drive · arrows steer · tap LIFT for bow rides':'WASD to drive · T riding mode · Q/E trim · H for moves');}
+function home(show=true){if(!show)return;online.stop().catch(()=>{});ui.updateGarage();state='home';battle.cancel();activities.cancel();input.clear();vehicle.recover();spray?.clear();chase.reset();ui.show('home',true);ui.show('hud',false);ui.show('pause',false);}
 function recover(){battle.recover();vehicle.recover(true);spray?.clear();input.clear();chase.reset();activities.combo=0;activities.comboTime=0;ui.toast('Back in safe water','Fresh start. Send it again.');if(state==='paused')resume();}
 function showControls(){if(state==='controls')return;controlsFrom=state;state='controls';input.clear();ui.show('controls',true);}
 function closeControls(){ui.show('controls',false);state=controlsFrom;input.clear();last=performance.now();}
@@ -95,12 +113,15 @@ try {
   loadCraftAssets().then(()=>{replaceModel();ready=true;ui.ready();}).catch(error=>{console.warn('Detailed craft load failed',error);ready=true;ui.ready();ui.toast('Lightweight craft loaded','The detailed model could not load. Reload to try again.');});
   const canvas=document.querySelector('#game');canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();pause();ui.error('The graphics connection was lost. Reload to relaunch. Try Low quality if this repeats.');});
   function frame(now){
-    requestAnimationFrame(frame);if(document.hidden){last=now;return;}setWeatherClock(Date.now()/1000);
+    requestAnimationFrame(frame);if(document.hidden){last=now;return;}setWeatherClock(online.now());
+    const shared=online.active&&!!online.session;
+    if(shared!==usingSharedSea){usingSharedSea=shared;setSeaState(shared?'changing':settings.seaState,waveClock(),true);document.getElementById('sea-state').disabled=shared;document.getElementById('sea-state').value=shared?'changing':settings.seaState;vehicle.recover(true);spray.clear();chase.reset();}
+
     const elapsed=Math.max(0,(now-last)/1000),dt=Math.min(.1,elapsed);last=now;fpsTime+=elapsed;frameCount++;
     if(fpsTime>=1){fps=frameCount/fpsTime;fpsTime=0;frameCount=0;if(state==='playing'&&settings.quality==='Auto'){lowFrames=fps<28?lowFrames+1:0;if(lowFrames>6&&qualityName!=='Low'){applyQuality(qualityName==='High'?'Medium':'Low');lowFrames=0;ui.toast('Keeping it smooth',`Auto quality adjusted to ${qualityName}.`);}}}
     if(state==='playing'){
       accumulator=Math.min(.12,accumulator+dt);
-      while(accumulator>=FIXED_STEP){simulationTime+=FIXED_STEP;if(!battle.sinking)vehicle.update(FIXED_STEP,input.sample(true),simulationTime,ramps);battle.update(FIXED_STEP,vehicle,simulationTime);activities.update(FIXED_STEP,vehicle);playground.update(FIXED_STEP,vehicle,simulationTime,!activities.race&&!battle.active);accumulator-=FIXED_STEP;}
+      while(accumulator>=FIXED_STEP){simulationTime+=FIXED_STEP;const physicsTime=usingSharedSea?online.now()-accumulator+FIXED_STEP:simulationTime;if(!battle.sinking)vehicle.update(FIXED_STEP,input.sample(true),physicsTime,ramps);battle.update(FIXED_STEP,vehicle,physicsTime);activities.update(FIXED_STEP,vehicle);playground.update(FIXED_STEP,vehicle,physicsTime,!activities.race&&!battle.active);accumulator-=FIXED_STEP;}
     }else if(state==='home'){simulationTime+=dt;vehicle.y=.14;vehicle.pitch=Math.sin(simulationTime*.7)*.015;vehicle.roll=Math.sin(simulationTime*.6)*.018;}
     const alpha=state==='playing'?accumulator/FIXED_STEP:1,p=vehicle.previous;
     const render={...vehicle,x:THREE.MathUtils.lerp(p.x,vehicle.x,alpha),y:THREE.MathUtils.lerp(p.y,vehicle.y,alpha),z:THREE.MathUtils.lerp(p.z,vehicle.z,alpha),heading:THREE.MathUtils.lerp(p.heading,vehicle.heading,alpha),pitch:THREE.MathUtils.lerp(p.pitch,vehicle.pitch,alpha),roll:THREE.MathUtils.lerp(p.roll,vehicle.roll,alpha)};
@@ -111,14 +132,15 @@ try {
     if(model.userData.propeller)model.userData.propeller.rotation.z+=vehicle.drive.rpm/60*Math.PI*2*dt;
     model.userData.rider.userData.update(vehicle,dt,model.userData);
     if(state==='playing'&&input.sample().trim===0)persistTrim();
-    environment.userData.update?.(simulationTime);playground.render(simulationTime);water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing'&&!battle.sinking,input.sample());battle.render(dt,simulationTime,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing');
-    chase.update(dt,render,input,settings.camera,state==='home');atmosphere.update(simulationTime,camera.position);
+    const waterTime=waveClock();environment.userData.update?.(waterTime);playground.render(waterTime);water.update(waterTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,waterTime,state==='playing'&&!battle.sinking,input.sample());battle.render(dt,waterTime,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing');
+    chase.update(dt,render,input,settings.camera,state==='home');atmosphere.update(waterTime%(Math.PI*20000),camera.position);
     spray.resize(innerHeight,camera.fov,renderer.getPixelRatio());
     sun.position.set(vehicle.x+SUN_DIRECTION.x*400,SUN_DIRECTION.y*400,vehicle.z+SUN_DIRECTION.z*400);sun.target.position.set(vehicle.x,0,vehicle.z);
-    audio.update(vehicle,state==='playing');uiTime+=dt;if(uiTime>.09){ui.update(uiTime,vehicle,activities,fps,qualityName,battle.status,oceanReport(simulationTime),playground.status);uiTime=0;}
+    audio.update(vehicle,state==='playing');uiTime+=dt;if(uiTime>.09){ui.update(uiTime,vehicle,activities,fps,qualityName,battle.status,oceanReport(waveClock()),playground.status,fleet.mapPositions);uiTime=0;}
+    online.tick(dt,vehicle,settings,state==='playing');fleet.update(dt,waterTime,vehicle,qualityName,camera,renderer);
     water.reflect(renderer,camera);renderer.render(scene,camera);
   }
   requestAnimationFrame(frame);
   // Read-only diagnostics for browser acceptance tests. No scoring or teleport cheats in the shipped game.
-  window.__ESTUARY__={get status(){return {ready,state,features:'wharf-shoal-spray-tricks',targets:playground.status,airTrick:{pose:vehicle.airTricks.pose,completed:[...vehicle.airTricks.completed]},battle:battle.status,seaState:settings.seaState,sea:oceanReport(simulationTime),scenery:environment.userData.stats,detailedCraft:!!model?.userData.blenderShell,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{rearPlume:spray.plume.mesh.visible,fallingPackets:spray.plume.falling,plumePackets:spray.plume.geometry.instanceCount,left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
+  window.__ESTUARY__={get status(){return {ready,state,features:'wharf-shoal-spray-tricks',online:{...online.status,remote:fleet.status},targets:playground.status,airTrick:{pose:vehicle.airTricks.pose,completed:[...vehicle.airTricks.completed]},battle:battle.status,seaState:settings.seaState,sea:oceanReport(waveClock()),scenery:environment.userData.stats,detailedCraft:!!model?.userData.blenderShell,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{rearPlume:spray.plume.mesh.visible,fallingPackets:spray.plume.falling,plumePackets:spray.plume.geometry.instanceCount,left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
 } catch(error){console.error(error);ui.error(`WebGL could not start: ${error.message}. Use a current Chrome, Edge, Firefox or Safari with hardware acceleration enabled.`);}

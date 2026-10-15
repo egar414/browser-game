@@ -1,0 +1,21 @@
+// Test-only Supabase interface double. Production never imports this module.
+// Database/RLS security is checked separately with real PostgreSQL in PGlite.
+export class TestOnlineService {
+ constructor(){this.clients=[];this.rooms=new Map();this.users=new Map();this.profiles=new Map();this.next=0;}
+ addUser(id,email,nickname){this.users.set(email,{id,email,user_metadata:{nickname}});}
+ client(email=null){
+  const host=this,listeners=new Set(),client={session:email?{user:host.users.get(email),access_token:'test-token'}:null,channels:[],rpc:async(name,args={})=>{
+   const id=client.session?.user.id;if(!id)return {error:{message:'Sign in first'}};
+   if(name==='boating_clock')return {data:Date.now()/1000,error:null};
+   if(name==='ensure_pilot'){const nickname=args.display_name||host.profiles.get(id)?.nickname||client.session.user.user_metadata.nickname||'Skipper';const data={id,nickname};host.profiles.set(id,data);return {data,error:null};}
+   if(name==='create_boating_room'){const data={id:crypto.randomUUID(),code:(++host.next).toString(16).padStart(12,'0').toUpperCase(),expiresAt:new Date(Date.now()+86400000).toISOString()};host.rooms.set(data.id,{...data,members:new Set([id])});return {data,error:null};}
+   if(name==='join_boating_room'){const code=args.invite.replace(/[- ]/g,'').toUpperCase(),room=[...host.rooms.values()].find(r=>r.code===code);if(!room)return {data:{error:'That invite code is invalid or expired.'}};room.members.add(id);return {data:{id:room.id,code:room.code,expiresAt:room.expiresAt},error:null};}
+   if(name==='leave_boating_room'){host.rooms.get(args.room_id_text)?.members.delete(id);return {data:null,error:null};}return {error:{message:'Unknown RPC'}};
+  },realtime:{setAuth:async()=>{}},from:()=>({select:()=>({eq:(_,id)=>({maybeSingle:async()=>({data:host.profiles.get(id)||null,error:null})})})})};
+  const emit=()=>{for(const cb of listeners)cb(client.session?'SIGNED_IN':'SIGNED_OUT',client.session);};
+  client.auth={getSession:async()=>({data:{session:client.session},error:null}),onAuthStateChange:cb=>{listeners.add(cb);return {data:{subscription:{unsubscribe:()=>listeners.delete(cb)}}};},signInWithPassword:async({email,password})=>{if(password!=='test-password-123'||!host.users.has(email))return {error:{message:'Invalid credentials'}};client.session={user:host.users.get(email),access_token:'test-token'};emit();return {data:{session:client.session},error:null};},signUp:async({email,options})=>{host.addUser(crypto.randomUUID(),email,options.data.nickname);client.session={user:host.users.get(email),access_token:'test-token'};emit();return {data:{session:client.session},error:null};},signOut:async()=>{client.session=null;emit();return {error:null};},resetPasswordForEmail:async()=>({error:null}),updateUser:async()=>({error:null})};
+  client.channel=(name,options={})=>{const callbacks=[],c={topic:'realtime:'+name,name,options,subscribed:false,on:(kind,filter,callback)=>{callbacks.push({kind,event:filter.event,callback});return c;},subscribe:cb=>{c.callback=cb;queueMicrotask(()=>{c.subscribed=true;cb?.('SUBSCRIBED');});return c;},track:async meta=>{c.meta=meta;host.sync();return 'ok';},presenceState:()=>{const result={};for(const other of host.clients)for(const ch of other.channels)if(ch.name===name&&ch.subscribed&&ch.meta)result[ch.options.config.presence.key]=[ch.meta];return result;},send:async packet=>{const parts=name.split(':');if(parts[1]==='pilot'&&parts[3]!==client.session.user.id)throw new Error('Wrong writer');for(const other of host.clients)for(const ch of other.channels)if(ch!==c&&ch.name===name&&ch.subscribed)ch.deliver('broadcast',packet.event,{payload:packet.payload});return 'ok';},deliver:(kind,event,data)=>{for(const e of callbacks)if(e.kind===kind&&e.event===event)e.callback(data);}};client.channels.push(c);return c;};
+  client.removeChannel=async c=>{c.subscribed=false;c.callback?.('CLOSED');client.channels=client.channels.filter(x=>x!==c);host.sync();return 'ok';};this.clients.push(client);return client;
+ }
+ sync(){for(const client of this.clients)for(const channel of client.channels)if(channel.subscribed&&channel.options.config?.presence)queueMicrotask(()=>channel.deliver('presence','sync',{}));}
+}

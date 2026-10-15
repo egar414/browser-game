@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Multiplayer development inspection</title><link rel="icon" href="data:,"></head><body><canvas id="game"></canvas><div id="app"></div><div id="preview-tools" style="position:fixed;bottom:15px;left:15px;z-index:30;background:#eef0dc;padding:12px;font:12px sans-serif"><strong>LOCAL TEST SERVICE · not a public server</strong><p>WASD drives Alice. Bob is another client. Accounts here are test doubles.</p><button id="bob-join">BOB JOINS ALICE’S ROOM</button><button id="bob-public">BOB RETURNS TO PUBLIC</button><span id="test-world-status"></span></div><script type="module">
+import '/src/style.css';
+import * as THREE from 'three';
+import {OnlineSession}from'/src/online/session.js';
+import {OnlinePanel}from'/src/online/panel.js';
+import {RemoteFleet}from'/src/online/fleet.js';
+import {TestOnlineService}from'/tests/helpers/online-service-double.js';
+import {VehiclePhysics}from'/src/vehicles/physics.js';
+import {makeVehicle,loadCraftAssets}from'/src/vehicles/models.js';
+import {Input}from'/src/systems/input.js';
+import {Water}from'/src/systems/water.js';
+import {createAtmosphere,SUN_DIRECTION}from'/src/systems/atmosphere.js';
+import {QUALITY,VEHICLES}from'/src/config.js';
+const host=new TestOnlineService(),bobId='22222222-2222-4222-8222-222222222222';host.addUser('11111111-1111-4111-8111-111111111111','alice@example.test','Alice');host.addUser(bobId,'bob@example.test','Bob');
+const scene=new THREE.Scene(),renderer=new THREE.WebGLRenderer({canvas:document.querySelector('#game'),antialias:true}),camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,2200);renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(1);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;
+const sky=createAtmosphere(scene,renderer);scene.add(new THREE.HemisphereLight('#bddde8','#526254',.8));const sun=new THREE.DirectionalLight('#ffe4bb',2.5);sun.position.copy(SUN_DIRECTION).multiplyScalar(400);scene.add(sun);
+const water=new Water(scene,QUALITY.Low),fleet=new RemoteFleet(scene),v=new VehiclePhysics(),bobBoat=new VehiclePhysics('cat');v.safe={x:0,z:0,heading:0};v.recover();bobBoat.safe={x:6,z:12,heading:Math.PI};bobBoat.recover();
+let panel;const alice=new OnlineSession(host.client(),{onStatus:s=>panel?.render(s),onPose:(id,p,name)=>fleet.receive(id,p,name),onRemove:id=>fleet.remove(id),onClear:()=>fleet.clear()}),bob=new OnlineSession(host.client('bob@example.test'));
+panel=new OnlinePanel(alice,{open(){input.clear();},close(){input.clear();}});const input=new Input(code=>{if(code==='Escape'&&panel.visible)panel.close();});
+await alice.init();await alice.play();await bob.init();await bob.play();
+document.querySelector('#bob-join').onclick=()=>bob.joinRoom(alice.status.code);document.querySelector('#bob-public').onclick=()=>bob.publicWorld();
+await loadCraftAssets();const model=makeVehicle('ski',VEHICLES.ski.colours[0]);scene.add(model);let t=0,last=performance.now(),acc=0;
+function frame(now){requestAnimationFrame(frame);const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;while(acc>=1/60){t+=1/60;v.update(1/60,panel.visible?{throttle:0,steer:0,trim:0,freestyle:false}:input.sample(true),t);bobBoat.update(1/60,{throttle:0,steer:0,trim:0,freestyle:false},t);acc-=1/60;}
+model.position.set(v.x,v.y,v.z);model.rotation.set(-v.pitch,v.heading,v.roll,'YXZ');model.userData.rider.userData.update(v,dt,model.userData);alice.tick(dt,v,{colour:0,design:'classic'},!panel.visible);bob.tick(dt,bobBoat,{colour:1,design:'classic'},true);
+camera.position.set(v.x+12,v.y+6,v.z-16);camera.lookAt(v.x+3,1,v.z+5);water.update(t,v.x,v.z,v);sky.update(t,camera.position);fleet.update(dt,t,v,'Low',camera,renderer);renderer.render(scene,camera);
+document.querySelector('#preview-tools').style.visibility=panel.visible?'hidden':'visible';
+document.querySelector('#test-world-status').textContent=`Alice: ${alice.status.world==='public'?'PUBLIC':'PRIVATE'} ${alice.status.count} · Bob: ${bob.status.world==='public'?'PUBLIC':'PRIVATE'} ${bob.status.count}`;
+window.onlineInspection={ready:true,alice:alice.status,bob:bob.status,remote:fleet.status,position:{x:v.x,z:v.z}};}requestAnimationFrame(frame);
+</script></body></html>

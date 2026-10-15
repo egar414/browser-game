@@ -29,3 +29,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+Prepared multiplayer branch: Supabase JavaScript client and its dependencies
+are used under their package licenses (primarily MIT). PGlite is used only for
+development PostgreSQL policy tests (Apache-2.0); it is not loaded by the game.
+The complete dependency license files are available through npm dependencies.

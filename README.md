@@ -270,3 +270,12 @@ Tune rear packets in `src/systems/jet-plume.js` and `JET_PLUME` in
 `node scripts/place-canal-targets.mjs` rebuilds the authored site selection from
 the retained map geometry. Existing vehicle handling tuning remains in
 `src/config.js`. See `RESEARCH.md` for geographic and physics limitations.
+
+### Prepared multiplayer branch (not active on the live link yet)
+
+The next build adds managed email/password accounts, a shared public estuary,
+private 12-character invite rooms, remote boat/spray rendering, name tags and
+minimap markers. A Supabase project must be connected before it can go live.
+See [MULTIPLAYER_SETUP.md](MULTIPLAYER_SETUP.md) for the migration, public client
+configuration, email-delivery requirements and remaining real-service tests.
+Current public play remains the tested single-player release linked above.

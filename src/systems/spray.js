@@ -84,7 +84,7 @@ class FoamWake {
     }
     this.geometry.setDrawRange(0,index);this.geometry.index.needsUpdate=true;
     for(const attr of Object.values(this.geometry.attributes))attr.needsUpdate=true;
-    this.material.uniforms.uTime.value=time;
+    this.material.uniforms.uTime.value=time%(Math.PI*20000);
   }
   dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
 }
@@ -138,7 +138,7 @@ class SprayFan {
         wet.setX(i*7+j,clamp((py-water)*7)*clamp(frame.strength/.8));
       }
     }
-    p.needsUpdate=true;wet.needsUpdate=true;this.material.uniforms.uTime.value=time;this.material.uniforms.uStrength.value=clamp(peak/1.3,.1,1.2);
+    p.needsUpdate=true;wet.needsUpdate=true;this.material.uniforms.uTime.value=time%(Math.PI*20000);this.material.uniforms.uStrength.value=clamp(peak/1.3,.1,1.2);
   }
 
   dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}

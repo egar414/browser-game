@@ -53,17 +53,21 @@ export function waveHeight(x,z,time){
  }
  return height;
 }
+export function wavePhases(time){const wrap=speed=>(time*speed)%(Math.PI*2);return {wind:WAVES.map(w=>wrap(w.speed)),swell:OCEAN_SWELL.map(w=>wrap(w.speed)),group:wrap(.055)};}
 const f=n=>Number(n).toFixed(9);
 // Generated from the same coefficients/equations as CPU buoyancy. Return height
 // and analytic X/Z slopes (ignoring the slowly varying shore-mask and shoal-envelope gradients).
 export const WAVE_GLSL=`
 ${SHOAL_GLSL}
-vec3 oceanWave(vec2 p,float time,float amplitude,float chop){
+vec3 oceanWavePhased(vec2 p,float amplitude,float chop,vec3 windPhase,vec3 swellPhase,float groupPhase){
  float ocean=smoothstep(.48,.94,chop),wind=chop*(1.+(amplitude-1.)*ocean*.72);vec3 w=vec3(0.);
- ${WAVES.map(v=>`{float phase=dot(p,vec2(${f(v.kx)},${f(v.kz)}))+time*${f(v.speed)};float a=${f(v.amplitude)}*wind;w+=vec3(sin(phase),cos(phase)*${f(v.kx)},cos(phase)*${f(v.kz)})*a;}`).join('\n')}
- float gp=dot(p,vec2(.008,.004))+time*.055;
+ ${WAVES.map((v,i)=>`{float phase=dot(p,vec2(${f(v.kx)},${f(v.kz)}))+windPhase[${i}];float a=${f(v.amplitude)}*wind;w+=vec3(sin(phase),cos(phase)*${f(v.kx)},cos(phase)*${f(v.kz)})*a;}`).join('\n')}
+ float gp=dot(p,vec2(.008,.004))+groupPhase;
  float bank=entranceShoal(p),sharp=.16+bank*.22;
  float group=.66+.34*(.5+.5*sin(gp)),swell=(.4+amplitude*.5)*.536*ocean*(1.+bank*.8);
- ${OCEAN_SWELL.map(v=>`{float phase=dot(p,vec2(${f(v.kx)},${f(v.kz)}))+time*${f(v.speed)};float h=sin(phase)-sharp*cos(2.*phase),slope=cos(phase)+2.*sharp*sin(2.*phase),a=${f(v.weight)}*swell;w+=vec3(h*group,slope*${f(v.kx)}*group+h*.17*cos(gp)*.008,slope*${f(v.kz)}*group+h*.17*cos(gp)*.004)*a;}`).join('\n')}
+ ${OCEAN_SWELL.map((v,i)=>`{float phase=dot(p,vec2(${f(v.kx)},${f(v.kz)}))+swellPhase[${i}];float h=sin(phase)-sharp*cos(2.*phase),slope=cos(phase)+2.*sharp*sin(2.*phase),a=${f(v.weight)}*swell;w+=vec3(h*group,slope*${f(v.kx)}*group+h*.17*cos(gp)*.008,slope*${f(v.kz)}*group+h*.17*cos(gp)*.004)*a;}`).join('\n')}
  return w;
+}
+vec3 oceanWave(vec2 p,float time,float amplitude,float chop){
+ return oceanWavePhased(p,amplitude,chop,vec3(${WAVES.map(v=>`time*${f(v.speed)}`).join(',')}),vec3(${OCEAN_SWELL.map(v=>`time*${f(v.speed)}`).join(',')}),time*.055);
 }`;

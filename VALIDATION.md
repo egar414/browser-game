@@ -82,3 +82,13 @@ its route, race logic and launch/start/restart flow, rather than claiming anothe
 full driving completion. All assets are bundled; no play account or API key is
 needed for this single-player release. Multiplayer is a separately requested
 next phase and is not part of this deployment.
+
+## Published verification
+
+Application commit `2c9e64826742ade31145636c4e35cbc8e8ce6068` deployed successfully
+through [Actions run 38812189595](https://github.com/egar414/browser-game/actions/runs/38812189595).
+The public page and each new JS/CSS asset return HTTP 200; the application
+bundle contains the new release marker. The public Chrome native-touch check
+reached 10.09 m/s on Low, confirmed the detailed craft, fullscreen availability,
+Thundercat selection, rotate prompt and portrait fallback, with no page/console
+errors or failed requests. This uses emulation, not a physical phone.
