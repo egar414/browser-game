@@ -1,5 +1,7 @@
 # Estuary Rats
 
+**Play:** https://egar414.github.io/browser-game/
+
 A playable single-player 3D coastal boating playground. Free roam is the default:
 pick a compact freestyle jet ski or a twin-pontoon racing inflatable and launch
 into a fictional Australian estuary. No account, API key, or external asset
@@ -110,13 +112,16 @@ node tests/race-drive.mjs
 through GitHub Pages on pushes to `main`. Before the first deployment, set the
 repository's **Settings → Pages → Source** to **GitHub Actions**. Publishing a
 Pages site generally makes the playable game publicly accessible. Deployment
-must be explicitly approved before this project's source is pushed and hosting
-is enabled from this onboarding task.
+was explicitly approved by the repository owner in this onboarding task.
+The public site is now deployed and verified in Chromium.
 
-The cloud instance initially blocks `api.github.com` (proxy HTTP 403); API access
-is necessary for automated Pages setup. `egar414.github.io` is also needed to
-validate the hosted result. A successful local preview is not evidence of a
-published site. No permanent hosted URL is claimed until deployment succeeds.
+The required network destinations are `api.github.com` and
+`egar414.github.io`. They are allowed in the prepared cloud configuration.
+Pages is configured to use GitHub Actions. Future application changes pushed to
+`main` run the installation, physics checks, build and deployment workflow.
+The published site was opened over verified HTTPS in Chromium, and both
+vehicles were launched, accelerated, steered and checked for spray with no
+runtime errors or failed requests.
 
 ## First-release limits
 

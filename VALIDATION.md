@@ -6,6 +6,8 @@ The browser used SwiftShader software WebGL, not a hardware GPU.
 
 ## Executed checks
 
+**13 physics/integration tests and 4 browser tests passed.**
+
 - Production bundle generated successfully with Vite. It is fully self-contained;
   dependencies are bundled and there are no runtime CDN, account, or API calls.
 - Physics/integration tests cover acceleration, braking, reverse, distinct craft
@@ -43,7 +45,11 @@ Actual performance and subjective handling feel require hardware-browser testing
   integration coverage, not a full human browser play-through.
 - Chromium is tested; Firefox, Safari, touch input, and hardware-GPU performance
   have not been tested.
-- The game is locally playable. Public hosting and a hosted-link smoke test remain
-  pending network access and approval to publish. Do not represent a candidate
-  GitHub Pages address as a verified play link.
+- Public GitHub Pages deployment succeeded (Actions run 38672474416, attempt 3).
+  https://egar414.github.io/browser-game/ returned HTTP 200. Chromium opened the
+  hosted page over verified HTTPS and drove both vehicles with keyboard throttle,
+  steering and freestyle inputs. Both generated spray; no page runtime errors
+  or failed network requests were observed. The cloud filesystem sandbox needed
+  broader access for Chromium to read its existing trusted certificate database;
+  certificate verification remained enabled throughout.
 - SumbaSurf was not inspected and no visual-parity claim is made.
