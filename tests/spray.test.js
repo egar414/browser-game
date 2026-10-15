@@ -6,20 +6,20 @@ import { sprayState, launchSpray } from '../src/systems/spray-model.js';
 import { Spray } from '../src/systems/spray.js';
 const boat=(type='ski')=>({type,config:VEHICLES[type],x:0,y:.14,z:0,heading:0,vx:0,vz:18,speed:18,throttle:1,steer:0,slip:0,yawRate:0,pitch:0,airborne:false,wipeout:0});
 
-test('stationary, airborne and wiped-out boats cannot emit powered spray',()=>{
+test('idle without a pump, airborne and wiped-out boats cannot emit powered spray',()=>{
   for(const change of [{speed:0},{airborne:true},{wipeout:1}]){
     const s=sprayState({...boat(),...change},true);assert.equal(s.rate,0);assert.equal(s.jet,0);assert.equal(s.left,0);assert.equal(s.right,0);
   }
 });
-test('spray follows actual slip and turn load, with stronger freestyle carving',()=>{
+test('spray follows actual slip and turn load, without artificial Shift multiplication',()=>{
   const v={...boat(),vx:-6,slip:-6,yawRate:1,steer:1},cruise=sprayState(boat()),turn=sprayState(v),freestyle=sprayState(v,true);
-  assert(turn.left>turn.right*2);assert(turn.rate>cruise.rate);assert(freestyle.left>turn.left);
+  assert(turn.left>turn.right*2);assert(turn.rate>cruise.rate);assert.equal(freestyle.left,turn.left);
   const opposite=sprayState({...v,vx:6,slip:6,yawRate:-1,steer:-1},true);assert(opposite.right>opposite.left*2);
 });
 test('outward launch direction mirrors correctly and originates at the chine',()=>{
   const v=boat(),s=sprayState(v),left=launchSpray(v,s,-1,()=>.5),right=launchSpray(v,s,1,()=>.5);
-  assert(left.x<0&&right.x>0);assert(left.vx<0&&right.vx>0);assert(left.z<0&&right.z<0);assert.equal(left.y,right.y);
-  const reversed=sprayState({...v,vz:-3,speed:3});assert(reversed.jet<s.jet*.5);
+  assert(left.x<0&&right.x>0);assert(left.vx<0&&right.vx>0);assert(Math.abs(left.z)<=v.config.length*.44&&Math.abs(right.z)<=v.config.length*.44);assert(left.y>=waveHeight(left.x,left.z,0)&&right.y>=waveHeight(right.x,right.z,0));
+  const reversed=sprayState({...v,vz:-3,speed:3});assert(reversed.rate<s.rate);
 });
 test('emission is stable across frame rates and geometry stays within its pool',()=>{
   const run=dt=>{const scene=new THREE.Scene(),s=new Spray(scene,QUALITY.Low),v=boat();

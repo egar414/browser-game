@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { waveHeight } from '../config.js';
-import { clamp, sprayState, launchSpray, SPRAY_TUNING } from './spray-model.js';
+import { clamp, sprayState, launchSpray, pumpDischarge, stepDroplet, SPRAY_TUNING } from './spray-model.js';
 
 function foamTexture() {
   const size=128,data=new Uint8Array(size*size*4);
@@ -105,22 +105,44 @@ class SprayFan {
       }`});
     this.mesh=new THREE.Mesh(this.geometry,this.material);this.mesh.frustumCulled=false;this.mesh.renderOrder=3;scene.add(this.mesh);
   }
-  update(dt,v,time,strength) {
+  update(dt,v,time,strength,state) {
     this.strength=THREE.MathUtils.lerp(this.strength,strength,1-Math.exp(-dt*9));this.mesh.visible=this.strength>.06;
     if(!this.mesh.visible)return;
-    const fX=Math.sin(v.heading),fZ=Math.cos(v.heading),sX=fZ,sZ=-fX,side=this.side;
-    const x=v.x+sX*side*v.config.width*.47-fX*v.config.length*.22,z=v.z+sZ*side*v.config.width*.47-fZ*v.config.length*.22;
-    const strengthNow=this.strength,spread=1.4+strengthNow*3.1,lift=1.05+strengthNow*1.25;
-    const p=this.geometry.attributes.position,wet=this.geometry.attributes.aWet;
+    const strengthNow=this.strength,p=this.geometry.attributes.position,wet=this.geometry.attributes.aWet;
     for(let i=0;i<=this.rows;i++)for(let j=0;j<=this.columns;j++){
       const t=i/this.rows*SPRAY_TUNING.fanLife,fan=j/this.columns;
-      const angle=-.4+fan*1.35;
-      const outward=spread*Math.cos(angle),back=v.speed*.45+spread*Math.sin(angle);
-      const px=x+(sX*side*outward-fX*back)*t,pz=z+(sZ*side*outward-fZ*back)*t;
-      const py=v.y+.04+lift*(.55+.45*Math.sin(fan*Math.PI))*t-4.905*t*t,water=waveHeight(px,pz,time);
+      const drop=launchSpray(v,state,this.side,()=>fan);
+      // In the moving source frame, old water falls behind the hull.
+      const px=drop.x+(drop.vx-v.vx)*t,pz=drop.z+(drop.vz-v.vz)*t;
+      const py=drop.y+drop.vy*t-4.905*t*t,water=waveHeight(px,pz,time);
       p.setXYZ(i*7+j,px,Math.max(water+.025,py),pz);wet.setX(i*7+j,clamp((py-water)*5));
     }
     p.needsUpdate=true;wet.needsUpdate=true;this.material.uniforms.uTime.value=time;this.material.uniforms.uStrength.value=clamp(strengthNow/2,.1,1.1);
+  }
+  dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
+}
+
+class PumpStream {
+  constructor(scene){
+    this.rows=14;this.sides=8;const positions=new Float32Array((this.rows+1)*this.sides*3),indices=[];
+    for(let i=0;i<this.rows;i++)for(let j=0;j<this.sides;j++){const a=i*this.sides+j,b=i*this.sides+(j+1)%this.sides;indices.push(a,b,a+this.sides,b,b+this.sides,a+this.sides);}
+    this.geometry=new THREE.BufferGeometry();this.geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));this.geometry.setIndex(indices);
+    this.material=new THREE.MeshBasicMaterial({color:0xc1e8e3,transparent:true,opacity:.28,depthWrite:false,side:THREE.DoubleSide});
+    this.mesh=new THREE.Mesh(this.geometry,this.material);this.mesh.frustumCulled=false;scene.add(this.mesh);this.mesh.visible=false;
+  }
+  update(v,discharge){
+    this.mesh.visible=!!discharge?.aerial&&discharge.reverse<.1;
+    if(!this.mesh.visible)return;
+    const {origin,velocity,flow}=discharge;
+    const relative=new THREE.Vector3(velocity.x-v.vx,velocity.y-(v.vy||0),velocity.z-v.vz),speed=relative.length();
+    const axis=relative.clone().normalize(),side=new THREE.Vector3().crossVectors(axis,new THREE.Vector3(0,1,0)).normalize(),up=new THREE.Vector3().crossVectors(side,axis);
+    const radius=Math.min(.045,Math.sqrt(flow/(Math.PI*Math.max(1,speed)))),duration=Math.min(.07,1.5/Math.max(1,speed));
+    const p=this.geometry.attributes.position;
+    for(let i=0;i<=this.rows;i++)for(let j=0;j<this.sides;j++){
+      const t=i/this.rows*duration,a=j/this.sides*Math.PI*2,r=radius*(1+i/this.rows*.3),c=Math.cos(a)*r,s=Math.sin(a)*r;
+      p.setXYZ(i*this.sides+j,origin.x+relative.x*t+side.x*c+up.x*s,origin.y+relative.y*t-4.905*t*t+up.y*s,origin.z+relative.z*t+side.z*c+up.z*s);
+    }
+    p.needsUpdate=true;
   }
   dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
 }
@@ -140,45 +162,52 @@ export class Spray {
         #include <colorspace_fragment>
       }`});
     this.points=new THREE.Points(g,this.material);this.points.frustumCulled=false;this.points.renderOrder=4;scene.add(this.points);
+    this.stream=new PumpStream(scene);
     this.wake=new FoamWake(scene,this.texture,quality.wakeSamples);
     this.fans=[new SprayFan(scene,this.texture,-1,quality.fanSegments),new SprayFan(scene,this.texture,1,quality.fanSegments)];
     this.state={left:0,right:0,rate:0};this.time=0;
   }
-  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.wake.clear();this.accumulator=0;this.jetAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.mesh.visible=false;}}
-  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=kind===0?.55+Math.random()*.5:.9;Object.assign(target,p,{life,max:life,size:kind===0?.055+Math.random()*.10:.25+Math.random()*.3,kind});}
+  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.wake.clear();this.accumulator=0;this.jetAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.mesh.visible=false;}}
+  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=kind===0?.55+Math.random()*.5:.9;Object.assign(target,{diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===0?.055+Math.random()*.10:.25+Math.random()*.3,kind});}
   splash(v,impact) {
     const count=Math.min(this.count*.4,40+impact*13);
     for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:v.x,y:waveHeight(v.x,v.z,this.time)+.1,z:v.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},i%8===0?1:0);}
     this.wake.splash(v,impact,this.time);
   }
   update(dt,v,time,active=true,controls={}) {
-    this.time=time;this.state=sprayState(v,!!controls.freestyle);
-    const wet=clamp(1-Math.max(0,v.y-waveHeight(v.x,v.z,time)-.4)*1.5);
-    if(!active||wet===0)this.state={...this.state,rate:0,left:0,right:0,jet:0};
-    this.accumulator+=dt*this.state.rate*wet;
+    this.time=time;this.state=sprayState(v,false,time);
+    if(!active)this.state={...this.state,rate:0,left:0,right:0,jet:0};
+    this.accumulator+=dt*this.state.rate;
     const count=Math.min(Math.floor(this.accumulator),80);this.accumulator-=count;
     for(let i=0;i<count;i++){
-      const side=i%2?-1:1;this.emit(launchSpray(v,this.state,side),i%13===0?1:0);
+      const side=Math.random()*(this.state.left+this.state.right)<this.state.left?-1:1;
+      this.emit(launchSpray(v,this.state,side),i%17===0?1:0);
     }
-    const fX=Math.sin(v.heading),fZ=Math.cos(v.heading);
-    this.jetAccumulator+=dt*this.state.jet*(v.type==='ski'?135:75)*wet;
+    const discharge=active?pumpDischarge(v,time):null;this.stream.update(v,discharge);
+    this.jetAccumulator+=dt*this.state.jet*(v.type==='ski'?160:90);
     const jetCount=Math.min(30,Math.floor(this.jetAccumulator));this.jetAccumulator-=jetCount;
-    for(let i=0;i<jetCount;i++){
-      const speed=(v.type==='ski'?10:6)*this.state.jet;
-      this.emit({x:v.x-fX*v.config.length*.52+(Math.random()-.5)*.18,y:v.y+(v.type==='ski'?.02:-.03),z:v.z-fZ*v.config.length*.52+(Math.random()-.5)*.18,
-        vx:(v.vx||0)*.25-fX*speed+(Math.random()-.5)*1.1,vy:.6+Math.max(0,v.pitch)*3+Math.random()*.8,vz:(v.vz||0)*.25-fZ*speed+(Math.random()-.5)*1.1});
+    for(let i=0;i<jetCount&&discharge;i++){
+      const {origin,velocity,aerial}=discharge;
+      if(aerial){
+        const spread=.28+discharge.reverse*.6;
+        this.emit({x:origin.x,y:origin.y,z:origin.z,vx:velocity.x+(Math.random()-.5)*spread,vy:velocity.y+(Math.random()-.5)*spread,vz:velocity.z+(Math.random()-.5)*spread,diameter:.003+Math.random()*.002});
+      }else{
+        // Turbulence reaches the surface as low froth, never an above-water rocket plume.
+        const t=Math.random()*.11,x=origin.x+velocity.x*t,z=origin.z+velocity.z*t;
+        this.emit({x:x+(Math.random()-.5)*.35,y:waveHeight(x,z,time)+.025,z,vx:velocity.x*.12,vy:.25+Math.random()*.7,vz:velocity.z*.12,diameter:.004});
+      }
     }
     for(let i=0;i<this.count;i++){
       const p=this.particles[i];p.life-=dt;
-      if(p.life>0){p.x+=p.vx*dt;p.z+=p.vz*dt;p.vy-=SPRAY_TUNING.gravity*dt;p.y+=p.vy*dt;
+      if(p.life>0){stepDroplet(p,dt);
         if(p.y<waveHeight(p.x,p.z,time)-.02)p.life=0;
         this.positions.set([p.x,p.y,p.z],i*3);this.sizes[i]=p.size*(p.kind?1+(1-p.life/p.max)*1.7:1);this.alphas[i]=clamp(p.life/.2);this.kinds[i]=p.kind;
       }else{this.alphas[i]=0;this.sizes[i]=0;}
     }
     for(const attr of Object.values(this.points.geometry.attributes))attr.needsUpdate=true;
     const visibleState=dt>0?this.state:{...this.state,rate:0};this.wake.update(dt,v,time,visibleState);
-    this.fans[0].update(dt,v,time,this.state.left*wet);this.fans[1].update(dt,v,time,this.state.right*wet);
+    this.fans[0].update(dt,v,time,this.state.left,this.state);this.fans[1].update(dt,v,time,this.state.right,this.state);
   }
   resize(height,fov,pixelRatio){this.material.uniforms.uScale.value=height*pixelRatio/(2*Math.tan(THREE.MathUtils.degToRad(fov)*.5));}
-  dispose(){this.points.removeFromParent();this.points.geometry.dispose();this.material.dispose();this.wake.dispose();this.fans.forEach(f=>f.dispose());this.texture.dispose();}
+  dispose(){this.points.removeFromParent();this.points.geometry.dispose();this.material.dispose();this.stream.dispose();this.wake.dispose();this.fans.forEach(f=>f.dispose());this.texture.dispose();}
 }

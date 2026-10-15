@@ -1,82 +1,79 @@
 # Validation record
 
-Validated in this cloud environment using Node.js 24.19.0, npm 11.9.0, and
-Chromium 154.0.8037.57 on Linux with an AMD EPYC virtual CPU (5 reported CPUs).
-The browser used SwiftShader software WebGL, not a hardware GPU.
+Current pump, trim and spray update: 15 October 2026.
 
-## Executed checks
+Environment: Node.js 24.19.0, npm 11.9.0 and Chromium 154 on Linux, with an
+AMD EPYC virtual CPU (5 reported CPUs). WebGL uses SwiftShader software
+rendering, not a hardware GPU. These checks do not establish laptop frame rates
+or a human judgement of handling realism.
 
-**18 physics/spray integration tests and 5 browser tests passed for the graphics upgrade.**
+## Current executed checks
 
-- Production bundle generated successfully with Vite. It is fully self-contained;
-  dependencies are bundled and there are no runtime CDN, account, or API calls.
-- Physics/integration tests cover acceleration, braking, reverse, distinct craft
-  tuning, powered/coasting steering, inertia, idle scoring, shared wave buoyancy,
-  bow lifts, over-trim wipeouts, both craft launching from ramps and landing,
-  a complete 360 spin banked on landing, rough landings, land collisions, bridge
-  passages, navigable race segments, nearby recovery, world limits, race completion
-  and restart, timed challenge expiry, repeated-trick farming prevention, and
-  damaged/unavailable local storage.
-- Five Playwright browser flows exercised actual keyboard input: both craft
-  selection and driving, acceleration, spray generation, powered sliding turns,
-  braking/reverse, recovery, jet ski wheelie scoring, cameras, pause/resume,
-  quality and mute controls, persisted vehicle/colour, controls guide, resize,
-  focus loss, race start/restart, challenge start and return to free roam. New
-  assertions check outside-turn spray strength, persistent wake generation and
-  recovery clearing the old effects. Low, Medium and High render without shader
-  or runtime errors, including repeated changes to reflection settings.
-- Spray tests cover stationary/airborne/wipeout suppression, mirrored ejection
-  points, actual turn and slip response, stronger freestyle carving, reduced
-  reverse jetting, frame-rate stability, finite bounded geometry, foam expiry,
-  landing effects, recovery clearing, and disposal of all effect objects.
-- The separate end-to-end acceptance driver completed all 12 race gates using
-  only keyboard controls against the production build, and restarted the race.
-  Lap: **121.83 seconds** of simulated race time. No page runtime errors. This
-  complete race was run before the graphics upgrade; the vehicle movement,
-  collision system and route are unchanged. The current browser suite checks
-  race start/restart and activity switching; it does not repeat the full lap.
-- Menu and driving screenshots were visually inspected, including the original
-  twin-pontoon model, outboard marking, HUD, waterways, marina, and foam trails.
-- Frozen installation is exercised with `npm ci`, preserving package-lock.json.
+- **25 Node simulation/spray tests passed.** Coverage includes distinct craft
+  acceleration, braking/reverse, powered steering, four-point shared-wave
+  buoyancy, wheelie scoring and over-trim wipeout, ramps for both craft, landed
+  360 scoring, rough landings, collisions, clear bridge/race routes, recovery,
+  boundaries, activities, exploit prevention and corrupt storage.
+- Added energy/momentum checks for jet thrust and propeller power; trim versus
+  hull attitude; stationary pumping under power; immediate loss of liquid
+  thrust with exposed intake; gradual re-immersion; reversed discharge;
+  submerged wash; mode power differences; latched trim/clamping; dry chine
+  suppression; gravity/drag; frame-rate emission stability; pool bounds and
+  effect cleanup. Shift alone no longer multiplies a physically identical
+  spray state.
+- **6 Playwright browser flows passed against the frozen production build.**
+  Actual keyboard input drove both craft, including powered sliding turns,
+  outside spray/wakes, braking, reverse and recovery. Other checks covered
+  Low/Medium/High rendering and reflections, wheelie scoring, pause/camera,
+  mute, controls, focus loss, resizing, preferences, race start/restart,
+  trick sessions and return to free roam. The new flow checks T mode cycling,
+  extended trim above 12 game degrees, releasing Q without losing trim,
+  reloading its saved value, mode-dependent limits and decreasing trim.
+- Production build succeeded. No runtime CDN, accounts or API keys are needed;
+  all dependencies and procedural assets are bundled.
+- High-quality water/reflection, new HUD, full-race finish and powered-turn
+  screenshots for both craft were visually inspected. A local production
+  smoke check also verified mode cycling, latched trim and powered spray for
+  both craft, without page runtime errors or failed requests.
 
-## Performance observations
+The separate keyboard-only acceptance driver completed all 12 race gates in
+**125.58 simulated seconds**, with no page runtime errors, and successfully
+restarted the race. It ran against the frozen production build at 800×500 Low.
+Logged software-rendered FPS samples ranged approximately from 8 to 16; the
+finish sample was 8.6 FPS. These are workload observations, not a GPU benchmark.
+Public deployment of this update: pending final verification.
 
-The initial keyboard-driven complete race at an 800×500 viewport and Low quality
-measured approximately **10–17 FPS** on software rendering. The graphics upgrade
-was measured separately at 800×500 Low during a cruise followed by a spray turn:
-six samples were **9.2, 7.5, 9.4, 9.1, 9.4 and 11.2 FPS**, a **9.3 FPS** mean.
-These are different workloads and do not establish a comparative speedup. This is a correctness-testing
-environment, not representative evidence for 60 FPS on a recent laptop. Higher
-quality uses a denser water surface and optional shadows. Auto starts from CPU
-and viewport information, then reduces quality after sustained slow gameplay.
-Actual performance and subjective handling feel require hardware-browser testing.
+## Physical realism and research limits
 
-## Limits of these checks
+See [RESEARCH.md](RESEARCH.md) for inspected OpenStax sources, implemented
+relations, tuning and approximations. This is not a calibrated production
+watercraft simulation. Manufacturer pages were blocked by the proxy; factory
+trim angles, measured pump curves and hull resistance were not obtained.
+Ventilation is approximated; vapor cavitation and full fluid dynamics are not
+simulated. Buoyancy, powered wheelie assistance, yaw, ramps and aerial control
+retain game approximations. A reverse bucket is approximated in force/wash
+without animated bucket geometry.
 
-- A full race has not been driven by a human tester.
-- Ramp launch, complete spin, landing/wipeout, and long challenge expiry have
-  integration coverage, not a full human browser play-through.
-- Chromium is tested; Firefox, Safari, touch input, and hardware-GPU performance
-  have not been tested.
-- Public GitHub Pages deployment succeeded (Actions run 38672474416, attempt 3).
-  https://egar414.github.io/browser-game/ returned HTTP 200. Chromium opened the
-  hosted page over verified HTTPS and drove both vehicles with keyboard throttle,
-  steering and freestyle inputs. Both generated spray; no page runtime errors
-  or failed network requests were observed. The cloud filesystem sandbox needed
-  broader access for Chromium to read its existing trusted certificate database;
-  certificate verification remained enabled throughout.
-- SumbaSurf's supplied Wavedash URL was blocked by the proxy (CONNECT 403).
-  `wavedash.com` was added to the saved network draft; runtime access still
-  requires applying that configuration. The reference has not been visually
-  inspected and no visual-parity claim is made.
+A human has not driven a complete test lap. Ramps/spins/landings and long trick
+session expiry have simulation coverage, rather than a human browser
+play-through. Chromium was tested; Firefox, Safari, mobile/touch and hardware
+GPU performance were not tested. Software-browser screenshots can verify
+appearance and operation, not subjective real-world handling accuracy.
 
-## Published graphics upgrade
+## Earlier graphics deployment
 
-Commit `18acdc1a3b5ff30f9b0b4eeaf00142967d4a32ff` deployed successfully in
-GitHub Actions run `38675522389`. The public URL with `?v=18acdc1` returned 200
-and loaded the new spray diagnostics, confirming the updated bundle was served.
-Chromium drove both craft through powered spray turns: the outside spray was
-more than twice the inside spray, particles and wake samples were present, and
-Medium reflections were enabled successfully after switching quality. There
-were no runtime/shader errors or failed requests. HTTPS verification remained
-enabled. Public gameplay and reflection screenshots were visually inspected.
+The prior graphics update was published as commit
+`18acdc1a3b5ff30f9b0b4eeaf00142967d4a32ff`, Actions run `38675522389`.
+Its public HTTPS page and both craft were tested with certificate verification
+enabled. The initial version's complete keyboard race took 121.83 simulated
+seconds. Those earlier results are historical and do not substitute for the
+current changed-propulsion acceptance drive.
+
+Previous graphics performance at 800×500 Low was a 9.3 FPS mean across six
+software-rendered cruise/turn samples. That workload is not a benchmark of an
+ordinary laptop, and the current update does not promise universal 60 FPS.
+Auto quality reduces rendering detail after sustained low frame rates.
+
+The supplied SumbaSurf reference at https://wavedash.com/games/sumbasurf remains
+blocked by the cloud proxy. It has not been visually inspected; no visual-parity
+claim is made.

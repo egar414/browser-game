@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createAtmosphere, SUN_DIRECTION } from './systems/atmosphere.js';
 import './style.css';
-import { FIXED_STEP, VEHICLES, QUALITY } from './config.js';
+import { FIXED_STEP, VEHICLES, QUALITY, RIDE_MODES } from './config.js';
 import { VehiclePhysics } from './vehicles/physics.js';
 import { makeVehicle } from './vehicles/models.js';
 import { buildEnvironment, collision, ramps } from './systems/environment.js';
@@ -24,12 +24,16 @@ const vehicle=new VehiclePhysics(settings.vehicle,collision,event=>{
   if(event.type==='wipeout')spray?.splash(vehicle,8);
   if(event.type==='bump'||event.type==='boundary')ui?.toast(event.label);
 });
+vehicle.setMode(settings.rideMode);vehicle.setTrim(settings[settings.vehicle==='ski'?'trimSki':'trimCat']);
+function setRideMode(mode){vehicle.setMode(mode);settings.rideMode=vehicle.rideMode;persistTrim();saveSettings(settings);document.getElementById('ride-mode').value=mode;ui.toast(`${RIDE_MODES[mode].name} mode`,RIDE_MODES[mode].description);}
+function persistTrim(){const key=vehicle.type==='ski'?'trimSki':'trimCat';if(settings[key]!==vehicle.trimDegrees){settings[key]=vehicle.trimDegrees;saveSettings(settings);}}
 const input=new Input(code=>{
   if(code==='Blur'){if(state==='playing')pause();return;}
   if(code==='Escape'){if(state==='controls')closeControls();else if(state==='paused')resume();else pause();return;}
   if(code==='KeyH'){showControls();return;}
   if(code==='KeyM'){mute();return;}
   if(state!=='playing')return;
+  if(code==='KeyT'){const modes=Object.keys(RIDE_MODES);setRideMode(modes[(modes.indexOf(vehicle.rideMode)+1)%modes.length]);}
   if(code==='KeyR')recover();
   if(code==='KeyC'){settings.camera=1-settings.camera;saveSettings(settings);ui.toast(settings.camera?'Close riding view':'Wide chase view');}
   if(code==='KeyF')activities.startRace(vehicle);
@@ -38,9 +42,9 @@ const input=new Input(code=>{
 const ui=new UI(settings,{
   play,resume,pause,home,controls:showControls,closeControls,recover,mute,
   freeRoam(){activities.cancel();resume();ui.toast('Free roam','No clock. Find your own line.');},
-  vehicle(type){settings.vehicle=type;saveSettings(settings);vehicle.setType(type);replaceModel();ui.selectVehicle();chase.reset();},
+  vehicle(type){settings.vehicle=type;saveSettings(settings);vehicle.setType(type);vehicle.setTrim(settings[type==='ski'?'trimSki':'trimCat']);replaceModel();ui.selectVehicle();chase.reset();},
   colour(index){settings.colour=index;saveSettings(settings);replaceModel();ui.selectVehicle();},
-  setting(key,value){settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
+  setting(key,value){if(key==='rideMode'){setRideMode(value);return;}settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
   race(){if(state==='playing')activities.startRace(vehicle);},challenge(){if(state==='playing')activities.startChallenge();},
 });
 const activities=new Activities(scene,settings,(title,subtitle)=>ui.toast(title,subtitle));
@@ -56,9 +60,9 @@ function applyQuality(force){
   if(spray){spray.dispose();spray=new Spray(scene,q);}
   saveSettings(settings);
 }
-function pause(){if(state!=='playing')return;state='paused';input.clear();ui.show('pause',true);}
+function pause(){if(state!=='playing')return;persistTrim();state='paused';input.clear();ui.show('pause',true);}
 function resume(){if(!ready)return;state='playing';input.clear();audio.start();ui.show('pause',false);ui.show('controls',false);last=performance.now();}
-function play(){if(!ready)return;home(false);state='playing';vehicle.recover();spray?.clear();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);ui.toast('Welcome to Pelican Estuary','WASD to drive · Shift to spray · H for special moves');}
+function play(){if(!ready)return;home(false);state='playing';vehicle.recover();spray?.clear();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);ui.toast('Welcome to Pelican Estuary','WASD to drive · T riding mode · Q/E trim · H for moves');}
 function home(show=true){if(!show)return;state='home';activities.cancel();input.clear();vehicle.recover();spray?.clear();chase.reset();ui.show('home',true);ui.show('hud',false);ui.show('pause',false);}
 function recover(){vehicle.recover(true);spray?.clear();input.clear();chase.reset();activities.combo=0;activities.comboTime=0;ui.toast('Back in safe water','Fresh start. Send it again.');if(state==='paused')resume();}
 function showControls(){if(state==='controls')return;controlsFrom=state;state='controls';input.clear();ui.show('controls',true);}
@@ -66,6 +70,7 @@ function closeControls(){ui.show('controls',false);state=controlsFrom;input.clea
 function mute(){settings.muted=!settings.muted;saveSettings(settings);ui.toast(settings.muted?'Audio muted':'Audio on');}
 function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
 window.addEventListener('resize',resize);
+window.addEventListener('pagehide',persistTrim);
 try {
   renderer=new THREE.WebGLRenderer({canvas:document.querySelector('#game'),antialias:true,powerPreference:'high-performance'});
   renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -87,7 +92,9 @@ try {
     const render={...vehicle,x:THREE.MathUtils.lerp(p.x,vehicle.x,alpha),y:THREE.MathUtils.lerp(p.y,vehicle.y,alpha),z:THREE.MathUtils.lerp(p.z,vehicle.z,alpha),heading:THREE.MathUtils.lerp(p.heading,vehicle.heading,alpha)};
     model.position.set(render.x,render.y,render.z);model.rotation.set(-vehicle.pitch,render.heading,vehicle.roll,'YXZ');
     const rider=model.userData.rider;rider.rotation.z=vehicle.steer*.08;rider.rotation.x=-Math.max(0,vehicle.throttle)*.045;
-    if(model.userData.motor)model.userData.motor.rotation.y=-vehicle.steer*.48;
+    for(const part of [model.userData.motor,model.userData.nozzle])if(part)part.rotation.set(vehicle.drive.trimAngle,-vehicle.drive.steeringAngle,0,'YXZ');
+    if(model.userData.propeller)model.userData.propeller.rotation.z+=vehicle.drive.rpm/60*Math.PI*2*dt;
+    if(state==='playing'&&input.sample().trim===0)persistTrim();
     atmosphere.update(simulationTime);water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing',input.sample());
     chase.update(dt,render,input,settings.camera,state==='home');
     spray.resize(innerHeight,camera.fov,renderer.getPixelRatio());
@@ -97,5 +104,5 @@ try {
   }
   requestAnimationFrame(frame);
   // Read-only diagnostics for browser acceptance tests. No scoring or teleport cheats in the shipped game.
-  window.__ESTUARY__={get status(){return {ready,state,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,airborne:vehicle.airborne,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
+  window.__ESTUARY__={get status(){return {ready,state,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,drive:{...vehicle.drive},airborne:vehicle.airborne,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
 } catch(error){console.error(error);ui.error(`WebGL could not start: ${error.message}. Use a current Chrome, Edge, Firefox or Safari with hardware acceleration enabled.`);}

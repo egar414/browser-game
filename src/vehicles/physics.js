@@ -1,9 +1,11 @@
-import { VEHICLES, SPAWN, WORLD, waveHeight } from '../config.js';
+import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, waveHeight } from '../config.js';
+import { Propulsion, hullImmersion } from './propulsion.js';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 export class VehiclePhysics {
   constructor(type = 'ski', collision = () => null, onEvent = () => {}) {
     this.type = type; this.config = VEHICLES[type]; this.collision = collision; this.onEvent = onEvent;
+    this.rideMode='sport';this.trimDegrees=0;this.propulsion=new Propulsion(type);
     this.safe = { ...SPAWN }; this.recover();
   }
   recover(nearest = false) {
@@ -23,9 +25,12 @@ export class VehiclePhysics {
       pitch: 0, roll: 0, yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.previous = this.snapshot();
+    this.propulsion.reset();this.drive=this.propulsion.state;
   }
   snapshot() { return { x: this.x, y: this.y, z: this.z, heading: this.heading, pitch: this.pitch, roll: this.roll }; }
-  setType(type) { this.type = type; this.config = VEHICLES[type]; this.recover(); }
+  setMode(mode){if(!RIDE_MODES[mode])return;this.rideMode=mode;this.setTrim(this.trimDegrees);}
+  setTrim(degrees){const mode=RIDE_MODES[this.rideMode];this.trimDegrees=clamp(Number.isFinite(degrees)?degrees:0,mode.trimMin,this.type==='cat'?Math.min(8,mode.trimMax):mode.trimMax);}
+  setType(type) { this.type = type; this.config = VEHICLES[type];this.propulsion=new Propulsion(type);this.setTrim(this.trimDegrees); this.recover(); }
   wipe(reason) {
     if (this.wipeout) return;
     this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
@@ -34,23 +39,30 @@ export class VehiclePhysics {
     this.previous = this.snapshot();
     if (this.wipeout > 0) { this.wipeout -= dt; if (this.wipeout <= 0) this.recover(true); return; }
     const c = this.config;
+    const mode=RIDE_MODES[this.rideMode],driveConfig=PROPULSION[this.type];
     this.trickCooldown = Math.max(0, this.trickCooldown - dt);
-    this.throttle = damp(this.throttle, input.throttle, 3.6, dt);
+    this.throttle = damp(this.throttle, input.throttle, mode.throttleResponse, dt);
     this.steer = damp(this.steer, input.steer, 6, dt);
+    if(!this.airborne)this.setTrim(this.trimDegrees+(input.trim||0)*driveConfig.trimRate*dt);
     let fx = Math.sin(this.heading), fz = Math.cos(this.heading);
     let forward = this.vx * fx + this.vz * fz;
     this.speed = Math.hypot(this.vx, this.vz);
     this.slip = this.vx * fz - this.vz * fx;
+    this.drive=this.propulsion.update(dt,this,input,time);
     if (!this.airborne) {
-      let acceleration = this.throttle * (this.throttle >= 0 ? c.acceleration : (forward > 1 ? 12 : c.reverseAcceleration));
-      if (forward > c.maxSpeed || forward < -c.reverseMax) acceleration = 0;
-      this.vx += fx * acceleration * dt; this.vz += fz * acceleration * dt;
+      let forceX=this.drive.force.x,forceZ=this.drive.force.z;
+      const forwardForce=forceX*fx+forceZ*fz;
+      if((forward>c.maxSpeed&&forwardForce>0)||(forward<-c.reverseMax&&forwardForce<0)){forceX-=fx*forwardForce;forceZ-=fz*forwardForce;}
+      this.vx+=forceX/driveConfig.effectiveMass*dt;this.vz+=forceZ/driveConfig.effectiveMass*dt;
       const grip = input.freestyle ? c.slideGrip : c.lateralGrip;
       const lateral = (this.vx * fz - this.vz * fx) * (1 - Math.exp(-grip * dt));
       this.vx -= fz * lateral; this.vz += fx * lateral;
-      const drag = Math.exp(-(c.drag + this.speed * c.waterDrag) * dt);
+      const immersed=hullImmersion(this,time);
+      const resistance=immersed*(driveConfig.linearResistance+this.speed*driveConfig.quadraticResistance)/driveConfig.effectiveMass+(1-immersed)*this.speed*.0015;
+      const drag = Math.exp(-resistance*dt);
       this.vx *= drag; this.vz *= drag;
-      const authority = (0.22 + 0.78 * Math.max(0, this.throttle)) * Math.min(1, Math.abs(forward) / 5);
+      const powered=clamp(this.drive.thrust/(this.type==='ski'?3200:2450),0,1)*this.drive.wetness;
+      const authority = (0.18+0.82*powered) * Math.min(1, Math.abs(forward) / 5);
       const yawTarget = this.steer * c.steer * authority * Math.sign(forward || 1) * (input.freestyle ? 1.48 : 1);
       this.yawRate = damp(this.yawRate, yawTarget, this.type === 'ski' ? 4.5 : 2.8, dt);
     } else {
@@ -81,12 +93,14 @@ export class VehiclePhysics {
     const surfacePitch = Math.atan2((samples[0][1] + samples[1][1] - samples[0][0] - samples[1][0]) / 2, half * 2);
     const surfaceRoll = Math.atan2((samples[1][0] + samples[1][1] - samples[0][0] - samples[0][1]) / 2, width * 2);
     if (!this.airborne) {
-      const lift = this.type === 'ski' && input.freestyle && forward > 5 ? c.wheelieAngle * clamp(this.throttle, 0, 1) * clamp(1 - Math.abs(this.steer) * 0.85, 0, 1) : 0;
+      const balanceMoment=1+Math.max(0,this.drive.trimAngle*180/Math.PI-6)*.018;
+      const lift = this.type === 'ski' && input.freestyle && forward > 5 ? c.wheelieAngle * balanceMoment*clamp(this.throttle, 0, 1) * clamp(1 - Math.abs(this.steer) * 0.85, 0, 1) : 0;
       const plane = this.type === 'cat' ? Math.max(0, this.throttle) * 0.2 * Math.exp(-Math.pow((this.speed - 7) / 8, 2)) : 0.035 * this.throttle;
-      const trim = input.trim * (this.type === 'ski' ? 0.34 : 0.14);
+      const trim = this.drive.trimAngle*(this.type==='ski'?.45:.65);
       this.pitch = damp(this.pitch, surfacePitch + lift + plane + trim, 3, dt);
-      this.roll = damp(this.roll, surfaceRoll + this.steer * clamp(this.speed / 25, 0, 1) * (this.type === 'ski' ? 0.43 : 0.18), 4, dt);
-      this.vy += ((water - this.y) * c.spring - this.vy * c.damping) * dt;
+      this.roll = damp(this.roll, surfaceRoll - this.steer * clamp(this.speed / 25, 0, 1) * (this.type === 'ski' ? 0.43 : 0.18), 4, dt);
+      const verticalReaction=clamp(this.drive.force.y/driveConfig.effectiveMass,-3,3);
+      this.vy += ((water - this.y) * c.spring - this.vy * c.damping+verticalReaction) * dt;
       this.y += this.vy * dt;
       if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe('Over the balance point');
       let onRamp=false;

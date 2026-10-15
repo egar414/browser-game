@@ -1,4 +1,4 @@
-const defaults = { vehicle: 'ski', colour: 0, quality: 'Auto', master: 0.55, engine: 0.65, water: 0.45, muted: false, bestRace: 0, bestTricks: 0, camera: 0 };
+const defaults = { vehicle: 'ski', rideMode:'sport', trimSki:0, trimCat:0, colour: 0, quality: 'Auto', master: 0.55, engine: 0.65, water: 0.45, muted: false, bestRace: 0, bestTricks: 0, camera: 0 };
 export function loadSettings(storage) {
   try {
     storage ||= globalThis.localStorage;
@@ -7,6 +7,8 @@ export function loadSettings(storage) {
     for (const key of Object.keys(defaults)) {
       if (typeof data?.[key] === typeof defaults[key] && (typeof data[key] !== 'number' || Number.isFinite(data[key]))) result[key] = data[key];
     }
+    if (!['cruise','sport','freestyle'].includes(result.rideMode)) result.rideMode='sport';
+    result.trimSki=Math.max(-10,Math.min(19,result.trimSki));result.trimCat=Math.max(-10,Math.min(8,result.trimCat));
     if (!['ski', 'cat'].includes(result.vehicle)) result.vehicle = 'ski';
     if (!['Auto', 'Low', 'Medium', 'High'].includes(result.quality)) result.quality = 'Auto';
     for (const key of ['master', 'engine', 'water']) result[key] = Math.max(0, Math.min(1, result[key]));

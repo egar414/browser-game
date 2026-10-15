@@ -12,7 +12,7 @@ layered water ripples and sun highlights, shallow-water colour and shoreline
 foam, sky-lit glossy hulls, and a wider chase view across the water. Spray now
 comes from the chines and jet/propeller, with stronger outside-turn fans,
 ballistic droplets, mist, persistent V wakes, and expanding landing foam.
-Vehicle movement tuning, controls, map routes and activities are preserved.
+The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
 ## Run locally
 
@@ -41,7 +41,8 @@ Asset URLs are relative, including for subdirectory hosting.
 | S / Down | Brake, then reverse |
 | A, D / Left, Right | Steer; rotate while airborne |
 | Shift | Jet ski bow lift; powered sliding turns on both craft |
-| Q / E | Bow up / bow down; limited aerial pitch |
+| Q / E | Increase / decrease persistent trim; limited aerial pitch |
+| T | Cycle Cruise / Sport / Freestyle riding modes |
 | C | Close or wide chase camera |
 | Mouse drag | Orbit camera; automatically recentres |
 | R | Recover in nearby clear water |
@@ -51,7 +52,7 @@ Asset URLs are relative, including for subdirectory hosting.
 | M | Mute |
 | Escape | Pause and settings |
 
-**Bow rider:** accelerate on the jet ski and hold Shift without steering. E
+**Bow rider:** select Freestyle with T, accelerate on the jet ski and hold Shift without steering. E
 settles the bow; adding too much Q tips it. **Rooster tail:** carry speed into a
 W + Shift + A/D turn. **Air and spins:** approach the gold floating ramps from
 the north and travel south, away from the minimap’s N label (+Z). Use A/D in the air and Q/E to level out.
@@ -62,7 +63,7 @@ Repeated actions have diminishing rewards and cooldowns; idling scores nothing.
 The canals, marina, two bridges, mangrove creek, island, beaches, river mouth,
 and stunt area are connected through navigable water. Gold squares on the
 minimap mark the ramps. Gates appear only during races. Vehicle choice, colour,
-quality, audio, camera, best race time and best trick session are saved locally.
+riding mode, trim for each craft, quality, audio, camera, best race time and best trick session are saved locally.
 Storage failures fall back to playable defaults.
 
 ## Project structure and tuning
@@ -71,11 +72,12 @@ Storage failures fall back to playable defaults.
 | --- | --- |
 | `src/config.js` | Vehicle tuning, quality profiles, shared wave equations, race route |
 | `src/vehicles/physics.js` | Fixed-step movement, four-point buoyancy, planing, slides, air control, scoring events |
+| `src/vehicles/propulsion.js` | Pump/propeller momentum, intake immersion, nozzle poses and reaction force |
 | `src/vehicles/models.js` | Original procedural craft, rider, outboard and tiller |
 | `src/systems/water.js` | Adaptive water mesh, ripples, shallow colour, sun highlights and planar reflections |
 | `src/systems/atmosphere.js` | Sky/cloud lighting, shared sun direction and filtered material reflections |
 | `src/systems/spray.js` | Pooled droplets, turn fans, jet stream, foam wake ribbons and landing rings |
-| `src/systems/spray-model.js` | Spray tuning and speed/throttle/slip/turn response |
+| `src/systems/spray-model.js` | Hull waterline contacts, physical discharge and aerodynamic droplet drag |
 | `src/systems/environment.js` | Land polygons, simplified collision shapes, scenery and floating ramps |
 | `src/systems/input.js` | Keyboard, orbit drag, blur/visibility cleanup |
 | `src/systems/camera.js` | Chase camera, smoothing, views and shoreline avoidance |
@@ -84,7 +86,7 @@ Storage failures fall back to playable defaults.
 | `src/systems/ui.js` | Menus, controls, HUD, minimap and settings |
 | `src/main.js` | Initialization, fixed-step accumulator and interpolated render loop |
 
-Both craft share the simulation architecture but have separate acceleration,
+Both craft share the simulation architecture but have separate propulsion,
 steering, inertia, lateral grip, spring/damping, trim, air authority and models.
 The displayed speeds and “50” engine specification are approximate arcade
 values, not verified manufacturer performance. The game uses no copied logos.
@@ -110,8 +112,8 @@ Low retains the water shading and spray systems at reduced render resolution
 without the extra reflection pass. Medium uses 256-pixel reflections; High uses
 512-pixel reflections and shadows. `QUALITY` in `src/config.js` controls render
 resolution, water density, particle/wake budgets, fan density and reflections.
-`SPRAY_TUNING` in `src/systems/spray-model.js` controls spray force response and
-wake lifetime/spread. The water shader's colours and optical detail are in
+`RIDE_MODES` and `PROPULSION` in `src/config.js` control modes, trim and pump/propeller tuning.
+`SPRAY_TUNING` in `src/systems/spray-model.js` controls wake lifetime/spread. The water shader's colours and optical detail are in
 `src/systems/water.js`. These visual parameters do not alter boat physics.
 
 To run the complete keyboard-controlled race acceptance drive against a frozen
@@ -156,3 +158,7 @@ runtime errors or failed requests.
   establish performance or subjective handling quality on an ordinary laptop.
 
 See `ATTRIBUTION.md` for asset origins and `VALIDATION.md` for measured checks.
+
+After deployment, `node tests/hosted-smoke.mjs` opens the public HTTPS site,
+checks both craft, mode switching, persistent trim and powered spray turns.
+`ESTUARY_URL` can target another deployment; HTTPS certificate validation stays on.

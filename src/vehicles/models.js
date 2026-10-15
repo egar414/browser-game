@@ -61,7 +61,7 @@ export function makeVehicle(type, colour) {
   const accent = new THREE.MeshPhysicalMaterial({color:colour,roughness:.3,metalness:.08,clearcoat:.8,clearcoatRoughness:.24});
   const pale = mat('#e0e9d7'), blue = new THREE.MeshPhysicalMaterial({color:'#344b61',roughness:.24,metalness:.25,clearcoat:.65});
   const silver = new THREE.MeshStandardMaterial({color:'#a8b9bd',roughness:.26,metalness:.8});
-  let motor, person;
+  let motor, person, nozzle, propeller;
   if (type === 'ski') {
     hull(body, [[-1.48, 0.42, 0.13, -0.2], [-1.15, 0.59, 0.22, -0.29], [-0.35, 0.62, 0.29, -0.3], [0.6, 0.54, 0.37, -0.22], [1.22, 0.3, 0.34, -0.12], [1.55, 0.025, 0.21, 0.05]], dark);
     hull(body, [[-1.03, 0.47, 0.25, 0.1], [-0.5, 0.49, 0.32, 0.2], [0.43, 0.47, 0.48, 0.23], [1.1, 0.28, 0.4, 0.21], [1.45, 0.02, 0.25, 0.2]], accent);
@@ -73,7 +73,8 @@ export function makeVehicle(type, colour) {
     }
     tube(body, [[0, 0.4, 0.62], [0, 1.14, 0.45]], 0.055, dark);
     tube(body, [[-0.35, 1.14, 0.33], [0, 1.14, 0.45], [0.35, 1.14, 0.33]], 0.04, silver);
-    const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.22, 12), dark); jet.rotation.x = Math.PI / 2; jet.position.set(0, -0.04, -1.5); body.add(jet);
+    nozzle = new THREE.Group(); nozzle.position.set(0,-.04,-1.5); body.add(nozzle);
+    const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.22, 12), dark); jet.rotation.x = Math.PI / 2; jet.position.z=-.05; nozzle.add(jet);
     box(body, 0.65, 0.035, 0.3, 0, 0.17, -1.2, rubber);
     label(body, 'RAT', 0.34, 0.16, 0, 0.5, 0.96, 0); // Original mark.
     person = rider(body, type);
@@ -99,7 +100,7 @@ export function makeVehicle(type, colour) {
     box(motor, 0.32, 0.05, 0.6, 0, 0.46, 0, silver);
     box(motor, 0.13, 0.8, 0.18, 0, -0.29, 0.02, blue);
     ellipsoid(motor, 1, 0, -0.73, -0.01, 0.1, 0.1, 0.25, blue);
-    const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.035, 3), silver); prop.rotation.x = Math.PI / 2; prop.position.set(0, -0.72, -0.23); motor.add(prop);
+    const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.035, 3), silver); prop.rotation.x = Math.PI / 2; prop.position.set(0, -0.72, -0.23); propeller=new THREE.Group();propeller.position.copy(prop.position);prop.position.set(0,0,0);propeller.add(prop);motor.add(propeller);
     box(motor, 0.28, 0.035, 0.4, 0, -0.5, -0.05, dark);
     tube(motor, [[0, 0.4, 0.16], [-0.12, 0.45, 0.45], [-0.25, 0.45, 0.65]], 0.035, dark);
     label(motor, '50', 0.35, 0.25, 0, 0.53, -0.29, Math.PI);
@@ -107,6 +108,6 @@ export function makeVehicle(type, colour) {
     label(body, 'RATS', 0.65, 0.24, 0, 0.81, -1.445, Math.PI);
     person = rider(body, type);
   }
-  root.userData = { body, motor, rider: person };
+  root.userData = { body, motor, nozzle, propeller, rider: person };
   return root;
 }

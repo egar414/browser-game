@@ -64,3 +64,16 @@ test('optional activities start, restart and remain separate from free roam',asy
   await page.keyboard.press('KeyR');const before=(await status(page)).score;await page.waitForTimeout(1500);expect((await status(page)).score).toBe(before);
   await page.keyboard.press('Escape');await page.locator('#free-roam').click();expect((await status(page)).challenge).toBeNull();expect((await status(page)).state).toBe('playing');
 });
+test('riding modes, extended trim and trim preference persist without held keys',async({page})=>{
+  await page.locator('#play').click();await page.keyboard.press('KeyT');
+  expect((await status(page)).rideMode).toBe('freestyle');
+  await page.keyboard.down('KeyQ');await expect.poll(async()=>(await status(page)).trim,{timeout:20000}).toBeGreaterThan(12);await page.keyboard.up('KeyQ');
+  const trim=(await status(page)).trim;await page.waitForTimeout(400);expect((await status(page)).trim).toBe(trim);
+  await expect(page.locator('#trim-label')).toContainText('TRIM +');
+  await page.keyboard.press('Escape');expect(await page.locator('#ride-mode').inputValue()).toBe('freestyle');
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('estuary-rats-v1')));expect(saved.trimSki).toBe(trim);
+  const reload=await page.context().newPage();await reload.goto('/');await reload.waitForFunction(()=>window.__ESTUARY__?.status.ready);
+  expect((await status(reload)).rideMode).toBe('freestyle');expect((await status(reload)).trim).toBe(trim);await reload.close();
+  await page.locator('#ride-mode').selectOption('cruise');expect((await status(page)).trim).toBe(8);
+  await page.locator('#resume').click();await page.keyboard.down('KeyE');await expect.poll(async()=>(await status(page)).trim).toBeLessThan(7);await page.keyboard.up('KeyE');
+});

@@ -24,7 +24,7 @@ test('four-point buoyancy follows the same surface without persistent clipping',
   for(const type of ['ski','cat']){const v=openBoat(type);v.z=300;let sum=0;for(let i=0;i<1200;i++){v.update(FIXED_STEP,idle,i*FIXED_STEP);if(i>600)sum+=Math.abs(v.y-waveHeight(v.x,v.z,i*FIXED_STEP)-v.config.rideHeight);}assert(sum/599<.15);assert(Number.isFinite(v.roll));}
 });
 test('powered bow lift scores, and over-trimming eventually wipes out',()=>{
-  const events=[],v=openBoat('ski',events);advance(v,4,{throttle:1,freestyle:true});assert(events.some(e=>e.label==='Bow rider'));advance(v,3,{throttle:1,freestyle:true,trim:1});assert(events.some(e=>e.type==='wipeout'));
+  const events=[],v=openBoat('ski',events);v.setMode('freestyle');advance(v,4,{throttle:1,freestyle:true});assert(events.some(e=>e.label==='Bow rider'));advance(v,3,{throttle:1,freestyle:true,trim:1});assert(events.some(e=>e.type==='wipeout'));
 });
 test('ramps launch both craft, landing banks air score only once',()=>{
   for(const type of ['ski','cat']){const events=[],v=openBoat(type,events);v.x=ramps[0].x;v.z=205;v.vz=20;let airborne=false;for(let i=0;i<360;i++){v.update(FIXED_STEP,{...idle,throttle:i<90?1:0},i*FIXED_STEP,ramps);if(v.airborne)airborne=true;}assert(airborne,`${type} should launch`);assert(events.some(e=>e.type==='splash'),`${type} should land`);assert(events.some(e=>e.type==='score'&&e.label==='Clean air'),`${type} should score clean air`);}

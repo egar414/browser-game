@@ -21,8 +21,8 @@ export class GameAudio {
     this.master.gain.setTargetAtTime(s.muted?0:s.master*.28,now,.12);
     this.engineGain.gain.setTargetAtTime(playing?s.engine*(.07+Math.abs(v.throttle)*.10):0,now,.12);
     const base=v.type==='ski'?57:36;
-    this.osc.frequency.setTargetAtTime(base+v.speed*(v.type==='ski'?7.3:4.5)+Math.max(0,v.throttle)*35+(v.airborne?35:0),now,.16);
-    this.sub.frequency.setTargetAtTime(base*.5+v.speed*1.5,now,.18);
+    this.osc.frequency.setTargetAtTime(base+(v.drive?.rpmFraction||0)*(v.type==='ski'?215:135),now,.16);
+    this.sub.frequency.setTargetAtTime(base*.5+(v.drive?.rpmFraction||0)*45,now,.18);
     this.waterGain.gain.setTargetAtTime(playing?s.water*(.025+v.speed*.011+Math.abs(v.slip)*.015):0,now,.2);
   }
   splash(impact) {
