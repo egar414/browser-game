@@ -1,11 +1,12 @@
 import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, waveHeight, waveChop } from '../config.js';
+import { TUNING } from '../systems/progression.js';
 import { Propulsion, hullImmersion } from './propulsion.js';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 export class VehiclePhysics {
   constructor(type = 'ski', collision = () => null, onEvent = () => {}) {
     this.type = type; this.config = VEHICLES[type]; this.collision = collision; this.onEvent = onEvent;
-    this.rideMode='sport';this.trimDegrees=0;this.propulsion=new Propulsion(type);
+    this.tuning='stock';this.rideMode='sport';this.trimDegrees=0;this.propulsion=new Propulsion(type);
     this.safe = { ...SPAWN }; this.recover();
   }
   recover(nearest = false) {
@@ -56,7 +57,13 @@ export class VehiclePhysics {
     this.trickCooldown = Math.max(0, this.trickCooldown - dt);
     this.throttle = damp(this.throttle, input.throttle, mode.throttleResponse, dt);
     this.steer = damp(this.steer, input.steer, 6, dt);
-    if(!this.airborne)this.updateTrim(dt,input.trim||0);
+    if(!this.airborne){
+      if(input.trimStep){
+        if(this.type==='ski')this.trimDegrees=SKI_TRIM_POSITIONS[clamp(this.trimIndex+input.trimStep,0,8)];
+        else this.setTrim(this.trimDegrees+input.trimStep);
+        this.trimHeld=input.trim||0;this.trimRepeat=0;
+      }else this.updateTrim(dt,input.trim||0);
+    }
     this.riderAft=damp(this.riderAft,input.freestyle?1:0,5,dt);
     let fx = Math.sin(this.heading), fz = Math.cos(this.heading);
     let forward = this.vx * fx + this.vz * fz;
@@ -71,7 +78,7 @@ export class VehiclePhysics {
       const forwardForce=forceX*fx+forceZ*fz;
       if((forward>c.maxSpeed&&forwardForce>0)||(forward<-c.reverseMax&&forwardForce<0)){forceX-=fx*forwardForce;forceZ-=fz*forwardForce;}
       this.vx+=forceX/driveConfig.effectiveMass*dt;this.vz+=forceZ/driveConfig.effectiveMass*dt;
-      const grip = (input.freestyle ? c.slideGrip : c.lateralGrip)*(1-.18*this.planing);
+      const grip = TUNING[this.tuning].grip*(input.freestyle ? c.slideGrip : c.lateralGrip)*(1-.18*this.planing);
       const lateral = (this.vx * fz - this.vz * fx) * (1 - Math.exp(-grip * dt));
       this.vx -= fz * lateral; this.vz += fx * lateral;
       this.lateralAcceleration=damp(this.lateralAcceleration,-lateral/dt,10,dt);
@@ -80,8 +87,8 @@ export class VehiclePhysics {
       const planeDrag=1+.26*(1-this.planing)*clamp(this.speed/6,0,1);
       const coastDrag=this.type==='cat'&&(this.drive.shifting||Math.abs(this.throttle)<.05)?hydro.coastDrag:1;
       // At high bow angle the stern pushes a larger wetted face through water.
-      // This extra drag keeps a powerstand in its balance speed range; release
-      // the rider's aft stance and the hull settles and accelerates onto plane.
+      // A small gameplay drag penalty allows a sustained powered bow ride all
+      // the way to its speed ceiling; releasing the aft stance settles the hull.
       const bowDrag=1+(hydro.bowPloughDrag||0)*Math.sin(Math.max(0,this.pitch))**2;
       const resistance=immersed*coastDrag*trimDrag*planeDrag*bowDrag*(driveConfig.linearResistance+this.speed*driveConfig.quadraticResistance)/driveConfig.effectiveMass+(1-immersed)*this.speed*.0015;
       const drag = Math.exp(-resistance*dt);
@@ -90,7 +97,7 @@ export class VehiclePhysics {
       const sliding=input.freestyle?.72:1;
       const decay=Math.exp(-yawDamping*sliding*dt);
       const torque=this.drive.yawMoment||0;
-      this.yawRate=clamp(this.yawRate*decay+(torque/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-1.6,1.6);
+      this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-1.6,1.6);
     } else {
       this.lateralAcceleration=damp(this.lateralAcceleration,0,6,dt);
       this.yawRate = damp(this.yawRate, this.steer * c.airSteer, 2.5, dt);
@@ -121,9 +128,9 @@ export class VehiclePhysics {
     const surfaceRoll = Math.atan2((samples[1][0] + samples[1][1] - samples[0][0] - samples[0][1]) / 2, width * 2);
     if (!this.airborne) {
       const balanceMoment=1+Math.max(0,this.drive.trimAngle*180/Math.PI-6)*.018;
-      const bowWindow=this.type==='ski'?(forward>5?1:0):clamp((forward-3)/4,0,1)*clamp((19-forward)/7,0,1);
+      const bowWindow=this.type==='ski'?(forward>5?1:0):clamp((forward-3)/4,0,1);
       const lift=input.freestyle?c.wheelieAngle*balanceMoment*this.riderAft*bowWindow*clamp(this.throttle,0,1)*clamp(1-Math.abs(this.steer)*.85,0,1):0;
-      const plane = this.type === 'cat' ? Math.max(0, this.throttle) * .24 * Math.sin(this.planing*Math.PI) : 0.035 * this.throttle;
+      const plane = this.type === 'cat' ? Math.max(0, this.throttle) * .24 * Math.sin(this.planing*Math.PI)*(1-this.riderAft*.7) : 0.035 * this.throttle;
       const trim = this.drive.trimAngle*(this.type==='ski'?.45:.65);
       // Angular inertia and damping retain a landing/chop response instead of
       // instantly following a prescribed orientation.
@@ -150,7 +157,7 @@ export class VehiclePhysics {
         }
       }
       // Large steep chop can unweight a fast hull. No jump input or repeated aerial launch.
-      if (!this.airborne && !onRamp && waveChop(this.x,this.z) > .52 && this.speed > 17 && this.y > water + 0.22 && this.vy > 1.2) this.launch(this.vy, this.pitch);
+      if (!this.airborne && !onRamp && waveChop(this.x,this.z) > .52 && this.speed > 14 && Math.abs(this.pitch)<.45 && this.y > water + .07 && this.vy > .65) this.launch(this.vy, this.pitch,true);
       if (!this.airborne && this.pitch > 0.65 && this.speed > 7) {
         this.wheelieTime += dt;
         if (this.wheelieTime > 1.6 && !this.trickCooldown) { this.onEvent({ type: 'score', label: 'Bow rider', points: 100 }); this.trickCooldown = 4; this.wheelieTime = 0; }
@@ -173,7 +180,7 @@ export class VehiclePhysics {
         else {
           const spins = Math.floor((Math.abs(this.spin) + 0.35) / (2 * Math.PI));
           const halfspin = Math.abs(this.spin) > Math.PI - 0.3;
-          if (this.airTime > 0.45) this.onEvent({ type: 'score', label: spins ? `${spins * 360}° spin · landed` : halfspin ? '180° · landed' : 'Clean air', points: Math.round(this.airTime * 80) + (spins ? spins * 400 : halfspin ? 180 : 0) });
+          if (this.airTime > 0.45) this.onEvent({ type: 'score', label: spins ? `${spins * 360}° spin · landed` : halfspin ? '180° · landed' : this.waveLaunch?'Wave hop · landed':'Clean air', points: Math.round(this.airTime * 80) + (spins ? spins * 400 : halfspin ? 180 : 0) });
           const loss = clamp(1 - impact * 0.025 - lateralImpact * 0.012, 0.4, 0.95);
           this.vx *= loss; this.vz *= loss; this.vy = -impact * 0.08;
         }
@@ -185,5 +192,5 @@ export class VehiclePhysics {
     if (!this.airborne && !hit && this.speed < 12 && Math.abs(this.pitch) < 0.4 && !this.boundary) this.safe = { x: this.x, z: this.z, heading: this.heading };
     if (![this.x, this.y, this.z, this.heading, this.vx, this.vz].every(Number.isFinite) || this.y < -3) this.recover();
   }
-  launch(velocity, pitch) { if (this.airborne) return; this.airborne = true; this.vy = velocity; this.pitch = pitch; this.airTime = 0; this.spin = 0; }
+  launch(velocity, pitch, wave=false) { if (this.airborne) return; this.airborne = true;this.waveLaunch=wave; this.vy = velocity; this.pitch = pitch; this.airTime = 0; this.spin = 0; }
 }

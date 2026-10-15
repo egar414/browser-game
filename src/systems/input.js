@@ -1,6 +1,6 @@
 export class Input {
   constructor(onAction) {
-    this.keys = new Set(); this.onAction = onAction; this.orbit = 0; this.dragging = false;
+    this.keys = new Set();this.trimQueue=[];this.touchPointers=new Map();this.touchToggles=new Set(); this.onAction = onAction; this.orbit = 0; this.dragging = false;
     const captured = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'];
     window.addEventListener('keydown', e => {
       if (/INPUT|SELECT/.test(e.target.tagName)) return;
@@ -17,10 +17,14 @@ export class Input {
     canvas.addEventListener('pointerup', () => { this.dragging = false; });
     canvas.addEventListener('lostpointercapture', () => { this.dragging = false; });
   }
-  clear() { this.keys.clear(); this.dragging = false; }
-  held(...codes) { return codes.some(c => this.keys.has(c)); }
-  sample() {
+  clear() { this.keys.clear();this.trimQueue.length=0;this.touchPointers.clear();this.touchToggles.clear();this.onClear?.();this.dragging = false; }
+  touchStart(id,code){this.touchPointers.set(id,code);if(code==='KeyQ'||code==='KeyE')this.trimQueue.push(code==='KeyQ'?1:-1);}
+  touchEnd(id){this.touchPointers.delete(id);}
+  toggleTouch(code){if(this.touchToggles.has(code))this.touchToggles.delete(code);else this.touchToggles.add(code);}
+  held(...codes) { return codes.some(c => this.keys.has(c)||this.touchToggles.has(c)||[...this.touchPointers.values()].includes(c)); }
+  sample(consume=false) {
     return {
+      trimStep:consume?(this.trimQueue.shift()||0):0,
       throttle: +this.held('KeyW', 'ArrowUp') - +this.held('KeyS', 'ArrowDown'),
       steer: +this.held('KeyA', 'ArrowLeft') - +this.held('KeyD', 'ArrowRight'),
       trim: +this.held('KeyQ') - +this.held('KeyE'),

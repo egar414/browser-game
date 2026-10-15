@@ -1,5 +1,5 @@
 const RACE_COURSE='minyama-island-2026-10';
-const defaults = { raceCourse:RACE_COURSE, vehicle: 'ski', rideMode:'sport', trimSki:0, trimCat:0, colour: 0, quality: 'Auto', master: 0.55, engine: 0.65, water: 0.45, muted: false, bestRace: 0, bestTricks: 0, camera: 0 };
+const defaults = { seaState:'calm',careerPoints:0,design:'classic',tuning:'stock',raceCourse:RACE_COURSE, vehicle: 'ski', rideMode:'sport', trimSki:0, trimCat:0, colour: 0, quality: 'Auto', master: 0.55, engine: 0.65, water: 0.45, muted: false, bestRace: 0, bestTricks: 0, camera: 0 };
 export function loadSettings(storage) {
   try {
     storage ||= globalThis.localStorage;
@@ -9,6 +9,10 @@ export function loadSettings(storage) {
       if (typeof data?.[key] === typeof defaults[key] && (typeof data[key] !== 'number' || Number.isFinite(data[key]))) result[key] = data[key];
     }
     if(data?.raceCourse!==RACE_COURSE){result.bestRace=0;result.raceCourse=RACE_COURSE;}
+    if(!['calm','chop','swell','changing'].includes(result.seaState))result.seaState='calm';
+    result.careerPoints=Math.max(0,Math.min(1e9,Math.floor(result.careerPoints)));
+    if(!['classic','race','heritage'].includes(result.design))result.design='classic';
+    if(!['stock','agile','race'].includes(result.tuning))result.tuning='stock';
     if (!['cruise','sport','freestyle'].includes(result.rideMode)) result.rideMode='sport';
     result.trimSki=Math.max(-10,Math.min(19,result.trimSki));result.trimCat=Math.max(-10,Math.min(8,result.trimCat));
     if (!['ski', 'cat'].includes(result.vehicle)) result.vehicle = 'ski';

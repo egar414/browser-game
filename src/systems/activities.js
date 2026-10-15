@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RACE } from '../config.js';
+import { earnProgress } from './progression.js';
 import { saveSettings } from './storage.js';
 export function formatTime(seconds) { return `${Math.floor(seconds/60)}:${(seconds%60).toFixed(1).padStart(4,'0')}`; }
 export class Activities {
@@ -33,7 +34,8 @@ export class Activities {
     this.combo=this.comboTime>0?Math.min(3,this.combo+.25):1;this.comboTime=7;
     const earned=Math.round(points*this.combo);this.score+=earned;
     if(this.challenge)this.challenge.score+=earned;
-    this.toast(event.label,`+${earned}  ·  ${this.combo.toFixed(2).replace(/\.00$/,'')}× combo`);
+    const unlocked=earnProgress(this.settings,earned);saveSettings(this.settings);
+    this.toast(event.label,`+${earned}  ·  ${this.combo.toFixed(2).replace(/\.00$/,'')}× combo${unlocked.length?' · Unlocked '+unlocked.join(', '):' · +garage XP'}`);
   }
   update(dt,v) {
     this.totalTime+=dt;this.comboTime=Math.max(0,this.comboTime-dt);if(!this.comboTime)this.combo=0;

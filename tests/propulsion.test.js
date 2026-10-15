@@ -132,3 +132,17 @@ test('a setup carve retains loaded-side spray through countersteering, then thro
   const carve=drive(51,-1,true);assert(carve>cruise*2);assert(carve>setup);
   const finished=sprayState(v,false,time);assert(finished.right>finished.left,'fan changes sides when cross-flow reverses');
 });
+
+test('Thundercat keeps its bow up beyond 60 km/h and throughout a minute of powered running',()=>{
+  for(const trim of [0,5,8]){
+    const v=craft('cat');v.x=-200;v.z=-1000;v.heading=Math.PI/2;v.setTrim(trim);
+    let aboveSixty=0,minimumPitch=10;
+    for(let i=0;i<3600;i++){
+      v.update(1/60,{...input,freestyle:true},i/60);
+      if(v.speed>60/3.6){aboveSixty++;minimumPitch=Math.min(minimumPitch,v.pitch);}
+      assert(!v.airborne&&!v.wipeout);
+    }
+    assert(aboveSixty>2400);assert(minimumPitch>.65);
+    const ceiling=v.speed;run(v,120,{...input,freestyle:false});assert(v.pitch<.35);assert(v.speed>ceiling);
+  }
+});

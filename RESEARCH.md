@@ -181,7 +181,7 @@ larger map to avoid leaving the original fixed dome near the mouth.
 
 Rider hands/feet use two-link inverse kinematics and stay attached to the moving
 handlebar/tiller and footwells while the torso moves. The Thundercat now has an
-assisted, medium-speed bow-ride window under power and aft weight shift; releasing
+assisted bow-ride regime with a speed ceiling but no high-speed lift cutoff under power and aft weight shift; releasing
 Shift or reducing power settles it. This is a gameplay move, not a validated
 prediction of safe operation of a real boat. The engine sounds use distinct
 synthesized firing cadence/harmonics and the landing sound uses broadband noise;
@@ -194,3 +194,26 @@ flow, real cavitation, individual droplet breakup, or wake buoyancy. The hull
 stability assistance makes the game controllable; these equations alone cannot
 establish real-world accuracy. Hardware play testing and measured manufacturer
 curves would be needed to calibrate it further.
+
+## Playable preview additions
+
+The central jet-ski plume now uses a pooled historical volume and larger spray
+clusters behind the actual nozzle. Its height, thickness and breakup have been
+artistically amplified at the player's request; they do not represent measured
+Spark discharge or a validated droplet distribution. Physical pump thrust stays
+separate. Existing chine/pontoon turn fans retain their contact-based rules.
+
+Calm, chop, swell and changing settings multiply the same wave displacement for
+GPU water and CPU buoyancy, blending across twelve simulated seconds. Natural
+crest launches require speed and upward separation, without a jump button;
+normal airborne controls and successful-landing scoring apply. This is reduced
+order wave hopping, not a wave-breaking or surfing simulation.
+
+Spray battles accumulate gameplay water using side-fan/rear-plume exposure
+volumes, independent of visual particle budgets. A full meter starts a finite
+sinking animation and safe-water recovery. Garage kits and designs use earned
+combo XP; the tuning changes are original gameplay coefficients.
+
+Google Earth reference access was attempted and retried with the required
+network approval, but the proxy returned 403. No Google imagery was inspected
+or used. Existing OSM geometry remains the geographic source.

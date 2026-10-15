@@ -1,7 +1,10 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { makeRider } from './rider.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 const mat = (colour, roughness = 0.5) => new THREE.MeshStandardMaterial({ color: colour, roughness, metalness: 0.08 });
+let skiShell=null;
+export async function loadCraftAssets(){const gltf=await new GLTFLoader().loadAsync(new URL('../assets/sparkplug.glb',import.meta.url).href);skiShell=gltf.scene;}
 const dark = mat('#182b32'), rubber = mat('#101a20', 0.9), skin = mat('#bd8867'), shirt = mat('#eee9d1');
 export function box(parent, w, h, d, x, y, z, material, radius = false) {
   const geometry=radius?new RoundedBoxGeometry(w,h,d,2,Math.min(w,h,d)*.15):new THREE.BoxGeometry(w,h,d);
@@ -24,9 +27,9 @@ function hull(parent, sections, material) {
   }
   for (let s = 0; s < sections.length - 1; s++) for (let j = 0; j < 5; j++) {
     const a = s * 5 + j, b = s * 5 + (j + 1) % 5;
-    indices.push(a, b, b + 5, a, b + 5, a + 5);
+    indices.push(a, b + 5, b, a, a + 5, b + 5);
   }
-  for (let j = 1; j < 4; j++) { indices.push(0, j + 1, j); const n = (sections.length - 1) * 5; indices.push(n, n + j, n + j + 1); }
+  for (let j = 1; j < 4; j++) { indices.push(0, j, j + 1); const n = (sections.length - 1) * 5; indices.push(n, n + j + 1, n + j); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); g.setIndex(indices); g.computeVertexNormals();
   const mesh = new THREE.Mesh(g, material); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
 }
@@ -44,44 +47,50 @@ function inflatable(parent,material){
   for(let j=0;j<sections.length-1;j++)for(let i=0;i<segments;i++){const a=j*(segments+1)+i,b=a+segments+1;indices.push(a,b,a+1,a+1,b,b+1);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.castShadow=m.receiveShadow=true;parent.add(m);
 }
-export function makeVehicle(type, colour) {
+export function makeVehicle(type, colour, design='classic') {
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   const accent = new THREE.MeshPhysicalMaterial({color:colour,roughness:.3,metalness:.08,clearcoat:.8,clearcoatRoughness:.24});
   const pale = mat('#e0e9d7'), blue = new THREE.MeshPhysicalMaterial({color:'#344b61',roughness:.24,metalness:.25,clearcoat:.65});
   const silver = new THREE.MeshStandardMaterial({color:'#a8b9bd',roughness:.26,metalness:.8});
   let motor, person, nozzle, propeller, bucket, handlebars;
   if (type === 'ski') {
-    hull(body, [[-1.48, 0.42, 0.13, -0.2], [-1.15, 0.59, 0.22, -0.29], [-0.35, 0.62, 0.29, -0.3], [0.6, 0.54, 0.37, -0.22], [1.22, 0.3, 0.34, -0.12], [1.55, 0.025, 0.21, 0.05]], dark);
-    hull(body, [[-1.03, 0.47, 0.25, 0.1], [-0.5, 0.49, 0.32, 0.2], [0.43, 0.47, 0.48, 0.23], [1.1, 0.28, 0.4, 0.21], [1.45, 0.02, 0.25, 0.2]], accent);
-    // Dark faceted foredeck sits inside bright side shoulders, as in the reference.
-    hull(body, [[.12,.27,.52,.37],[.55,.37,.59,.37],[1.02,.24,.48,.31],[1.43,.015,.29,.21]], rubber);
-    hull(body, [[-.89,.18,.5,.37],[-.55,.24,.62,.39],[-.03,.2,.59,.4],[.2,.13,.48,.36]], accent);
+    // Closed outward-facing V hull, sculpted shoulders and recessed footwells.
+    hull(body,[[-1.45,.44,.16,-.18],[-1.18,.57,.24,-.28],[-.55,.61,.3,-.3],[.24,.58,.35,-.26],[.85,.46,.38,-.18],[1.28,.25,.29,-.08],[1.49,.015,.17,.08]],dark);
+    hull(body,[[-1.17,.36,.29,.16],[-.72,.39,.34,.22],[.05,.43,.44,.28],[.55,.47,.5,.31],[1.04,.32,.4,.27],[1.4,.02,.22,.18]],accent);
+    hull(body,[[.13,.24,.61,.38],[.52,.34,.77,.4],[.91,.29,.62,.34],[1.22,.16,.42,.27],[1.4,.01,.24,.19]],rubber);
+    // A raised saddle and distinct pedestal separate the rider from the bow hood.
+    hull(body,[[-1.1,.15,.41,.25],[-.83,.23,.58,.27],[-.26,.21,.62,.31],[.19,.14,.55,.35]],rubber);
+    box(body,.43,.17,1.08,0,.65,-.48,accent,true);
+    ellipsoid(body,1,0,.65,-.91,.2,.09,.17,accent);
+    hull(body,[[.01,.17,.66,.54],[.3,.14,.67,.46],[.48,.1,.61,.42]],dark);
+    box(body,.19,.045,.13,0,.71,.31,silver,true);
     for(const side of [-1,1]){
-      const cheek=box(body,.16,.045,.62,side*.39,.43,.72,dark);cheek.rotation.y=side*-.24;
-      tube(body,[[side*.58,.19,-1.21],[side*.63,.26,-.3],[side*.51,.3,.63],[side*.27,.3,1.22]],.034,rubber,16);
-      for(let i=0;i<6;i++)box(body,.17,.008,.018,side*.44,.318,-.85+i*.14,dark);
+      box(body,.22,.055,1.25,side*.44,.285,-.43,rubber);
+      for(let i=0;i<9;i++)box(body,.19,.009,.026,side*.44,.318,-.97+i*.12,dark);
+      tube(body,[[side*.53,.21,-1.26],[side*.61,.27,-.35],[side*.53,.32,.55],[side*.29,.31,1.15]],.035,rubber,18);
+      tube(body,[[side*.32,.37,-.98],[side*.33,.43,-.22],[side*.36,.48,.24]],.024,dark,10);
+      const shoulder=box(body,.13,.07,.53,side*.39,.5,.58,accent);shoulder.rotation.y=side*-.24;
+      const vent=box(body,.025,.12,.29,side*.34,.51,.24,rubber);vent.rotation.y=side*-.2;
+      for(let i=0;i<4;i++)box(body,.03,.018,.025,side*.36,.47+i*.025,.19+i*.025,silver);
+      const wedge=box(body,.21,.19,.33,side*.43,.35,-1.06,rubber,true);wedge.rotation.x=.22;
     }
-    for (const side of [-1, 1]) {
-      box(body, 0.22, 0.06, 1.3, side * 0.44, 0.28, -0.44, rubber);
-      tube(body, [[side * 0.55, 0.26, -1.15], [side * 0.58, 0.3, 0], [side * 0.43, 0.38, 0.73]], 0.025, pale);
-      box(body, 0.15, 0.24, 0.17, side * 0.43, 0.37, -1.05, accent);
-    }
-    tube(body, [[0, 0.4, 0.62], [0, 1.14, 0.45]], 0.055, dark);
-    handlebars=new THREE.Group();handlebars.position.set(0,1.14,.45);body.add(handlebars);
-    tube(handlebars,[[-.35,0,-.12],[0,0,0],[.35,0,-.12]],.04,silver);
+    tube(body,[[0,.56,.51],[0,1.24,.35]],.045,silver,10);
+    tube(body,[[0,.6,.5],[0,1.02,.39]],.068,dark,8);
+    handlebars=new THREE.Group();handlebars.position.set(0,1.24,.35);body.add(handlebars);
+    tube(handlebars,[[-.37,0,-.12],[-.17,.025,-.02],[0,0,0],[.17,.025,-.02],[.37,0,-.12]],.03,dark,12);
     for(const side of [-1,1]){
-      box(handlebars,.18,.07,.08,side*.34,0,-.12,rubber,true);
-      const guard=box(handlebars,.29,.15,.08,side*.29,.025,.02,rubber,true);guard.rotation.y=side*.18;
+      box(handlebars,.19,.065,.075,side*.34,0,-.12,rubber,true);
+      const guard=box(handlebars,.28,.13,.07,side*.29,.025,.025,rubber,true);guard.rotation.y=side*.2;
     }
-    box(body,.13,.2,.09,0,1.04,.48,rubber,true);
-    for(const side of [-1,1]){box(body,.18,.18,.38,side*.43,.35,-1.03,rubber,true);}
+    box(body,.68,.04,.3,0,.21,-1.25,rubber);
+    tube(body,[[-.15,.29,-1.13],[0,.35,-1.25],[.15,.29,-1.13]],.025,dark,10);
     nozzle = new THREE.Group(); nozzle.position.set(0,-.04,-1.5); body.add(nozzle);
     const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.22, 12), dark); jet.rotation.x = Math.PI / 2; jet.position.z=-.05; nozzle.add(jet);
     bucket=new THREE.Group();bucket.position.set(0,.15,-1.56);body.add(bucket);
     const gate=new THREE.Mesh(new THREE.SphereGeometry(.21,14,8,0,Math.PI,0,Math.PI*.55),dark);gate.rotation.x=-Math.PI/2;gate.position.z=-.08;bucket.add(gate);
     for(const side of [-1,1])tube(bucket,[[side*.2,0,.04],[side*.2,-.03,-.12]],.025,dark,4);
     box(body, 0.65, 0.035, 0.3, 0, 0.17, -1.2, rubber);
-    label(body, 'RAT', 0.34, 0.16, 0, 0.5, 0.96, 0); // Original mark.
+    for(const side of [-1,1])label(body,'ER',.23,.105,side*.555,.28,-.08,side*Math.PI/2);
     person = makeRider(body, type);
   } else {
     for (const side of [-1, 1]) {
@@ -114,7 +123,20 @@ export function makeVehicle(type, colour) {
     label(body, 'RATS', 0.65, 0.24, 0, 0.81, -1.445, Math.PI);
     person = makeRider(body, type);
   }
-  root.userData = { body, motor, nozzle, propeller, bucket, handlebars, rider: person };
+  if(type==='ski'&&skiShell){
+    for(const child of [...body.children])if(![person,nozzle,bucket,handlebars].includes(child)){
+      body.remove(child);child.traverse(o=>o.geometry?.dispose());
+    }
+    const shell=skiShell.clone(true);
+    shell.traverse(o=>{if(o.isMesh){o.geometry=o.geometry.clone();o.material=o.material.clone();if(o.material.name.startsWith('Accent'))o.material.color.set(colour);o.castShadow=o.receiveShadow=true;}});
+    body.add(shell);root.userData.blenderShell=true;
+  }
+  if(design!=='classic'){
+    const stripe=mat(design==='race'?'#f2e6c4':'#eea851',.35);
+    if(type==='ski')for(const side of [-1,1])tube(body,[[side*.49,.33,-.83],[side*.51,.39,-.1],[side*.38,.54,.56],[side*.22,.41,1.04]],design==='race'?.018:.032,stripe,16);
+    else for(const side of [-1,1])tube(body,[[side*.94,.35,-1.5],[side*1.01,.4,0],[side*.92,.52,1.3]],design==='race'?.025:.045,stripe,16);
+  }
+  root.userData = { blenderShell:type==='ski'&&!!skiShell, body, motor, nozzle, propeller, bucket, handlebars, rider: person };
   person.userData.update({riderAft:0,steer:0,surgeAcceleration:0},1,root.userData);
   return root;
 }

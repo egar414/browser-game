@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { WAVES, WORLD, WAVE_FIELD } from '../config.js';
+import { WAVES, WORLD, WAVE_FIELD, seaAmplitude } from '../config.js';
 import { lands } from './environment.js';
 import { SUN_DIRECTION } from './atmosphere.js';
 export { Spray } from './spray.js';
@@ -43,16 +43,16 @@ export class Water {
     field.minFilter=field.magFilter=THREE.LinearFilter;field.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({
       uniforms:{
-        uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
+        uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
         uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
         uReflection:{value:null},uReflectionMatrix:{value:new THREE.Matrix4()},uReflect:{value:0},
         uHull:{value:new THREE.Vector4(0,0,1,2)},uHeading:{value:0},uContact:{value:1},
       },
       vertexShader:`
-        uniform float uTime;uniform vec4 uMapBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
+        uniform float uSea;uniform float uTime;uniform vec4 uMapBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;
         float wave(vec2 p){vec2 uv=(clamp((p-uMapBounds.xy)/uMapBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;float chop=texture2D(uWaveField,uv).r;
-          return (${WAVES.map(w=>`${w.amplitude}*sin(p.x*${w.kx}+p.y*${w.kz}+uTime*${w.speed})`).join('+')})*chop;}
+          return (${WAVES.map(w=>`${w.amplitude}*sin(p.x*${w.kx}+p.y*${w.kz}+uTime*${w.speed})`).join('+')})*chop*uSea;}
         void main(){
           vec3 p=position;p.xz+=uCenter;p.y=wave(p.xz);
           float dx=(wave(p.xz+vec2(.15,0.))-wave(p.xz-vec2(.15,0.)))/.3;
@@ -126,7 +126,7 @@ export class Water {
     this.material.uniforms.uReflect.value=0;
   }
   update(t,x,z,v) {
-    const u=this.material.uniforms;u.uTime.value=t;u.uCenter.value.set(x,z);
+    const u=this.material.uniforms;u.uTime.value=t;u.uSea.value=seaAmplitude(t);u.uCenter.value.set(x,z);
     if(v){u.uHull.value.set(x,z,v.config.width*.72,v.config.length*.62);u.uHeading.value=v.heading;u.uContact.value=v.airborne?Math.max(0,1-v.y/4):1;}
   }
   reflect(renderer,camera) {

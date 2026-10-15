@@ -16,7 +16,7 @@ export const VEHICLES = {
     length: 4.1, width: 2.05, maxSpeed: 27,
     reverseMax: 3.3, lateralGrip: 2.6,
     slideGrip: 0.92, spring: 34, damping: 10, rideHeight: 0.16, airSteer: 0.83,
-    wheelieAngle: 0.67, wipeoutAngle: 1.08, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
+    wheelieAngle: 0.75, wipeoutAngle: 1.08, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
   },
 };
 export const WAVES = [
@@ -30,7 +30,14 @@ export function waveChop(x,z){
   const ix=Math.min(n-2,Math.floor(u)),iz=Math.min(n-2,Math.floor(v)),fx=u-ix,fz=v-iz,a=iz*n+ix,d=WAVE_FIELD.values;
   return ((d[a]*(1-fx)+d[a+1]*fx)*(1-fz)+(d[a+n]*(1-fx)+d[a+n+1]*fx)*fz)/255;
 }
-export function waveHeight(x,z,time){return WAVES.reduce((h,w)=>h+Math.sin(x*w.kx+z*w.kz+time*w.speed)*w.amplitude,0)*waveChop(x,z);}
+export const SEA_STATES={calm:{name:'Calm canals',amplitude:1},chop:{name:'Estuary chop',amplitude:2.2},swell:{name:'Rolling swell',amplitude:3.4},changing:{name:'Changing conditions',amplitude:1}};
+let seaState='calm',seaFrom=1,seaStart=-20;
+export function seaAmplitude(time){
+  const target=seaState==='changing'?2.2-1.2*Math.cos(time*Math.PI/90):SEA_STATES[seaState].amplitude;
+  const t=Math.max(0,Math.min(1,(time-seaStart)/12)),blend=t*t*(3-2*t);return seaFrom+(target-seaFrom)*blend;
+}
+export function setSeaState(name,time=0,immediate=false){if(!SEA_STATES[name])return;seaFrom=seaAmplitude(time);seaState=name;seaStart=immediate?time-20:time;}
+export function waveHeight(x,z,time){return WAVES.reduce((h,w)=>h+Math.sin(x*w.kx+z*w.kz+time*w.speed)*w.amplitude,0)*waveChop(x,z)*seaAmplitude(time);}
 export const QUALITY = {
   Low: { pixelRatio: .75, waterSegments: 100, particles: 600, wakeSamples: 125, fanSegments: 8, reflectionSize: 0, shadows: false, trees: 0.5 },
   Medium: { pixelRatio: 1.25, waterSegments: 160, particles: 1400, wakeSamples: 180, fanSegments: 12, reflectionSize: 256, shadows: false, trees: 0.75 },
@@ -49,7 +56,7 @@ export const RIDE_MODES = {
 export const SKI_TRIM_POSITIONS = [-10,-7.5,-5,-2.5,0,4,8,13,19];
 export const HYDRODYNAMICS = {
   ski:{coastDrag:1,planingStart:4,planingEnd:13,minimumWetted:.56,pitchSpring:17,pitchDamping:6.8,rollSpring:24,rollDamping:8.2,yawInertia:340,yawDamping:2.7,yawSpeedDamping:.09},
-  cat:{bowPloughDrag:6,coastDrag:3.5,planingStart:5,planingEnd:15,minimumWetted:.62,pitchSpring:12,pitchDamping:5.4,rollSpring:19,rollDamping:7,yawInertia:550,yawDamping:2.2,yawSpeedDamping:.04},
+  cat:{bowPloughDrag:.32,coastDrag:3.5,planingStart:5,planingEnd:15,minimumWetted:.62,pitchSpring:12,pitchDamping:5.4,rollSpring:19,rollDamping:7,yawInertia:550,yawDamping:2.2,yawSpeedDamping:.04},
 };
 export const PROPULSION = {
   ski:{

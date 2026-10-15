@@ -89,3 +89,20 @@ keys and trick-session clock, remained afloat without wipeout, and settled on
 release. Final pitch during the hold was ~0.893 rad. No runtime errors or failed
 requests occurred. Hosted spray and bow-ride screenshots were inspected. HTTPS
 certificate validation remained enabled.
+
+## Current work-in-progress preview (15 October 2026)
+
+- 46 Node checks pass, including a minute-long powered Thundercat bow ride
+  beyond 60 gameplay km/h, finite rear-plume geometry, natural swell launch and
+  landed tricks for both craft, weather blending, garage unlock persistence,
+  spray exposure and automatic recovery after swamping.
+- Production build passes with the original Blender GLB bundled locally.
+- The new jet-ski menu was opened and visually inspected in Chromium.
+- Three mobile-emulation input flows passed earlier in development. The full
+  updated ten-flow desktop/mobile suite is running at preview publication;
+  its eventual result must be recorded separately. Previous release results
+  above do not validate every addition in this preview.
+- Physical phones, Safari and hardware-GPU performance are untested. Software
+  rendering performance is not representative of a phone or laptop GPU.
+- Extended play checks of battle AI, flooding balance and garage progression
+  remain in progress. This preview is published at the player's request.

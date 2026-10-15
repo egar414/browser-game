@@ -5,7 +5,7 @@ export class ChaseCamera {
   reset() { this.initialized=false; }
   update(dt,v,input,mode=0,menu=false) {
     if(!input.dragging)input.orbit*=Math.exp(-dt*.9);
-    const heading=v.heading+input.orbit+(menu?.48:0);
+    const heading=v.heading+input.orbit+(menu?Math.PI+.65:0);
     const distance=menu?8.5:mode?6.6:13.5+Math.min(2.5,v.speed*.10);
     const height=menu?4:mode?3.1:7+v.speed*.035;
     const ahead=menu?0:mode?v.speed*.14:3+v.speed*.20;

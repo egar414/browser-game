@@ -39,7 +39,7 @@ export function makeRider(parent,type){
       if(cat){
         hand=side===1?new THREE.Vector3(-.25,.45,.65).applyEuler(parts.motor.rotation).add(parts.motor.position):new THREE.Vector3(-.66,.61,-.36);
       }else{
-        hand=new THREE.Vector3(side*.3,0,-.12).applyAxisAngle(Y,-v.steer*.43).add(new THREE.Vector3(0,1.14,.45));
+        hand=new THREE.Vector3(side*.3,0,-.12).applyAxisAngle(Y,-v.steer*.43).add(parts.handlebars.position);
       }
       const elbow=joint(shoulder,hand,.36,.39,new THREE.Vector3(side,.1,-.2));
       placeSegment(l.arm[0],shoulder,elbow);placeSegment(l.arm[1],elbow,hand);l.hand.position.copy(hand);

@@ -38,3 +38,21 @@ test('foam fades, splash rings expand, and recovery clears old spray',()=>{
   assert.equal(s.wake.history.length,0);assert.equal(s.wake.splashes.length,0);assert(s.particles.every(p=>p.life<=0));
   s.splash(v,8);s.clear();assert(s.particles.every(p=>p.life<=0));assert.equal(s.wake.geometry.drawRange.count,0);assert(s.fans.every(f=>!f.mesh.visible));s.dispose();
 });
+
+test('central ski plume is flow driven, trim responsive and excluded from propeller wash',async()=>{
+  const {jetPlumeSource}=await import('../src/systems/spray-model.js');
+  const v={...boat(),drive:{trimAngle:0}},d={origin:{x:0,y:-.1,z:-1.6},velocity:{x:0,y:0,z:-20},flow:.15,reverse:0,aerial:false};
+  const s=jetPlumeSource(v,d);assert(s.velocity.y>8);assert(s.origin.z<0);assert(s.origin.y>=waveHeight(0,-1.6,0));
+  assert(jetPlumeSource({...v,drive:{trimAngle:.3}},d).velocity.y>s.velocity.y);
+  for(const changed of [{type:'cat'},{airborne:true},{wipeout:1},{throttle:0}])assert.equal(jetPlumeSource({...v,...changed},d),null);
+  assert.equal(jetPlumeSource(v,{...d,reverse:1}),null);
+});
+test('central plume stays finite, expires and clears during recovery',async()=>{
+  const {jetPlumeSource}=await import('../src/systems/spray-model.js');
+  const v={...boat(),drive:{trimAngle:0}},d={origin:{x:0,y:.1,z:-1.6},velocity:{x:0,y:0,z:-20},flow:.15,reverse:0,aerial:false};
+  const s=new Spray(new THREE.Scene(),QUALITY.Low),source=jetPlumeSource(v,d);
+  for(let i=0;i<50;i++)s.plume.update(.1,source,i*.1);
+  assert(s.plume.mesh.visible);assert([...s.plume.geometry.attributes.position.array].every(Number.isFinite));assert(s.plume.history.length<=100);
+  for(let i=0;i<20;i++)s.plume.update(.1,null,5+i*.1);assert(!s.plume.mesh.visible);
+  s.plume.update(.1,source,7);s.clear();assert(!s.plume.mesh.visible);assert.equal(s.plume.history.length,0);s.dispose();
+});
