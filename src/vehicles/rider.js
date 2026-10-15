@@ -5,6 +5,12 @@ const suit=new THREE.MeshStandardMaterial({color:'#263d42',roughness:.83});
 const vest=new THREE.MeshStandardMaterial({color:'#e1dbc4',roughness:.68});
 const dark=new THREE.MeshStandardMaterial({color:'#14292e',roughness:.62});
 const limbGeometry=new THREE.CylinderGeometry(1,1,1,8);
+export const RIDER_WEIGHT = { response:7, steeringShift:.17, loadShift:.008, maximumShift:.26, bowShift:.0704 };
+export function riderWeightTargets(v){
+  const aft=THREE.MathUtils.clamp(v.riderAft||0,0,1),bow=v.airborne?0:THREE.MathUtils.clamp(((v.pitch||0)-.3)/.6,0,1)*aft;
+  const lean=THREE.MathUtils.clamp(-(v.steer||0)*RIDER_WEIGHT.steeringShift+(v.lateralAcceleration||0)*RIDER_WEIGHT.loadShift,-RIDER_WEIGHT.maximumShift,RIDER_WEIGHT.maximumShift)*(1+bow*.2);
+  return {aft,lean,bow};
+}
 function ball(parent,position,scale,material){const m=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),material);m.position.fromArray(position);m.scale.fromArray(scale);parent.add(m);m.castShadow=true;return m;}
 function segment(parent,radius,material){const m=new THREE.Mesh(limbGeometry,material);m.userData.radius=radius;parent.add(m);m.castShadow=true;return m;}
 function placeSegment(mesh,a,b){const d=b.clone().sub(a);mesh.position.copy(a).add(b).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(Y,d.clone().normalize());mesh.scale.set(mesh.userData.radius,d.length(),mesh.userData.radius);}
@@ -25,18 +31,20 @@ export function makeRider(parent,type){
   ball(torso,[0,.79,.14],[.16,.022,.1],dark);
   ball(torso,[0,.71,.153],[.13,.036,.026],dark);
   const limbs=[-1,1].map(side=>({side,arm:[segment(root,.059,skin),segment(root,.052,skin)],leg:[segment(root,.085,suit),segment(root,.071,skin)],hand:ball(root,[0,0,0],[.064,.065,.065],skin),foot:ball(root,[0,0,0],[.083,.045,.16],dark)}));
-  let aft=0,lean=0;
+  for(const limb of limbs){limb.hand.name=limb.side===1?'right-hand':'left-hand';limb.foot.name=limb.side===1?'right-foot':'left-foot';}
+  let aft=0,lean=0,bow=0;
   root.userData.update=(v,dt,parts)=>{
-    const blend=1-Math.exp(-dt*7);aft+=((v.riderAft||0)-aft)*blend;lean+=(-v.steer*.13-lean)*blend;
+    const target=riderWeightTargets(v),blend=1-Math.exp(-dt*RIDER_WEIGHT.response);aft+=(target.aft-aft)*blend;lean+=(target.lean-lean)*blend;bow+=(target.bow-bow)*blend;
     const cat=type==='cat',load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6);
-    const hip=new THREE.Vector3(cat?-.42:lean,cat?.74:.75+aft*.15,(cat?-.77:-.38)-aft*(cat?.22:.24));
+    const hip=new THREE.Vector3((cat?-.42:0)+lean*(cat?.85:1),cat?.74-bow*.035:.75+aft*.15,(cat?-.77:-.38)-aft*(cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
     const pose=v.airTricks?.pose,b=v.airTricks?.blend||0;
     if(pose==='hangman'){hip.x-=b*.24;hip.y+=b*.08;}
     if(pose==='superman'){hip.y+=b*.42;hip.z-=b*.38;}
-    torso.position.copy(hip);torso.rotation.set((cat?.35:.35)+aft*.42+load*.012,0,lean*.4);
+    torso.position.copy(hip);torso.rotation.set(.35+aft*.42+load*.012+bow*.08,0,lean*.85);
     if(pose==='hangman')torso.rotation.z-=b*.42;
     if(pose==='superman')torso.rotation.x+=b*.9;
     torso.updateMatrix();
+    root.userData.balance={aft,lean,bow,hip:hip.toArray()};
     for(const l of limbs){
       const {side}=l;
       const shoulder=new THREE.Vector3(side*.21,.48,0).applyMatrix4(torso.matrix);

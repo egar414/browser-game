@@ -313,3 +313,24 @@ view when a heavy plume crosses the chase camera. Pump force, handling, trim
 limits and spray-hit rules are unchanged. Density/appearance remain artistic
 approximations of water groups, not calibrated CFD or manufacturer measurements.
 Tune the central values in `JET_PLUME` in `src/systems/spray-model.js`.
+
+
+## Thundercat / bow-ride spray refinement — 15 October 2026
+
+The retained photo/video references guide broader pontoon fans and dense
+water with fine breakup. Side spray is emitted from the sampled wet contact
+and directed above the water plane. Applying the full bow-high body rotation
+to the spray's vertical direction had incorrectly aimed the sheet downward;
+that orientation error is corrected. Powered aft-weighted bow attitude adds
+artistic reach and lift without changing hydraulic thrust or handling.
+
+A time-sampled, interpolated sheet history retains the falling arc at fast
+frame rates. Droplet lifetimes account for launch speed and gravity, while
+drag and shared-wave contact still end individual drops. Finite emission
+budgets reserve pool capacity for falling water. Rider hip and torso shifts
+follow steering and lateral load, with attachment-point IK for the tiller,
+bars and feet. Animation is smoothed rather than instantaneously flipping.
+
+No new measured spray data, manufacturer tests or CFD were available for
+this refinement. Fan width, opacity and bow-ride amplification are original
+game tuning, not claims of engineering or training accuracy.

@@ -116,3 +116,24 @@ Validation on Linux Chromium 154 with SwiftShader:
 
 These targeted checks cover this spray revision; they do not claim a repeated
 full race, physical-phone testing or hardware GPU performance measurement.
+
+
+## Thundercat / bow-ride spray and rider update — 15 October 2026
+
+- `npm test`: 63 passed. New checks cover powered bow-ride launch direction
+  and reach, bounded side-sheet history at 120 Hz, expiry after emission stops,
+  smooth rider countersteering and the attached tiller hand. Existing sustained
+  Thundercat bow-ride and propulsion tests continue to pass.
+- `npm run build`: passed.
+- Four real-browser flows passed in Linux Chromium 154 / SwiftShader:
+  Thundercat driving, steering, spray, braking, reverse and recovery; all quality
+  profiles and reflections; jet-ski bow riding, pause, settings, save/reload,
+  resize and blur; Thundercat bow riding and settling with normal controls.
+- Inspected bow-riding and countersteering on both craft in the development
+  watercraft scene, including a closer rider view and the final textured
+  Thundercat sheet. No runtime or shader errors occurred in those runs.
+
+The initial rider attachment test selected the wrong unnamed scene child;
+named hand attachments made the assertion stable. No physical phone or
+hardware GPU performance measurement is claimed. Width, density, rider
+poses and bow-ride spray amplification remain stylised game approximations.

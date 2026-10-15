@@ -40,3 +40,14 @@ adjudication, server-authoritative movement, inter-player collision, shared
 progression and player PvP flooding are outside this prepared version. The
 renderer caps detailed visible boats by quality and processes up to 48 remote
 peers per client. Physical mobile devices and large player counts are untested.
+
+
+## Integration with the later spray updates
+
+The dense jet-ski plume and Thundercat / bow-ride / rider revisions from
+public application commit `a6b9a6b` are merged into this review branch.
+The online clock wrapping remains in the side-spray shader uniforms.
+After resolving that overlap, `npm test` passed all 70 checks and
+`npm run build` passed. The four earlier online browser flows use service
+doubles; real Supabase account/email and internet multiplayer activation
+remain pending the owner project described in MULTIPLAYER_SETUP.md.
