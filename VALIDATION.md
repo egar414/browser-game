@@ -49,7 +49,20 @@ or a human judgement of handling realism.
   run: the boat rises around the stern and its driver remains attached to the
   tiller/foot positions.
 
-Public deployment and hosted verification of this update: pending.
+## Public deployment
+
+Application commit `9e5965dd417aa52556068c90ffb12be86b880e0f` deployed successfully
+in GitHub Actions run **38685285349**. The public URL with `?v=9e5965d` returned
+HTTP 200 and served the new Mooloolaba screen and nine-position diagnostics.
+Chromium used the ordinary keys to drive both craft through powered spray
+turns, select Freestyle, adjust/latch trim and verify their distinct reverse
+steering. The Thundercat also raised its bow, scored the move without becoming
+airborne or wiping out, then settled after release. Hosted spray and bow-ride
+screenshots were visually inspected. No page runtime errors or failed requests
+occurred. The hosted Low 960×640 samples were 6.0 FPS (ski) and 7.6 FPS (cat) on
+software rendering. TLS certificate verification stayed enabled throughout;
+broader filesystem access let Chromium read its existing trusted certificate
+store.
 
 ## Research and realism limits
 
