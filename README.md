@@ -270,3 +270,8 @@ Tune rear packets in `src/systems/jet-plume.js` and `JET_PLUME` in
 `node scripts/place-canal-targets.mjs` rebuilds the authored site selection from
 the retained map geometry. Existing vehicle handling tuning remains in
 `src/config.js`. See `RESEARCH.md` for geographic and physics limitations.
+
+The latest spray refinement adds a substantially denser white rear core, grain,
+velocity-aligned water streaks and heavier falling breakup based on the supplied
+references. Low quality keeps the thick core. The pool retains water through its
+full falling arc; pump force and vehicle handling are unchanged.

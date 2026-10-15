@@ -184,7 +184,7 @@ export class Spray {
         #include <colorspace_fragment>
       }`});
     this.points=new THREE.Points(g,this.material);this.points.frustumCulled=false;this.points.renderOrder=4;scene.add(this.points);
-    this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,Math.min(1400,quality.particles+200));
+    this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,Math.min(3200,Math.round(1600+quality.particles*.8)));
     this.wake=new FoamWake(scene,this.texture,quality.wakeSamples);
     this.fans=[new SprayFan(scene,this.texture,-1,quality.fanSegments),new SprayFan(scene,this.texture,1,quality.fanSegments)];
     this.state={left:0,right:0,rate:0};this.time=0;

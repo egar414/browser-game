@@ -82,3 +82,28 @@ its route, race logic and launch/start/restart flow, rather than claiming anothe
 full driving completion. All assets are bundled; no play account or API key is
 needed for this single-player release. Multiplayer is a separately requested
 next phase and is not part of this deployment.
+
+
+## Dense jet-ski spray revision — 15 October 2026
+
+The central jet-ski plume now emits more overlapping water packets, with a
+dense white core, turbulent shading, finer mist and velocity-aligned droplets.
+Pool sizes and emission caps preserve the falling arc on Low quality.
+Thrust, handling, side spray and Thundercat behaviour are unchanged.
+
+Validation on Linux Chromium 154 with SwiftShader:
+
+- `npm test`: 60 passed, including a sustained dense-plume test checking
+  bounded pool use, descending water, surface impacts, finite GPU attributes
+  and expiry after throttle release.
+- `npm run build`: passed.
+- Three actual-browser flows passed: jet-ski driving/spray/brake/reverse/recovery;
+  all graphics profiles/reflection changes; native phone multi-touch driving
+  and recovery. No critical runtime or shader errors occurred.
+- Visually inspected a powered carve and the subsequent falling water using
+  normal controls in the watercraft inspection scene. The supplied video
+  informed density and breakup. The result remains stylised particle water,
+  not a measured fluid simulation.
+
+These targeted checks cover this spray revision; they do not claim a repeated
+full race, physical-phone testing or hardware GPU performance measurement.

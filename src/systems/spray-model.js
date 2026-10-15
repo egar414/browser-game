@@ -66,7 +66,7 @@ export function stepDroplet(p,dt) {
 
 // Larger visible breakup around the central pump wash, independently tunable
 // from the unchanged chine spray and hydraulic reaction-force calculation.
-export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:7.5, spread:.78, drag:.32 };
+export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:7.5, spread:.78, drag:.32, baseRate:260, poweredRate:330, coreOpacity:1.1, mistOpacity:.10, coreGrowth:.62, fineFraction:.14, streakThreshold:.84 };
 export function jetPlumeSource(v,discharge,time=0,state=null){
   if(v.type!=='ski'||!discharge||v.airborne||v.wipeout||discharge.reverse>.08||discharge.flow<JET_PLUME.minimumFlow||v.throttle<.08)return null;
   const power=clamp(discharge.flow/.16)*clamp(v.throttle),trim=clamp((v.drive?.trimAngle||0)/.33);
@@ -75,5 +75,5 @@ export function jetPlumeSource(v,discharge,time=0,state=null){
   const washLift=1.1+power*JET_PLUME.lift+trim*JET_PLUME.trimLift+loaded*loaded*5.8;
   const lift=Math.min(13,Math.max(discharge.aerial?discharge.velocity.y:0,washLift));
   return {origin:{...discharge.origin,y:Math.max(discharge.origin.y,waveHeight(discharge.origin.x,discharge.origin.z,time)+.055)},
-    velocity:{x:(v.vx||0)+dx/len*(3+power*JET_PLUME.rearSpeed),y:lift,z:(v.vz||0)+dz/len*(3+power*JET_PLUME.rearSpeed)},power};
+    velocity:{x:(v.vx||0)+dx/len*(3+power*JET_PLUME.rearSpeed),y:lift,z:(v.vz||0)+dz/len*(3+power*JET_PLUME.rearSpeed)},power,loaded};
 }
