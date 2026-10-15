@@ -56,3 +56,11 @@ test('central plume stays finite, expires and clears during recovery',async()=>{
   for(let i=0;i<20;i++)s.plume.update(.1,null,5+i*.1);assert(!s.plume.mesh.visible);
   s.plume.update(.1,source,7);s.clear();assert(!s.plume.mesh.visible);assert.equal(s.plume.history.length,0);s.dispose();
 });
+
+test('dense central core remains bounded and keeps descending water on Low quality',async()=>{
+ const s=new Spray(new THREE.Scene(),QUALITY.Low),source={origin:{x:0,y:.3,z:0},velocity:{x:0,y:13,z:4},power:1,loaded:1};let returns=0,max=0;
+ for(let i=0;i<100;i++){s.plume.update(.1,source,i*.1);returns+=s.plume.impacts.length;max=Math.max(max,s.plume.geometry.instanceCount);}
+ assert(max>500);assert(max<s.plume.packets.length);assert(s.plume.falling>100);assert(returns>1000);
+ for(const name of ['aCenter','aSize','aAlpha','aVelocity'])assert([...s.plume.geometry.attributes[name].array].every(Number.isFinite),name);
+ for(let i=0;i<60;i++)s.plume.update(.1,null,10+i*.1);assert.equal(s.plume.mesh.visible,false);s.dispose();
+});

@@ -294,3 +294,22 @@ A deliberate 0.35-second aerial hold qualifies each pose once per jump; points
 are banked only by the existing successful-landing checks. Ground input does
 not jump or score. These moves are a game animation, not instruction in real
 watercraft stunts.
+
+## Denser reference-style jet plume (16 October 2026)
+
+The follow-up uses the same supplied spray clip and photos: a dense white core,
+finer turbulent edges, elongated falling water and a substantial landing wash.
+The central pool now emits more overlapping core packets, with larger core
+cross-sections and separate fine mist/streak fractions. The white-water shader
+adds grain and internal light variation; core packets and streaks orient along
+their projected current velocity, so the descending section points downward.
+Turn load broadens the breakup. Water still follows the existing ballistic
+trajectory and returns to the shared wave surface.
+
+Pool capacity and emission are coupled to maximum packet lifetime, keeping
+water alive through its falling arc instead of recycling it early. Low quality
+also receives the dense core. A short near-camera fade preserves the driving
+view when a heavy plume crosses the chase camera. Pump force, handling, trim
+limits and spray-hit rules are unchanged. Density/appearance remain artistic
+approximations of water groups, not calibrated CFD or manufacturer measurements.
+Tune the central values in `JET_PLUME` in `src/systems/spray-model.js`.

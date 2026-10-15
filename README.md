@@ -279,3 +279,7 @@ minimap markers. A Supabase project must be connected before it can go live.
 See [MULTIPLAYER_SETUP.md](MULTIPLAYER_SETUP.md) for the migration, public client
 configuration, email-delivery requirements and remaining real-service tests.
 Current public play remains the tested single-player release linked above.
+The latest spray refinement adds a substantially denser white rear core, grain,
+velocity-aligned water streaks and heavier falling breakup based on the supplied
+references. Low quality keeps the thick core. The pool retains water through its
+full falling arc; pump force and vehicle handling are unchanged.
