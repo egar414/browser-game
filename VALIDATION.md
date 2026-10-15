@@ -41,7 +41,15 @@ The separate keyboard-only acceptance driver completed all 12 race gates in
 restarted the race. It ran against the frozen production build at 800×500 Low.
 Logged software-rendered FPS samples ranged approximately from 8 to 16; the
 finish sample was 8.6 FPS. These are workload observations, not a GPU benchmark.
-Public deployment of this update: pending final verification.
+Public deployment succeeded in Actions run **38681097961**, application commit
+`bd9327b19354a463c14258f1aa6e34acf0bac1c6`. The public HTTPS page with
+`?v=bd9327b` returned 200. Chromium drove both craft through broad powered turns,
+cycled into Freestyle and adjusted/latched trim. Both produced pump flow,
+particles and stronger outside spray. No page runtime errors or failed network
+requests occurred. Hosted screenshots of both turns were visually inspected.
+The 960×640 Low software-rendered samples were 6.7 FPS (ski) and 7.9 FPS (cat).
+Certificate verification stayed enabled; broader filesystem access let Chromium
+read its existing trusted certificate database.
 
 ## Physical realism and research limits
 
