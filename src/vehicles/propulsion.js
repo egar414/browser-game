@@ -16,9 +16,16 @@ export function bodyPoint(v,point) {const p=bodyVector(v,point);return {x:v.x+p.
 
 export function hullImmersion(v,time){
   if(v.airborne)return 0;
-  let deepest=0;
-  for(const end of [-1,1]){const p=bodyPoint(v,[0,-.25,end*v.config.length*.28]);deepest=Math.max(deepest,waveHeight(p.x,p.z,time)-p.y);}
-  return clamp(deepest/.11);
+  let wet=0;
+  for(const side of [-1,1]){
+    let deepest=0;
+    for(const z of [-v.config.length*.43,v.config.length*.32]){
+      const p=bodyPoint(v,[side*v.config.width*(v.type==='cat'?.36:.3),-.25,z]);
+      deepest=Math.max(deepest,waveHeight(p.x,p.z,time)-p.y);
+    }
+    wet+=clamp(deepest/.11);
+  }
+  return wet/2;
 }
 
 export function nozzleVector(trim,steering) {

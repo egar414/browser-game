@@ -31,6 +31,8 @@ try{
     console.log(JSON.stringify({reverseSteering:type,headingChange:(await page.evaluate(()=>window.__ESTUARY__.status.heading))-reverseHeading}));
     await page.keyboard.up('KeyS');await page.keyboard.up('KeyA');
     if(type==='cat'){
+      await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
+      await page.locator('[data-vehicle="cat"]').click();await page.locator('#play').click();
       for(const key of ['KeyW','KeyA','ShiftLeft'])await page.keyboard.up(key);
       await page.keyboard.press('KeyR');const before=await page.evaluate(()=>window.__ESTUARY__.status.score);
       await page.keyboard.down('KeyQ');await page.waitForFunction(()=>window.__ESTUARY__.status.trim>5);await page.keyboard.up('KeyQ');
@@ -40,7 +42,13 @@ try{
       await page.waitForFunction(points=>window.__ESTUARY__.status.score>points,before,{timeout:30000});
       const bow=await page.evaluate(()=>window.__ESTUARY__.status);
       if(bow.airborne||bow.wipeout)throw new Error('Bow ride unexpectedly launched or wiped out');
-      console.log(JSON.stringify({thundercatBowRide:true,pitch:bow.pitch,height:bow.position.y,score:bow.score,errors,failedRequests:failures}));
+      await page.keyboard.press('KeyG');
+      let held=await page.evaluate(()=>window.__ESTUARY__.status);
+      while(held.challenge.remaining>77){
+        if(held.wipeout||held.airborne||held.pitch<.6)throw new Error('Thundercat did not maintain its bow ride');
+        await page.waitForTimeout(300);held=await page.evaluate(()=>window.__ESTUARY__.status);
+      }
+      console.log(JSON.stringify({thundercatBowRide:true,continuousHold:'13 simulated seconds',pitch:held.pitch,height:held.position.y,score:held.score,errors,failedRequests:failures}));
       for(const key of ['KeyW','ShiftLeft'])await page.keyboard.up(key);
       await page.waitForFunction(()=>window.__ESTUARY__.status.pitch<.35,{},{timeout:15000});
       if(errors.length||failures.length)throw new Error('Hosted bow ride runtime or network errors');

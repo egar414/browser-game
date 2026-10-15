@@ -1,7 +1,7 @@
 # Asset provenance
 
-All watercraft, riders, buildings, terrain, trees, ramps, UI graphics, textures,
-and sounds in this project are original procedural work created for Estuary Rats.
+All watercraft, riders, procedural building meshes, trees, ramps, UI graphics,
+textures and sounds in this project are original procedural work created for Estuary Rats.
 There are no downloaded model packs, copied manufacturer marks, hotlinked
 textures, recorded music, or third-party sound samples.
 
@@ -19,5 +19,14 @@ Dependency versions and package integrity hashes are locked in package-lock.json
 
 Operating principles were researched from official BRP and Yamaha documents;
 see RESEARCH.md for links. No manufacturer manual text, diagrams, model meshes
-or photos are included. Mooloolaba-area names identify the inspiration for an
-original, compressed environment, rather than an imported or surveyed map.
+or photos are included. Two user-supplied still photos informed the craft proportions
+and colours; they are not bundled or used as textures.
+
+Geographic shoreline, building footprints, roads, piers, parks, beaches and bridge
+alignments are derived from **© OpenStreetMap contributors**, licensed under
+**ODbL 1.0**: https://www.openstreetmap.org/copyright . The derived database is
+provided as editable `src/data/mooloolaba.json`; source URLs, hashes and rebuild
+instructions are in `src/data/README.md`. The application displays this attribution.
+No third-party map tiles are downloaded while playing. Original procedural facade
+details, estimated heights and enlarged game bridge clearances do not establish
+survey accuracy or suitability for navigation.

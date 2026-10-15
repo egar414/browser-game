@@ -1,4 +1,4 @@
-import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, waveHeight } from '../config.js';
+import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, waveHeight, waveChop } from '../config.js';
 import { Propulsion, hullImmersion } from './propulsion.js';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
@@ -22,7 +22,7 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      pitch: 0, roll: 0, pitchRate:0,rollRate:0,planing:0,wettedFraction:1,surgeAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      pitch: 0, roll: 0, pitchRate:0,rollRate:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;
@@ -74,11 +74,16 @@ export class VehiclePhysics {
       const grip = (input.freestyle ? c.slideGrip : c.lateralGrip)*(1-.18*this.planing);
       const lateral = (this.vx * fz - this.vz * fx) * (1 - Math.exp(-grip * dt));
       this.vx -= fz * lateral; this.vz += fx * lateral;
+      this.lateralAcceleration=damp(this.lateralAcceleration,-lateral/dt,10,dt);
       const immersed=hullImmersion(this,time);
       const trimDrag=1+Math.max(0,-this.pitch)*.7+Math.max(0,this.pitch-.3)*.25;
       const planeDrag=1+.26*(1-this.planing)*clamp(this.speed/6,0,1);
       const coastDrag=this.type==='cat'&&(this.drive.shifting||Math.abs(this.throttle)<.05)?hydro.coastDrag:1;
-      const resistance=immersed*coastDrag*trimDrag*planeDrag*(driveConfig.linearResistance+this.speed*driveConfig.quadraticResistance)/driveConfig.effectiveMass+(1-immersed)*this.speed*.0015;
+      // At high bow angle the stern pushes a larger wetted face through water.
+      // This extra drag keeps a powerstand in its balance speed range; release
+      // the rider's aft stance and the hull settles and accelerates onto plane.
+      const bowDrag=1+(hydro.bowPloughDrag||0)*Math.sin(Math.max(0,this.pitch))**2;
+      const resistance=immersed*coastDrag*trimDrag*planeDrag*bowDrag*(driveConfig.linearResistance+this.speed*driveConfig.quadraticResistance)/driveConfig.effectiveMass+(1-immersed)*this.speed*.0015;
       const drag = Math.exp(-resistance*dt);
       this.vx *= drag; this.vz *= drag;
       const yawDamping=hydro.yawDamping+Math.abs(forward)*hydro.yawSpeedDamping;
@@ -87,6 +92,7 @@ export class VehiclePhysics {
       const torque=this.drive.yawMoment||0;
       this.yawRate=clamp(this.yawRate*decay+(torque/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-1.6,1.6);
     } else {
+      this.lateralAcceleration=damp(this.lateralAcceleration,0,6,dt);
       this.yawRate = damp(this.yawRate, this.steer * c.airSteer, 2.5, dt);
       this.spin += this.yawRate * dt; this.airTime += dt;
       this.pitch = clamp(this.pitch + input.trim * dt * (this.type === 'ski' ? 0.9 : 0.45), -0.9, 1.1);
@@ -144,7 +150,7 @@ export class VehiclePhysics {
         }
       }
       // Large steep chop can unweight a fast hull. No jump input or repeated aerial launch.
-      if (!this.airborne && !onRamp && this.z > 170 && this.speed > 17 && this.y > water + 0.22 && this.vy > 1.2) this.launch(this.vy, this.pitch);
+      if (!this.airborne && !onRamp && waveChop(this.x,this.z) > .52 && this.speed > 17 && this.y > water + 0.22 && this.vy > 1.2) this.launch(this.vy, this.pitch);
       if (!this.airborne && this.pitch > 0.65 && this.speed > 7) {
         this.wheelieTime += dt;
         if (this.wheelieTime > 1.6 && !this.trickCooldown) { this.onEvent({ type: 'score', label: 'Bow rider', points: 100 }); this.trickCooldown = 4; this.wheelieTime = 0; }
@@ -176,7 +182,7 @@ export class VehiclePhysics {
     }
     const nextForward=this.vx*fx+this.vz*fz;
     this.surgeAcceleration=damp(this.surgeAcceleration,clamp((nextForward-forward)/dt,-12,12),7,dt);
-    if (!this.airborne && !hit && this.speed < 12 && Math.abs(this.pitch) < 0.4 && !this.boundary && this.z > 0) this.safe = { x: this.x, z: this.z, heading: this.heading };
+    if (!this.airborne && !hit && this.speed < 12 && Math.abs(this.pitch) < 0.4 && !this.boundary) this.safe = { x: this.x, z: this.z, heading: this.heading };
     if (![this.x, this.y, this.z, this.heading, this.vx, this.vz].every(Number.isFinite) || this.y < -3) this.recover();
   }
   launch(velocity, pitch) { if (this.airborne) return; this.airborne = true; this.vy = velocity; this.pitch = pitch; this.airTime = 0; this.spin = 0; }

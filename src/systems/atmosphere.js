@@ -7,7 +7,7 @@ export function createAtmosphere(scene, renderer) {
     side: THREE.BackSide, depthWrite: false,
     uniforms: { uSun: { value: SUN_DIRECTION }, uTime: { value: 0 } },
     vertexShader: `varying vec3 vDirection;
-      void main(){vDirection=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+      void main(){vDirection=position;vec4 clip=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position=clip.xyww;}`,
     fragmentShader: `
       varying vec3 vDirection;uniform vec3 uSun;uniform float uTime;
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -38,5 +38,5 @@ export function createAtmosphere(scene, renderer) {
   const environment = pmrem.fromScene(environmentScene, .06, .1, 2000, { size: 128 });
   scene.environment = environment.texture; scene.environmentIntensity = .65;
   pmrem.dispose();
-  return { update(time) { material.uniforms.uTime.value = time; }, dispose() { environment.dispose(); } };
+  return { update(time,position) { material.uniforms.uTime.value = time;if(position)dome.position.copy(position); }, dispose() { environment.dispose(); } };
 }

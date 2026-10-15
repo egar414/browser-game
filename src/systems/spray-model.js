@@ -1,6 +1,6 @@
 import { waveHeight } from '../config.js';
 import { bodyPoint, bodyVector, propulsionPose, hullImmersion } from '../vehicles/propulsion.js';
-export const SPRAY_TUNING = { minimumSpeed:.7, maximumSpeed:32, gravity:9.81, wakeLifetime:7, wakeSpread:.16, sampleSpacing:.48, fanLife:.52 };
+export const SPRAY_TUNING = { minimumSpeed:.7, maximumSpeed:32, gravity:9.81, wakeLifetime:7, wakeSpread:.16, sampleSpacing:.48, fanLife:.8 };
 export const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 
 // Find the waterline along each physical chine/pontoon. A dry hull cannot throw water.
@@ -20,15 +20,22 @@ export function sprayState(v,_freestyle=false,time=0) {
   const speed=clamp(v.speed,0,32),contacts=[chineContact(v,-1,time),chineContact(v,1,time)];
   const drive=v.drive,jet=v.airborne||v.wipeout||drive?.neutral?0:clamp((drive?.flow||0)/(v.type==='ski'?.11:1.2));
   if(v.airborne||v.wipeout||speed<.7)return {speed,rate:0,left:0,right:0,jet,outside:0,contacts};
-  const turn=clamp(Math.abs(v.yawRate||0)*speed*.12+Math.abs(v.slip||0)*.19,0,3.5);
-  const outside=Math.sign((v.slip||0)-(v.yawRate||0)*2-(v.steer||0)*.1);
+  // The stern's cross-flow includes hull slip and yaw around its centre.
+  // A setup carve leaves momentum behind when the rider reverses the bars;
+  // spray follows that water load rather than instantly following a key press.
+  const sternCrossFlow=(v.slip||0)-(v.yawRate||0)*v.config.length*.43;
+  const loadHead=Math.sqrt(Math.abs(v.lateralAcceleration||0)*v.config.width);
+  const turn=clamp(Math.abs(sternCrossFlow)*.20+loadHead*.13,0,3.5);
+  const outside=Math.sign(sternCrossFlow);
   const side=sign=>(clamp(speed/23)*.65+turn*(outside===sign?1:.1)*clamp(speed/7))*contacts[sign===-1?0:1].wet;
   const left=side(-1),right=side(1);
   return {speed,outside,left,right,rate:clamp((left+right)*135,0,680),jet,contacts};
 }
 export function launchSpray(v,state,side,random=Math.random) {
   const strength=side===-1?state.left:state.right,p=state.contacts[side===-1?0:1];
-  const local=bodyVector(v,[side*(1.2+strength*2.8)*(.7+random()*.6),.8+strength*1.35+random()*.8,-state.speed*(.65+random()*.12)]);
+  const broad=v.type==='cat'?1.32:1.06,lift=v.type==='cat'?.86:1.22;
+  const spread=random(),angle=-.2+spread*1.45,flow=(2+strength*3.2)*broad;
+  const local=bodyVector(v,[side*flow*Math.cos(angle),(.8+strength*1.7)*lift*(.8+Math.sin(spread*Math.PI)*.35),-state.speed*(v.type==='cat'?.36:.5)-flow*Math.sin(angle)]);
   return {x:p.x,y:p.y,z:p.z,vx:(v.vx||0)+local.x,vy:(v.vy||0)*.25+local.y,vz:(v.vz||0)+local.z,strength};
 }
 // Submerged pump discharge stays a surface wash. Only a real surface crossing creates an aerial jet.

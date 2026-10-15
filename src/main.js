@@ -97,8 +97,8 @@ try {
     if(model.userData.propeller)model.userData.propeller.rotation.z+=vehicle.drive.rpm/60*Math.PI*2*dt;
     model.userData.rider.userData.update(vehicle,dt,model.userData);
     if(state==='playing'&&input.sample().trim===0)persistTrim();
-    atmosphere.update(simulationTime);water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing',input.sample());
-    chase.update(dt,render,input,settings.camera,state==='home');
+    water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing',input.sample());
+    chase.update(dt,render,input,settings.camera,state==='home');atmosphere.update(simulationTime,camera.position);
     spray.resize(innerHeight,camera.fov,renderer.getPixelRatio());
     sun.position.set(vehicle.x+SUN_DIRECTION.x*400,SUN_DIRECTION.y*400,vehicle.z+SUN_DIRECTION.z*400);sun.target.position.set(vehicle.x,0,vehicle.z);
     audio.update(vehicle,state==='playing');uiTime+=dt;if(uiTime>.09){ui.update(uiTime,vehicle,activities,fps,qualityName);uiTime=0;}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { VehiclePhysics } from '../src/vehicles/physics.js';
-import { waveHeight, FIXED_STEP, RACE, VEHICLES } from '../src/config.js';
+import { waveHeight, FIXED_STEP, RACE, VEHICLES, WORLD, SPAWN } from '../src/config.js';
 import { collision, ramps } from '../src/systems/environment.js';
 import { loadSettings } from '../src/systems/storage.js';
 import { Activities } from '../src/systems/activities.js';
@@ -27,22 +27,22 @@ test('powered bow lift scores, and over-trimming eventually wipes out',()=>{
   const events=[],v=openBoat('ski',events);v.setMode('freestyle');advance(v,4,{throttle:1,freestyle:true});assert(events.some(e=>e.label==='Bow rider'));advance(v,3,{throttle:1,freestyle:true,trim:1});assert(events.some(e=>e.type==='wipeout'));
 });
 test('ramps launch both craft, landing banks air score only once',()=>{
-  for(const type of ['ski','cat']){const events=[],v=openBoat(type,events);v.x=ramps[0].x;v.z=205;v.vz=20;let airborne=false;for(let i=0;i<360;i++){v.update(FIXED_STEP,{...idle,throttle:i<90?1:0},i*FIXED_STEP,ramps);if(v.airborne)airborne=true;}assert(airborne,`${type} should launch`);assert(events.some(e=>e.type==='splash'),`${type} should land`);assert(events.some(e=>e.type==='score'&&e.label==='Clean air'),`${type} should score clean air`);}
+  for(const type of ['ski','cat']){const events=[],v=openBoat(type,events);v.x=ramps[0].x;v.z=ramps[0].z-ramps[0].length/2-35;v.vz=20;let airborne=false;for(let i=0;i<360;i++){v.update(FIXED_STEP,{...idle,throttle:i<90?1:0},i*FIXED_STEP,ramps);if(v.airborne)airborne=true;}assert(airborne,`${type} should launch`);assert(events.some(e=>e.type==='splash'),`${type} should land`);assert(events.some(e=>e.type==='score'&&e.label==='Clean air'),`${type} should score clean air`);}
 });
-test('land, docks and bridge approaches are respected; water routes are clear',()=>{
-  assert(collision(-220,0));assert(collision(-12,-365));
-  for(const [x,z] of [[-125,-235],[-12,-300],[85,-145],[-125,110],[430,150],[425,-70],[0,200]])assert.equal(collision(x,z,2),null,`passage ${x},${z}`);
-  const v=new VehiclePhysics('ski',collision);v.x=-175;v.z=-30;v.heading=-Math.PI/2;advance(v,4,{throttle:1});assert(v.x>-185);
+test('real shoreline blocks land while the main river and island loop remain open',()=>{
+  assert(collision(-100,-850));assert(collision(1200,-1500));
+  for(const [x,z] of [[SPAWN.x,SPAWN.z],[330,-755],[583,-744],[1011,-916],[1117,-1319],[1500,-1050],[-843,227]])assert.equal(collision(x,z,2),null,`passage ${x},${z}`);
+  const v=new VehiclePhysics('ski',collision);v.x=39.7;v.z=-741.5;v.heading=Math.PI;advance(v,4,{throttle:1});assert.equal(collision(v.x,v.z,1),null);assert(v.z>-785,'cannot pass through the island bank');
 });
 test('a completed aerial spin is scored after landing and rough landings wipe out',()=>{
-  const events=[],v=openBoat('ski',events);v.x=245;v.z=260;v.vz=25;
+  const events=[],v=openBoat('ski',events);v.x=ramps[1].x;v.z=ramps[1].z-40;v.vz=25;
   for(let i=0;i<300;i++)v.update(FIXED_STEP,{...idle,throttle:1,steer:v.airborne&&Math.abs(v.spin)<6?1:0},i*FIXED_STEP,ramps);
   assert(events.some(e=>e.label==='360° spin · landed'));
   const bad=[],b=openBoat('cat',bad);b.launch(5,1.05);advance(b,3);assert(bad.some(e=>e.type==='wipeout'));
 });
 test('recovery selects nearby safe water and world limits cannot trap a boat',()=>{
-  const v=new VehiclePhysics('cat',collision);v.x=-182;v.z=-20;v.recover(true);assert.equal(collision(v.x,v.z,4),null);assert(Math.hypot(v.x+182,v.z+20)<80);
-  v.x=700;v.update(FIXED_STEP,idle,0);assert(v.x<640);assert.equal(v.speed,0);
+  const v=new VehiclePhysics('cat',collision);v.x=-100;v.z=-937;v.recover(true);assert.equal(collision(v.x,v.z,4),null);assert(Math.hypot(v.x+100,v.z+937)<80);
+  v.x=WORLD.maxX+1;v.update(FIXED_STEP,idle,0);assert(v.x<WORLD.maxX);assert.equal(v.speed,0);
 });
 test('the entire checkpoint route is navigable between gates',()=>{
   for(let i=1;i<RACE.length;i++){const a=RACE[i-1],b=RACE[i];for(let t=0;t<=1;t+=.025){const x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t;assert.equal(collision(x,z,3),null,`leg ${i} at ${x.toFixed(1)},${z.toFixed(1)}`);}}
@@ -61,4 +61,16 @@ test('holding a single repeated scoring action cannot farm unlimited points',()=
 test('corrupt or unavailable preferences recover safely',()=>{
   for(const value of ['nope','null','{"vehicle":"bad","quality":"bad","master":9}']){const s=loadSettings({getItem:()=>value});assert.equal(s.vehicle,'ski');assert(s.master<=1);}
   assert.equal(loadSettings({getItem(){throw new Error('blocked');}}).vehicle,'ski');
+});
+
+test('powered steering responds promptly with distinct practical turning circles',()=>{
+  const headings={};
+  for(const type of ['ski','cat']){
+    const v=openBoat(type);v.x=-200;v.z=-1000;v.heading=Math.PI/2;
+    advance(v,4,{throttle:1});const heading=v.heading;advance(v,2,{throttle:1,steer:1});
+    headings[type]=v.heading-heading;
+    assert(headings[type]>(type==='ski'?1.3:.7),`${type} powered turn too wide`);
+    assert(v.speed/Math.abs(v.yawRate)<(type==='ski'?25:40));assert(v.speed>8);
+  }
+  assert(headings.ski>headings.cat*1.3);
 });

@@ -40,17 +40,47 @@ Freestyle remain simplified game modes; Freestyle has a sharper brake/reverse
 response. No manufacturer UI, logos, diagrams, photos or manual prose are
 redistributed. The PDF was read for research and is not shipped in the game.
 
-## Geographic reference limits
+## Geographic sources and photo references
 
-The environment is a **compressed Mooloolaba-inspired playground**, with a
-Mooloolaba Wharf interpretation, a spit, Minyama/Kawana canal areas, river and
-modern Point Cartwright-inspired lighthouse silhouette. It is not a surveyed
-reconstruction; routes and orientation are rearranged for the compact map.
-OpenStreetMap and Sunshine Coast Council pages were blocked by
-the environment proxy during this update. Their hosts were added to the pending
-network draft. Map geometry, roads and landmark dimensions have therefore not
-been independently verified against a map; area names do not establish exact
-locations. No map tiles or third-party geographic assets are redistributed.
+On 15 October 2026, OpenStreetMap API access became available. The game now
+uses actual river relation 1380756 and coastline geometry, preserving the
+Mooloolah River / Minyama Island / Mooloolah Island / Tuckers Creek / marina /
+Spit / river-mouth topology and approximate metre distances. Mapped building
+footprints, piers, road bridges, parks and beaches replace the previous compressed
+fictional shoreline. [The database guide](src/data/README.md) records the exact
+extract URLs, projection, simplification, source hashes, regeneration and ODbL
+attribution. The 128² exposure field is sampled identically by CPU/GPU so canal
+and ocean waves agree with buoyancy. Elevations and many building heights are
+estimated; bridge clearance is enlarged for play. This is not a navigational chart.
+
+The user's two supplied still photographs were visually inspected. They guide
+the jet ski's blue seat/shoulders, angular black foredeck, rub rail, raised bars
+and guards, and the catamaran's continuous white tapered tubes, navy upper/lower
+stripes, open dark deck and stern-mounted outboard. These are original procedural
+meshes, with no copied logos, textures or photos shipped. The user mentioned
+videos, but none had been supplied at this update; no video-motion analysis is
+claimed.
+
+## Carving spray and sustained bow riding
+
+The BRP guide's steering section (printed pp.93–94) describes throttle, loading and water
+conditions affecting a turn. It does not prescribe a mandatory half-turn before spray.
+The user's setup-turn observation is implemented as a consequence of retained
+momentum: a carve builds lateral hull motion, and reversing steering changes
+stern cross-flow while the hull retains its prior motion. Chine emission uses
+stern cross-flow `slip - yawRate × aftDistance`, actual lateral acceleration and
+sampled wet contact. It follows the loaded side even during a steering reversal,
+then changes sides as the load changes. There is no scripted half-turn trigger
+or spray bonus from pressing Shift alone. The ejection coefficients and fan
+shape remain calibrated for a readable game effect, not measured spray footage.
+
+Thundercat high-bow resistance now samples the actual aft pontoon support instead
+of a point near the middle of the hull that became dry during a bow ride. A
+pitch-dependent ploughing drag term slows the stern-supported hull, allowing it
+to remain in the assisted medium-speed balance window. Continuous holds exceed
+15 seconds in simulation with neutral or raised trim; releasing the aft stance
+settles the bow and restores planing acceleration. This is a reduced-order,
+assisted game powerstand, not a validated prediction of real-boat stability.
 
 ## Implemented relations
 
@@ -107,7 +137,7 @@ at low speed. A latched shift state prevents oscillation at the speed threshold.
 Reverse on the outboard reverses its propeller wash.
 
 Chine/pontoon emission starts near each hull's sampled waterline. Contact,
-speed, yaw and lateral slip determine the two sides' spray independently.
+speed, stern cross-flow and lateral acceleration determine the two sides' spray independently.
 Holding Shift without changing the physical state does not multiply spray.
 Droplets inherit the vessel's velocity plus an ejection velocity, then experience
 gravity and approximate quadratic aerodynamic drag. Millimetre droplets use
@@ -126,6 +156,28 @@ Internal trim degrees are game tuning, not advertised factory trim angles; the
 jet-ski HUD shows the nine position indices. Q/E latches
 trim on water and controls pitch in air. T cycles modes. Each craft's trim and
 the riding mode are saved locally.
+
+The user's later spray photo guided a broader, denser white sheet with softer
+mist and finer droplets. Emission angles spread through an arc. The mesh retains
+recent real contact positions and velocities, so it curves through a turn and
+falls under gravity rather than rotating as one narrow ribbon. The Thundercat
+throws a wider, lower side fan and keeps propeller wash separate. This is visual
+reference matching at a stylised level, not a reconstruction of measured footage.
+
+After feedback that steering was too heavy, effective yaw inertia and especially
+speed-dependent damping were reduced independently for both craft. Powered
+steering remains thrust-driven and coast steering remains reduced. A repeatable
+two-second turn after four seconds of acceleration now has roughly a 17 m
+jet-ski radius versus roughly 52 m before this change, and a sub-40 m Thundercat
+radius versus roughly 149 m. These are scenario-specific simulation observations,
+not real-world turning-circle specifications.
+
+Original tileable grass/sand normal and colour maps, waterfront infill homes,
+gardens, verandas, roots and headland relief enrich the mapped land. Infill houses
+and headland height are artistic additions, not new geographic measurements.
+Static meshes are batched in spatial tiles and trees are instanced in tiles so
+geometry outside the view can be culled. The sky follows the camera across the
+larger map to avoid leaving the original fixed dome near the mouth.
 
 Rider hands/feet use two-link inverse kinematics and stay attached to the moving
 handlebar/tiller and footwells while the torso moves. The Thundercat now has an

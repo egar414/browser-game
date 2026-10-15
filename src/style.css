@@ -4,3 +4,7 @@
 @media(max-height:660px) and (min-width:681px){.launch-card{top:52%;padding:17px}.launch-card h2{margin:14px 0 7px}.launch-card p{margin:7px 0 10px}.vehicle-stats{padding-bottom:12px}.colour-row{margin:12px 0}.hero{top:24%}h1{font-size:95px}.location{margin-top:20px}.intro{font-size:12px}.home-footer{bottom:14px}}
 
 .trim-readout{display:flex;gap:12px;align-items:center;justify-content:flex-end;font-size:10px;letter-spacing:.08em;margin-top:10px;color:#e7dfc6}.trim-readout meter{width:65px;height:8px;accent-color:#edbd57}
+
+.home-footer a,.map-legend a{color:inherit;text-decoration:underline;text-underline-offset:2px;}
+
+.map-legend{flex-wrap:wrap;row-gap:6px}.map-legend a{font-size:8px;letter-spacing:0}.home-footer{font-size:8px}

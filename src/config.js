@@ -1,21 +1,22 @@
+import mapData from './data/mooloolaba.json' with {type:'json'};
 // All distances are metres; performance is arcade tuning, not manufacturer data.
 export const FIXED_STEP = 1 / 60;
-export const WORLD = { minX: -640, maxX: 640, minZ: -610, maxZ: 740 };
-export const SPAWN = { x: -125, z: 112, heading: Math.PI };
+export const WORLD = mapData.world;
+export const SPAWN = mapData.spawn;
 export const VEHICLES = {
   ski: {
     name: 'Sparkplug', subtitle: 'Freestyle jet ski', description: 'Light, lively and made for mischief. Lift the bow, carve a rooster tail, and spin off the ramps.',
     length: 3.0, width: 1.18, maxSpeed: 25.5,
     reverseMax: 4, lateralGrip: 3.7,
     slideGrip: 1.05, spring: 42, damping: 11, rideHeight: 0.14, airSteer: 4.9,
-    wheelieAngle: 0.92, wipeoutAngle: 1.22, colours: ['#ff613d', '#86df9c', '#f5bd39'],
+    wheelieAngle: 0.92, wipeoutAngle: 1.22, colours: ['#1679e8', '#ff613d', '#86df9c'],
   },
   cat: {
     name: 'Tunnel Rat 50', subtitle: 'Inflatable racing catamaran', description: 'Twin pontoons. One lively outboard. Settle onto the plane and carry a wide, heavy spray through the bends.',
     length: 4.1, width: 2.05, maxSpeed: 27,
     reverseMax: 3.3, lateralGrip: 2.6,
     slideGrip: 0.92, spring: 34, damping: 10, rideHeight: 0.16, airSteer: 0.83,
-    wheelieAngle: 0.67, wipeoutAngle: 1.08, colours: ['#f5bd39', '#ef745b', '#83d4ca'],
+    wheelieAngle: 0.67, wipeoutAngle: 1.08, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
   },
 };
 export const WAVES = [
@@ -23,20 +24,20 @@ export const WAVES = [
   { amplitude: 0.105, kx: -0.24, kz: 0.18, speed: 2.1 },
   { amplitude: 0.055, kx: 0.53, kz: 0.36, speed: 2.9 },
 ];
-export function waveHeight(x, z, time) {
-  const chop = 0.3 + 0.7 * Math.max(0, Math.min(1, (z - 40) / 230));
-  return WAVES.reduce((h, w) => h + Math.sin(x * w.kx + z * w.kz + time * w.speed) * w.amplitude * chop, 0);
+export const WAVE_FIELD=mapData.waveField;
+export function waveChop(x,z){
+  const n=WAVE_FIELD.size,u=Math.max(0,Math.min(n-1,(x-WORLD.minX)/(WORLD.maxX-WORLD.minX)*(n-1))),v=Math.max(0,Math.min(n-1,(z-WORLD.minZ)/(WORLD.maxZ-WORLD.minZ)*(n-1)));
+  const ix=Math.min(n-2,Math.floor(u)),iz=Math.min(n-2,Math.floor(v)),fx=u-ix,fz=v-iz,a=iz*n+ix,d=WAVE_FIELD.values;
+  return ((d[a]*(1-fx)+d[a+1]*fx)*(1-fz)+(d[a+n]*(1-fx)+d[a+n+1]*fx)*fz)/255;
 }
+export function waveHeight(x,z,time){return WAVES.reduce((h,w)=>h+Math.sin(x*w.kx+z*w.kz+time*w.speed)*w.amplitude,0)*waveChop(x,z);}
 export const QUALITY = {
   Low: { pixelRatio: .75, waterSegments: 100, particles: 600, wakeSamples: 125, fanSegments: 8, reflectionSize: 0, shadows: false, trees: 0.5 },
   Medium: { pixelRatio: 1.25, waterSegments: 160, particles: 1400, wakeSamples: 180, fanSegments: 12, reflectionSize: 256, shadows: false, trees: 0.75 },
   High: { pixelRatio: 1.65, waterSegments: 220, particles: 2400, wakeSamples: 230, fanSegments: 16, reflectionSize: 512, shadows: true, trees: 1 },
 };
-export const RACE = [
-  [-125, 10], [-125, -220], [-125, -470], [85, -470], [85, -275],
-  [280, -275], [275, -85], [275, 140], [430, 180], [280, 280], [30, 200], [-125, 112],
-];
-export const STUNT = { x: 165, z: 245, radius: 125 };
+export const RACE = mapData.race;
+export const STUNT = mapData.stunt;
 
 // Effective simulation values, not measured manufacturer specifications.
 export const RIDE_MODES = {
@@ -47,8 +48,8 @@ export const RIDE_MODES = {
 // Nine VTS selections are documented by BRP; these angles are original game tuning.
 export const SKI_TRIM_POSITIONS = [-10,-7.5,-5,-2.5,0,4,8,13,19];
 export const HYDRODYNAMICS = {
-  ski:{coastDrag:1,planingStart:4,planingEnd:13,minimumWetted:.56,pitchSpring:17,pitchDamping:6.8,rollSpring:24,rollDamping:8.2,yawInertia:450,yawDamping:3.6,yawSpeedDamping:.47},
-  cat:{coastDrag:3.5,planingStart:5,planingEnd:15,minimumWetted:.62,pitchSpring:12,pitchDamping:5.4,rollSpring:19,rollDamping:7,yawInertia:930,yawDamping:2.7,yawSpeedDamping:.27},
+  ski:{coastDrag:1,planingStart:4,planingEnd:13,minimumWetted:.56,pitchSpring:17,pitchDamping:6.8,rollSpring:24,rollDamping:8.2,yawInertia:340,yawDamping:2.7,yawSpeedDamping:.09},
+  cat:{bowPloughDrag:6,coastDrag:3.5,planingStart:5,planingEnd:15,minimumWetted:.62,pitchSpring:12,pitchDamping:5.4,rollSpring:19,rollDamping:7,yawInertia:550,yawDamping:2.2,yawSpeedDamping:.04},
 };
 export const PROPULSION = {
   ski:{

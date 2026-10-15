@@ -104,3 +104,31 @@ test('reverse bucket retains lateral jet deflection while a reversing propeller 
     assert(type==='ski'?v.drive.yawMoment>0:v.drive.yawMoment<0);
   }
 });
+
+test('Thundercat can sustain a stern-supported bow ride for over fifteen seconds',()=>{
+  for(const trim of [0,5,8]){
+    const v=craft('cat');v.x=-200;v.z=-1000;v.heading=Math.PI/2;v.setTrim(trim);
+    let continuous=0,longest=0;
+    for(let i=0;i<1200;i++){
+      v.update(1/60,{...input,freestyle:true},i/60);
+      continuous=v.pitch>.65?continuous+1:0;longest=Math.max(longest,continuous);
+      assert(!v.airborne&&!v.wipeout);assert(v.pitch<v.config.wipeoutAngle);
+    }
+    assert(longest/60>15,`trim ${trim}: longest balanced hold ${longest/60}s`);
+    run(v,180,{...input,freestyle:false});assert(v.pitch<.35);assert(v.speed>12);
+  }
+});
+
+test('a setup carve retains loaded-side spray through countersteering, then throws the opposite fan',()=>{
+  const v=craft('ski');v.x=-200;v.z=-1000;v.heading=Math.PI/2;let time=0;
+  const drive=(n,steer,freestyle)=>{
+    let peak=0;
+    for(let i=0;i<n;i++){v.update(1/60,{...input,steer,freestyle},time);time+=1/60;const s=sprayState(v,false,time);peak=Math.max(peak,s.left,s.right);}
+    return peak;
+  };
+  const cruise=drive(240,0,false),setup=drive(30,.7,true);
+  drive(9,-1,true);const loaded=sprayState(v,false,time);
+  assert(v.steer<0&&v.slip<0);assert(loaded.left>loaded.right,'water follows retained hull motion, not instantly the opposite bar input');
+  const carve=drive(51,-1,true);assert(carve>cruise*2);assert(carve>setup);
+  const finished=sprayState(v,false,time);assert(finished.right>finished.left,'fan changes sides when cross-flow reverses');
+});

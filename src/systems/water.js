@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { WAVES } from '../config.js';
+import { WAVES, WORLD, WAVE_FIELD } from '../config.js';
 import { lands } from './environment.js';
 import { SUN_DIRECTION } from './atmosphere.js';
 export { Spray } from './spray.js';
@@ -36,19 +36,22 @@ export class Water {
   constructor(scene, quality) {
     const canvas=document.createElement('canvas');canvas.width=canvas.height=1024;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,1024,1024);
-    ctx.fillStyle='#fff';ctx.shadowColor='#fff';ctx.shadowBlur=19;
-    for(const land of lands){ctx.beginPath();land.points.forEach((p,i)=>ctx[i?'lineTo':'moveTo']((p[0]+800)/1600*1024,(p[1]+800)/1600*1024));ctx.closePath();ctx.fill();}
+    ctx.fillStyle='#fff';ctx.shadowColor='#fff';ctx.shadowBlur=6;
+    const width=WORLD.maxX-WORLD.minX,depth=WORLD.maxZ-WORLD.minZ;
+    for(const land of lands){ctx.beginPath();for(const ring of [land.points,...(land.holes||[])]){ring.forEach((p,i)=>ctx[i?'lineTo':'moveTo']((p[0]-WORLD.minX)/width*1024,(p[1]-WORLD.minZ)/depth*1024));ctx.closePath();}ctx.fill('evenodd');}
+    const field=new THREE.DataTexture(new Uint8Array(WAVE_FIELD.values),WAVE_FIELD.size,WAVE_FIELD.size,THREE.RedFormat);
+    field.minFilter=field.magFilter=THREE.LinearFilter;field.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({
       uniforms:{
-        uTime:{value:0},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
+        uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
         uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
         uReflection:{value:null},uReflectionMatrix:{value:new THREE.Matrix4()},uReflect:{value:0},
         uHull:{value:new THREE.Vector4(0,0,1,2)},uHeading:{value:0},uContact:{value:1},
       },
       vertexShader:`
-        uniform float uTime;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
+        uniform float uTime;uniform vec4 uMapBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;
-        float wave(vec2 p){float chop=.3+.7*clamp((p.y-40.)/230.,0.,1.);
+        float wave(vec2 p){vec2 uv=(clamp((p-uMapBounds.xy)/uMapBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;float chop=texture2D(uWaveField,uv).r;
           return (${WAVES.map(w=>`${w.amplitude}*sin(p.x*${w.kx}+p.y*${w.kz}+uTime*${w.speed})`).join('+')})*chop;}
         void main(){
           vec3 p=position;p.xz+=uCenter;p.y=wave(p.xz);
@@ -59,7 +62,7 @@ export class Water {
           gl_Position=projectionMatrix*viewMatrix*vec4(p,1.);
         }`,
       fragmentShader:`
-        uniform float uTime;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
+        uniform float uTime;uniform vec4 uMapBounds;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
         uniform sampler2D uReflection;uniform float uReflect;uniform vec4 uHull;uniform float uHeading;uniform float uContact;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;
         void main(){
@@ -71,7 +74,7 @@ export class Water {
           vec2 ripples=(r1.rg*2.-1.)*.095+(r2.rg*2.-1.)*.045*micro;
           vec3 n=normalize(vNormal+vec3(ripples.x,0.,ripples.y));
           float ndv=max(dot(n,view),0.);float fresnel=.025+.975*pow(1.-ndv,5.);
-          float shore=texture2D(uShore,vec2((p.x+800.)/1600.,1.-(p.y+800.)/1600.)).r;
+          float shore=texture2D(uShore,vec2((p.x-uMapBounds.x)/uMapBounds.z,1.-(p.y-uMapBounds.y)/uMapBounds.w)).r;
           float bed=.82+.18*sin(p.x*.13+sin(p.y*.16))*sin(p.y*.18);
           vec3 deep=mix(vec3(.008,.105,.125),vec3(.045,.35,.265)*bed,smoothstep(.01,.78,shore));
           vec3 reflected=reflect(-view,n);

@@ -4,15 +4,19 @@
 
 A playable single-player 3D coastal boating playground. Free roam is the default:
 pick a compact freestyle jet ski or a twin-pontoon racing inflatable and launch
-into a compressed Mooloolaba-inspired estuary. No account, API key, or external asset
+into a Mooloolah River estuary based on actual OpenStreetMap shorelines. No account, API key, or external asset
 service is required to play.
 
-The graphics upgrade adds a moving cloud sky, reflected scenery on Medium/High,
+The graphics upgrade adds textured sand/grass, waterfront homes with verandas
+and gardens, branching mangroves, headland relief, and a moving cloud sky, reflected scenery on Medium/High,
 layered water ripples and sun highlights, shallow-water colour and shoreline
-foam, sky-lit glossy hulls, and a wider chase view across the water. Spray now
+foam, photo-referenced blue/black jet-ski panels and white/navy inflatable tubes, sky-lit glossy hulls, and a wider chase view across the water. Spray now
 comes from the chines and jet/propeller, with stronger outside-turn fans,
-ballistic droplets, mist, persistent V wakes, and expanding landing foam.
-The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
+curving spray sheets that retain their recent positions, ballistic droplets,
+soft mist, persistent V wakes, and expanding landing foam. Thundercat fans
+spread mainly sideways from the pontoons; its propeller has a separate wash.
+Powered steering is now quicker on both craft, with less excessive yaw damping
+and separate effective inertias. The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
 ## Run locally
 
@@ -53,23 +57,27 @@ Asset URLs are relative, including for subdirectory hosting.
 | Escape | Pause and settings |
 
 **Thundercat bow ride:** W + Shift at medium speed; trim up with Q, use E or
-release Shift to settle the bow. It rises during acceleration and settles as
-speed increases.
+release Shift to settle the bow. Stern contact and high-bow drag let it hold the bow ride under power;
+releasing Shift settles it back onto the plane.
 
 **Bow rider:** select Freestyle with T, accelerate on the jet ski and hold Shift without steering. E
 settles the bow; adding too much Q tips it. **Rooster tail:** carry speed into a
-W + Shift + A/D turn. **Air and spins:** approach the gold floating ramps from
+short setup turn, then carve the opposite way under power. Shift allows more
+sideways slip; a fixed half-turn is not required. **Air and spins:** approach the gold floating ramps from
 the north and travel south, away from the minimap’s N label (+Z). Use A/D in the air and Q/E to level out.
 The taller eastern ramp gives the best 360 opportunity. There is no jump key.
 Aerial points are banked only on a successful landing. Wipeouts break combos.
 Repeated actions have diminishing rewards and cooldowns; idling scores nothing.
 
-The Mooloolaba-inspired canals, wharf/marina, spit, two bridges, mangrove creek,
-island, beaches, Point Cartwright-inspired lighthouse and river mouth,
-and stunt area are connected through navigable water. Gold squares on the
+The map follows the real Mooloolah River, Minyama and Mooloolah Islands,
+connected residential canals, Tuckers Creek, marina, Mooloolaba Spit and the
+river mouth beside Point Cartwright. Its approximately 3.4 × 3.8 km horizontal
+layout is in metres. Nine mapped road bridges have enlarged gameplay clearance.
+Gold squares on the
 minimap mark the ramps. Gates appear only during races. Vehicle choice, colour,
 riding mode, trim for each craft, quality, audio, camera, best race time and best trick session are saved locally.
-Storage failures fall back to playable defaults.
+The mapped island course has a new record identifier, so times from the old
+fictional course are cleared while other preferences remain. Storage failures fall back to playable defaults.
 
 ## Project structure and tuning
 
@@ -84,7 +92,11 @@ Storage failures fall back to playable defaults.
 | `src/systems/atmosphere.js` | Sky/cloud lighting, shared sun direction and filtered material reflections |
 | `src/systems/spray.js` | Pooled droplets, turn fans, jet stream, foam wake ribbons and landing rings |
 | `src/systems/spray-model.js` | Hull waterline contacts, physical discharge and aerodynamic droplet drag |
-| `src/systems/environment.js` | Land polygons, simplified collision shapes, scenery and floating ramps |
+| `src/systems/environment.js` | Shoreline and solid-object collision queries |
+| `src/systems/geography.js` | Geographic database queries and named areas |
+| `src/systems/terrain-materials.js` | Tileable original ground colour/normal textures |
+| `src/systems/scenery.js` | Procedural scenery from mapped footprints, bridges, piers and parks |
+| `src/data/mooloolaba.json` | ODbL shoreline/features and shared wave-exposure field; [source/rebuild guide](src/data/README.md) |
 | `src/systems/input.js` | Keyboard, orbit drag, blur/visibility cleanup |
 | `src/systems/camera.js` | Chase camera, smoothing, views and shoreline avoidance |
 | `src/systems/audio.js` | Interaction-started procedural engine, water and impact audio |
@@ -154,7 +166,7 @@ runtime errors or failed requests.
 - Original stylised procedural models/scenery rather than licensed photoreal assets.
 - Desktop keyboard play; mobile/touch controls and multiplayer are not included.
 - Reduced-order buoyancy/planing and land collisions; no full fluid simulation or hull damage.
-- Compressed Mooloolaba-inspired geography; not a verified reconstruction or navigation map.
+- Actual OSM horizontal shoreline/feature layout with simplified widths, original facade details, estimated heights and enlarged bridge clearance; not a navigation map.
 - Physical coefficients and trim angles remain original tuning; see manufacturer research and limits in RESEARCH.md.
 - Visible foam wakes persist, but their trails do not add separate buoyancy forces.
 - Camera avoids shores and major low objects; it has no general mesh raycast solver.

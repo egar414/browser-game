@@ -84,7 +84,7 @@ class FoamWake {
 
 class SprayFan {
   constructor(scene,texture,side,segments) {
-    this.side=side;this.strength=0;this.rows=segments;this.columns=6;
+    this.side=side;this.strength=0;this.history=[];this.rows=segments;this.columns=6;
     const count=(segments+1)*7,positions=new Float32Array(count*3),uvs=new Float32Array(count*2),indices=[];
     for(let i=0;i<=segments;i++)for(let j=0;j<=6;j++)uvs.set([j/6,i/segments],(i*7+j)*2);
     for(let i=0;i<segments;i++)for(let j=0;j<6;j++){const a=i*7+j;indices.push(a,a+1,a+7,a+1,a+8,a+7);}
@@ -97,28 +97,43 @@ class SprayFan {
         float detail=texture2D(uNoise,vUv*vec2(4.,3.)-uTime*.25).r;
         float edges=pow(max(sin(vUv.x*3.14159),0.),.45)*(1.-smoothstep(.55,1.,vUv.y));
         float broken=smoothstep(.13,.73,noise*.7+detail*.3);
-        float alpha=edges*(.12+broken*.44)*min(uStrength,1.3)*vWet;
+        float alpha=edges*(.25+broken*.7)*min(uStrength,1.3)*vWet;
         if(alpha<.006)discard;
-        gl_FragColor=vec4(mix(vec3(.36,.68,.67),vec3(.94,.99,.94),broken),alpha);
+        gl_FragColor=vec4(mix(vec3(.68,.82,.8),vec3(.98,.99,.95),broken),alpha);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`});
     this.mesh=new THREE.Mesh(this.geometry,this.material);this.mesh.frustumCulled=false;this.mesh.renderOrder=3;scene.add(this.mesh);
   }
   update(dt,v,time,strength,state) {
-    this.strength=THREE.MathUtils.lerp(this.strength,strength,1-Math.exp(-dt*9));this.mesh.visible=this.strength>.06;
-    if(!this.mesh.visible)return;
-    const strengthNow=this.strength,p=this.geometry.attributes.position,wet=this.geometry.attributes.aWet;
-    for(let i=0;i<=this.rows;i++)for(let j=0;j<=this.columns;j++){
-      const t=i/this.rows*SPRAY_TUNING.fanLife,fan=j/this.columns;
-      const drop=launchSpray(v,state,this.side,()=>fan);
-      // In the moving source frame, old water falls behind the hull.
-      const px=drop.x+(drop.vx-v.vx)*t,pz=drop.z+(drop.vz-v.vz)*t;
-      const py=drop.y+drop.vy*t-4.905*t*t,water=waveHeight(px,pz,time);
-      p.setXYZ(i*7+j,px,Math.max(water+.025,py),pz);wet.setX(i*7+j,clamp((py-water)*5));
+    this.strength=THREE.MathUtils.lerp(this.strength,strength,1-Math.exp(-dt*9));
+    if(dt>0){
+      const drops=Array.from({length:this.columns+1},(_,j)=>launchSpray(v,state,this.side,()=>j/this.columns));
+      this.history.unshift({time,strength,drops});
     }
-    p.needsUpdate=true;wet.needsUpdate=true;this.material.uniforms.uTime.value=time;this.material.uniforms.uStrength.value=clamp(strengthNow/2,.1,1.1);
+    while(this.history.length&&(time-this.history.at(-1).time>SPRAY_TUNING.fanLife+.15||this.history.length>64))this.history.pop();
+    const peak=this.history.reduce((max,f)=>Math.max(max,f.strength*clamp(1-(time-f.time)/SPRAY_TUNING.fanLife)),0);
+    this.mesh.visible=peak>.06;
+    if(!this.mesh.visible)return;
+    const p=this.geometry.attributes.position,wet=this.geometry.attributes.aWet;
+    for(let i=0;i<=this.rows;i++){
+      const wanted=time-i/this.rows*SPRAY_TUNING.fanLife;
+      let frame=this.history[0];
+      for(const f of this.history){if(f.time>=wanted)frame=f;else break;}
+      const age=time-frame.time;
+      for(let j=0;j<=this.columns;j++){
+        const drop=frame.drops[j];
+        // Retain the actual past contact position and motion through the turn.
+        // Broad sheets curve behind the craft instead of swivelling as one jet.
+        const px=drop.x+drop.vx*age,pz=drop.z+drop.vz*age;
+        const py=drop.y+drop.vy*age-4.905*age*age,water=waveHeight(px,pz,time);
+        p.setXYZ(i*7+j,px,Math.max(water+.025,py),pz);
+        wet.setX(i*7+j,clamp((py-water)*7)*clamp(frame.strength/.8));
+      }
+    }
+    p.needsUpdate=true;wet.needsUpdate=true;this.material.uniforms.uTime.value=time;this.material.uniforms.uStrength.value=clamp(peak/1.3,.1,1.2);
   }
+
   dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
 }
 
@@ -153,10 +168,10 @@ export class Spray {
     this.particles=Array.from({length:this.count},()=>({life:0}));this.texture=foamTexture();
     this.positions=new Float32Array(this.count*3);this.sizes=new Float32Array(this.count);this.alphas=new Float32Array(this.count);this.kinds=new Float32Array(this.count);
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(this.positions,3));g.setAttribute('aSize',new THREE.BufferAttribute(this.sizes,1));g.setAttribute('aAlpha',new THREE.BufferAttribute(this.alphas,1));g.setAttribute('aKind',new THREE.BufferAttribute(this.kinds,1));
-    this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uScale:{value:600}},
-      vertexShader:`attribute float aSize;attribute float aAlpha;attribute float aKind;varying float vAlpha;varying float vKind;uniform float uScale;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uScale/max(1.,-mv.z),1.,52.);vAlpha=aAlpha;vKind=aKind;}`,
-      fragmentShader:`varying float vAlpha;varying float vKind;void main(){vec2 q=gl_PointCoord-.5;float d=length(q*vec2(vKind<.5?1.5:1.,1.));if(d>.5)discard;
-        float alpha=vKind<.5?(1.-smoothstep(.2,.5,d)):(1.-smoothstep(0.,.5,d))*.18;
+    this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uScale:{value:600},uNoise:{value:this.texture}},
+      vertexShader:`attribute float aSize;attribute float aAlpha;attribute float aKind;varying float vAlpha;varying float vKind;uniform float uScale;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uScale/max(1.,-mv.z),1.,aKind<.5?52.:112.);vAlpha=aAlpha;vKind=aKind;}`,
+      fragmentShader:`uniform sampler2D uNoise;varying float vAlpha;varying float vKind;void main(){vec2 q=gl_PointCoord-.5;float d=length(q*vec2(vKind<.5?1.5:1.,1.));if(d>.5)discard;
+        float noise=texture2D(uNoise,gl_PointCoord*1.7).r;float alpha=vKind<.5?(1.-smoothstep(.2,.5,d)):(1.-smoothstep(.08,.5,d))*(.1+noise*.18);
         gl_FragColor=vec4(mix(vec3(.69,.88,.91),vec3(.98,1.,.95),1.-d),alpha*vAlpha);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -167,8 +182,8 @@ export class Spray {
     this.fans=[new SprayFan(scene,this.texture,-1,quality.fanSegments),new SprayFan(scene,this.texture,1,quality.fanSegments)];
     this.state={left:0,right:0,rate:0};this.time=0;
   }
-  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.mesh.visible=false;}}
-  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=kind===0?.55+Math.random()*.5:.9;Object.assign(target,{diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===0?.055+Math.random()*.10:.25+Math.random()*.3,kind});}
+  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.mesh.visible=false;}}
+  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=kind===0?.55+Math.random()*.5:1.25;Object.assign(target,{diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
   splash(v,impact) {
     const count=Math.min(this.count*.4,40+impact*13);
     for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:v.x,y:waveHeight(v.x,v.z,this.time)+.1,z:v.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},i%8===0?1:0);}
@@ -181,7 +196,7 @@ export class Spray {
     const count=Math.min(Math.floor(this.accumulator),80);this.accumulator-=count;
     for(let i=0;i<count;i++){
       const side=Math.random()*(this.state.left+this.state.right)<this.state.left?-1:1;
-      this.emit(launchSpray(v,this.state,side),i%17===0?1:0);
+      this.emit(launchSpray(v,this.state,side),i%5===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
     }
     const discharge=active?pumpDischarge(v,time):null;this.stream.update(v,discharge);
     this.jetAccumulator+=dt*this.state.jet*(v.type==='ski'?160:90);
@@ -208,7 +223,7 @@ export class Spray {
       const p=this.particles[i];p.life-=dt;
       if(p.life>0){stepDroplet(p,dt);
         if(p.y<waveHeight(p.x,p.z,time)-.02)p.life=0;
-        this.positions.set([p.x,p.y,p.z],i*3);this.sizes[i]=p.size*(p.kind?1+(1-p.life/p.max)*1.7:1);this.alphas[i]=clamp(p.life/.2);this.kinds[i]=p.kind;
+        this.positions.set([p.x,p.y,p.z],i*3);this.sizes[i]=p.size*(p.kind?1+(1-p.life/p.max)*1.9:1);this.alphas[i]=clamp(p.life/.2);this.kinds[i]=p.kind;
       }else{this.alphas[i]=0;this.sizes[i]=0;}
     }
     for(const attr of Object.values(this.points.geometry.attributes))attr.needsUpdate=true;
