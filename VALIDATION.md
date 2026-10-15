@@ -76,3 +76,16 @@ The previous public release was application commit
 `9e5965dd417aa52556068c90ffb12be86b880e0f`, Actions run `38685285349`, and was
 verified over HTTPS with both craft. That historical record does not establish
 validation of this update. The new deployment result is appended once published.
+
+Application commit **6c675e555632915db301499cd580ca690340603d** published
+successfully in [GitHub Actions run 38696693707](https://github.com/egar414/browser-game/actions/runs/38696693707).
+https://egar414.github.io/browser-game/?v=6c675e5 returned HTTP 200 in Chromium,
+and the new island-course identifier confirmed the revised build was served.
+Both craft selected Freestyle, latched trim, accelerated, steered through loaded
+spray turns and verified their distinct reverse steering. Hosted Low 960×640
+samples were approximately 5.7 FPS on SwiftShader for both craft. The Thundercat
+then held a bow ride continuously for **13 simulated seconds** through the normal
+keys and trick-session clock, remained afloat without wipeout, and settled on
+release. Final pitch during the hold was ~0.893 rad. No runtime errors or failed
+requests occurred. Hosted spray and bow-ride screenshots were inspected. HTTPS
+certificate validation remained enabled.

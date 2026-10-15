@@ -11,6 +11,7 @@ try{
     const page=await context.newPage(),errors=[],failures=[];page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>failures.push(r.url()));
     const response=await page.goto(endpoint,{waitUntil:'networkidle'});if(response.status()!==200)throw new Error(`HTTP ${response.status()}`);
     await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
+    if(await page.evaluate(()=>window.__ESTUARY__.status.settings.raceCourse)!=='minyama-island-2026-10')throw new Error('Updated estuary build not served');
     if(!(await page.locator('.location').textContent()).includes('MOOLOOLABA'))throw new Error('Mooloolaba update not served');
     await page.locator(`[data-vehicle="${type}"]`).click();await page.locator('#play').click();await page.keyboard.press('KeyT');
     await page.keyboard.down('KeyQ');await page.waitForFunction(()=>window.__ESTUARY__.status.trim>4);await page.keyboard.up('KeyQ');
