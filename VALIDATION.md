@@ -69,3 +69,14 @@ Actual performance and subjective handling feel require hardware-browser testing
   `wavedash.com` was added to the saved network draft; runtime access still
   requires applying that configuration. The reference has not been visually
   inspected and no visual-parity claim is made.
+
+## Published graphics upgrade
+
+Commit `18acdc1a3b5ff30f9b0b4eeaf00142967d4a32ff` deployed successfully in
+GitHub Actions run `38675522389`. The public URL with `?v=18acdc1` returned 200
+and loaded the new spray diagnostics, confirming the updated bundle was served.
+Chromium drove both craft through powered spray turns: the outside spray was
+more than twice the inside spray, particles and wake samples were present, and
+Medium reflections were enabled successfully after switching quality. There
+were no runtime/shader errors or failed requests. HTTPS verification remained
+enabled. Public gameplay and reflection screenshots were visually inspected.
