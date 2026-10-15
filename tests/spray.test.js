@@ -42,7 +42,7 @@ test('foam fades, splash rings expand, and recovery clears old spray',()=>{
 test('central ski plume is flow driven, trim responsive and excluded from propeller wash',async()=>{
   const {jetPlumeSource}=await import('../src/systems/spray-model.js');
   const v={...boat(),drive:{trimAngle:0}},d={origin:{x:0,y:-.1,z:-1.6},velocity:{x:0,y:0,z:-20},flow:.15,reverse:0,aerial:false};
-  const s=jetPlumeSource(v,d);assert(s.velocity.y>8);assert(s.origin.z<0);assert(s.origin.y>=waveHeight(0,-1.6,0));
+  const s=jetPlumeSource(v,d);assert(s.velocity.y>4 && s.velocity.y<8);assert(s.origin.z<0);assert(s.origin.y>=waveHeight(0,-1.6,0));
   assert(jetPlumeSource({...v,drive:{trimAngle:.3}},d).velocity.y>s.velocity.y);
   for(const changed of [{type:'cat'},{airborne:true},{wipeout:1},{throttle:0}])assert.equal(jetPlumeSource({...v,...changed},d),null);
   assert.equal(jetPlumeSource(v,{...d,reverse:1}),null);

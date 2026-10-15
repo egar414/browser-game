@@ -18,31 +18,53 @@ spread mainly sideways from the pontoons; its propeller has a separate wash.
 Powered steering is now quicker on both craft, with less excessive yaw damping
 and separate effective inertias. The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
-## Current playable preview
+## Ocean and coastal detail update
 
-This update is published as a work in progress while extended browser testing continues.
-It includes an original Blender-built jet-ski shell, a denser elevated central rear
-plume, sustained powered Thundercat bow rides, and touch controls. Optional sea
-conditions blend from calm through swell, with natural wave hops and landed tricks.
-B starts a two-minute spray battle: soak rivals from the sides/rear, avoid filling
-up yourself, and use R / RESET to bail out. This is a gameplay water meter, not
-simulated hull flooding. Combo points earn garage designs and handling kits;
-locked selections show their required XP. All progression stays in local storage.
+The river mouth now blends into directional 7–10 second ocean swell, smaller
+wind chop and changing wave sets. Whitecaps, reflected scenery and finer ripples
+sit on the same displaced surface sampled by boat buoyancy. Hourly ocean
+conditions change smoothly using an offline simulated forecast tied to the
+clock, including across reloads. This is gameplay weather, not live observations.
+Pause → Sea conditions offers lighter seas, chop, swell and hourly conditions.
+An older save adopts hourly conditions once; later manual choices are preserved.
 
-On touch devices, hold GO, use the arrows to steer, and hold BRAKE to stop/reverse.
-Tap LIFT to toggle bow riding and BOW + / − for trim. MODE, VIEW, RESET and HELP
-are available on screen. Auto quality starts at Low on phones. Desktop controls
-remain available. Physical phone/Safari and hardware-GPU performance are unverified.
+The land follows 422 OSM building footprints, 828 road segments, 60 mapped
+residential areas and the mapped entrance rock wall. Roof shapes/heights use
+available OSM tags; missing details are original estimates. Individual windows,
+gutters, roof materials, doorways and garages replace plain blocks. There are
+313 additional estimated waterfront homes within mapped residential areas, not
+surveyed house replicas. Sloping shore edges, improved palms/clouds and 19
+wave-following moored aluminium tinnies enrich the surroundings. The three tinny
+styles are scenery; the jet ski and Thundercat remain the two drivable craft.
 
-The editable model is `art/sparkplug.blend`; rebuild the bundled GLB with:
+The supplied 22.8-second video informed denser, taller loaded-turn sheets,
+broader Thundercat pontoon spray and finer falling droplets. Straight-line rear
+wash stays lower; trim and turn loading raise the plume. This is a visual
+approximation, not reconstructed or measured real fluid flow. The video is not
+bundled. The jet-ski body is an original Blender asset; its source is editable.
+
+On touch devices, rotate sideways for the preferred riding view. FULL requests
+full screen and a landscape lock where the browser supports it. A rotate prompt
+with a portrait fallback handles browsers that refuse a lock. Hold GO, steer
+with the arrows, hold BRAKE to stop/reverse, tap LIFT for bow riding and BOW + / −
+for trim. Auto quality starts Low. The optional home-screen manifest requests
+landscape; installation is not required and offline play is not provided.
+
+Optional spray battles, landed trick scoring, combo-earned garage designs/kits,
+races and local save records remain available. B starts a two-minute spray
+battle; R / RESET bails out. This uses gameplay water meters rather than actual
+fluid flooding. No multiplayer or player accounts are needed.
+
+Rebuild the original editable model with:
 
 ```sh
 blender -b -t 2 -P art/build_sparkplug.py
 ```
 
-No Google Earth imagery is shipped. Access to the reference was blocked (proxy
-403), so the existing OpenStreetMap geography and original scenery remain the
-geographic basis.
+`art/sparkplug.blend` and `src/assets/sparkplug.glb` are included. No Google Earth
+imagery is shipped. Access to additional building data and the Google Earth
+reference was blocked, so OSM geometry and original scenery remain the basis.
+Photographic accuracy of every house and photorealism are not established.
 
 ## Run locally
 
@@ -110,7 +132,8 @@ fictional course are cleared while other preferences remain. Storage failures fa
 
 | File | Responsibility |
 | --- | --- |
-| `src/config.js` | Vehicle tuning, quality profiles, shared wave equations, race route |
+| `src/config.js` | Vehicle tuning, quality profiles and race route |
+| `src/ocean.js` | Shared CPU/GPU swell equations, hourly forecast and sea tuning |
 | `src/vehicles/physics.js` | Fixed-step movement, four-point buoyancy, planing, slides, air control, scoring events |
 | `src/vehicles/propulsion.js` | Pump/propeller momentum, intake immersion, nozzle poses and reaction force |
 | `src/vehicles/rider.js` | Articulated rider with fixed hand/foot contacts and posture response |
@@ -122,7 +145,9 @@ fictional course are cleared while other preferences remain. Storage failures fa
 | `src/systems/environment.js` | Shoreline and solid-object collision queries |
 | `src/systems/geography.js` | Geographic database queries and named areas |
 | `src/systems/terrain-materials.js` | Tileable original ground colour/normal textures |
-| `src/systems/scenery.js` | Procedural scenery from mapped footprints, bridges, piers and parks |
+| `src/systems/scenery.js` | Mapped land, shoreline slopes, roads, vegetation, piers and rock wall |
+| `src/systems/architecture.js` | Footprint-aligned roofs, facade atlas and house detail |
+| `src/systems/moored-boats.js` | Three original instanced aluminium tinny styles and water following |
 | `src/data/mooloolaba.json` | ODbL shoreline/features and shared wave-exposure field; [source/rebuild guide](src/data/README.md) |
 | `src/systems/input.js` | Keyboard, touch input, orbit drag, blur/visibility cleanup |
 | `src/systems/touch-controls.js` | Multi-touch driving buttons and lift toggle |
@@ -162,7 +187,7 @@ without the extra reflection pass. Medium uses 256-pixel reflections; High uses
 512-pixel reflections and shadows. `QUALITY` in `src/config.js` controls render
 resolution, water density, particle/wake budgets, fan density and reflections.
 `RIDE_MODES` and `PROPULSION` in `src/config.js` control modes, trim and pump/propeller tuning. `HYDRODYNAMICS` controls planing and angular response.
-`SEA_STATES` controls wave strength and smooth weather transitions. `JET_PLUME` in `src/systems/spray-model.js` controls central spray height, spread and lifetime. The central plume is visually amplified, not a measured factory discharge.
+`OCEAN_TUNING`, `OCEAN_SWELL` and `SEA_STATES` in `src/ocean.js` control wave periods, height, groups, one-hour forecast interval and twelve-second manual transitions. The shared `WAVE_GLSL` is generated from the same coefficients used by CPU buoyancy. `JET_PLUME` in `src/systems/spray-model.js` controls central spray height, spread and lifetime. The central plume is visually amplified, not a measured factory discharge.
 `SPRAY_TUNING` in `src/systems/spray-model.js` controls wake lifetime/spread. The water shader's colours and optical detail are in
 `src/systems/water.js`. These visual parameters do not alter boat physics.
 
@@ -195,7 +220,7 @@ runtime errors or failed requests.
 
 ## First-release limits
 
-- Original stylised procedural models/scenery rather than licensed photoreal assets.
+- Original procedural/Blender models and approximate facades rather than photogrammetry or measured replicas of each house.
 - Keyboard and touch controls; multiplayer is not included. Physical mobile browsers remain untested.
 - Reduced-order buoyancy/planing and land collisions; optional spray battles use approximate exposure volumes, not fluid dynamics or real hull damage.
 - Actual OSM horizontal shoreline/feature layout with simplified widths, original facade details, estimated heights and enlarged bridge clearance; not a navigation map.
@@ -214,3 +239,11 @@ See `ATTRIBUTION.md` for asset origins and `VALIDATION.md` for measured checks.
 After deployment, `node tests/hosted-smoke.mjs` opens the public HTTPS site,
 checks both craft, mode switching, persistent trim and powered spray turns.
 `ESTUARY_URL` can target another deployment; HTTPS certificate validation stays on.
+
+For development-only world inspection, run the dev server and open
+`/tools/scenery-preview.html?view=mouth` (`homes` / `marina` also available).
+This separate scene viewer is not a gameplay test or part of the production build.
+
+`node tests/hosted-phone.mjs` checks the public preview with Chromium touch
+emulation, full-screen request, driving, craft selection and rotation fallback.
+This does not establish Android/iOS hardware compatibility.

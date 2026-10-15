@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { coastalCanopy } from './foliage.js';
+import { createMooredTinnies } from './moored-boats.js';
+import { buildMappedBuildings, roofMaterial, facadeWindowMaterial } from './architecture.js';
 import { groundMaterial } from './terrain-materials.js';
 import { box, tube } from '../vehicles/models.js';
 import { mapData, lands, landAt, pointInPoly, edgeDistance } from './geography.js';
@@ -20,43 +23,45 @@ export function buildEstuaryScenery(scene,quality,solids){
   const root=new THREE.Group();scene.add(root);
   const sand=groundMaterial('#f0dbb1','sand'),grass=groundMaterial('#b4bf8d','grass'),park=groundMaterial('#94b47f','grass'),road=material('#737d78');
   const concrete=material('#c3c4b6'),timber=material('#92836c'),navy=material('#263e4f');
-  const walls=['#e2e3d7','#c4d3ce','#d3c2ac','#f0e5cf'].map(material),roofs=['#839390','#b39c85','#596f74'].map(material);
-  const garden=material('#537d57'),fence=material('#d3d2ba');
+  const walls=['#e2e3d7','#c4d3ce','#d3c2ac','#f0e5cf'].map(material),roofs=['#647675','#a7886d','#40535b','#bbc0b8','#77675a'].map(roofMaterial);
+  const garden=material('#537d57'),fence=material('#d3d2ba'),homeGlass=facadeWindowMaterial();
   const windows=new THREE.MeshStandardMaterial({color:'#38636e',roughness:.22,metalness:.32});
-  for(const land of lands){surface(root,land,.52,sand,2);for(const inset of land.grass)surface(root,inset,.56,grass);}
+  for(const land of lands){
+    surface(root,land,-.18,sand,2);for(const inset of land.grass)surface(root,inset,.56,grass);
+    const border=shapeOf(land);for(const inset of land.grass)border.holes.push(new THREE.Path(inset.points.map(([x,z])=>new THREE.Vector2(x,-z))));
+    const g=new THREE.ShapeGeometry(border);g.rotateX(-Math.PI/2);const p=g.attributes.position,uv=new Float32Array(p.count*2);
+    for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);let distance=Infinity;for(let j=1;j<land.points.length;j++)distance=Math.min(distance,edgeDistance(x,z,land.points[j-1],land.points[j]));p.setY(i,-.08+Math.min(1,distance/4)*.64);uv.set([x*.14,z*.14],i*2);}
+    g.setAttribute('uv',new THREE.BufferAttribute(uv,2));g.computeVertexNormals();root.add(new THREE.Mesh(g,sand));
+  }
   for(const p of mapData.parks)surface(root,p,.58,park);
   for(const p of mapData.beaches)surface(root,p,.6,sand);
   const segment=(a,b,w,y,h,mat)=>{const length=Math.hypot(b[0]-a[0],b[1]-a[1]);if(length<.1)return;const mesh=box(root,w,h,length,(a[0]+b[0])/2,y,(a[1]+b[1])/2,mat);mesh.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);return mesh;};
+  const roadMark=material('#d8d7bd');
   for(const r of mapData.roads)for(let i=1;i<r.points.length;i++){
-    const a=r.points[i-1],b=r.points[i];if(landAt((a[0]+b[0])/2,(a[1]+b[1])/2))segment(a,b,r.w,.64,.08,road);
+    const a=r.points[i-1],b=r.points[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);if(landAt((a[0]+b[0])/2,(a[1]+b[1])/2)){
+      segment(a,b,r.w,.64,.08,road);
+      if(len>5)for(const side of [-1,1]){const nx=dz/len*side,nz=-dx/len*side;segment([a[0]+nx*(r.w/2+.65),a[1]+nz*(r.w/2+.65)],[b[0]+nx*(r.w/2+.65),b[1]+nz*(r.w/2+.65)],1.1,.64,.1,concrete);}
+      if(r.w>7)for(let d=1;d<len-3;d+=12)segment([a[0]+dx*d/len,a[1]+dz*d/len],[a[0]+dx*Math.min(d+4,len)/len,a[1]+dz*Math.min(d+4,len)/len],.12,.69,.012,roadMark);
+    }
   }
   const shorelineDistance=(x,z)=>{
     let d=Infinity;const l=landAt(x,z);if(!l)return 0;
     for(let i=1;i<l.points.length;i++)d=Math.min(d,edgeDistance(x,z,l.points[i-1],l.points[i]));return d;
   };
   // Artist-shaped headland relief, not surveyed elevation data.
-  const terrainHeight=(x,z)=>.62+22*Math.exp(-((x-1410)**2+(z+1560)**2)/32000)*THREE.MathUtils.smoothstep(shorelineDistance(x,z),0,28);
-  const hillVertices=[],hillUV=[];
+  const terrainHeight=(x,z)=>.62+22*Math.exp(-((x-1410)**2+(z+1560)**2)/32000)*THREE.MathUtils.smoothstep(shorelineDistance(x,z),0,28)*THREE.MathUtils.smoothstep(x,1120,1200)*(1-THREE.MathUtils.smoothstep(x,1460,1540))*THREE.MathUtils.smoothstep(z,-1660,-1580)*(1-THREE.MathUtils.smoothstep(z,-1360,-1280));
+  const hillVertices=[],hillUV=[],hillEdges=new Map();
   for(let x=1120;x<1540;x+=16)for(let z=-1660;z<-1280;z+=16){
     const ps=[[x,z],[x+16,z],[x,z+16],[x+16,z+16]];
-    for(const ids of [[0,2,1],[1,2,3]])if(ids.every(i=>landAt(...ps[i])))for(const i of ids){const [px,pz]=ps[i];hillVertices.push(px,terrainHeight(px,pz),pz);hillUV.push(px*.14,pz*.14);}
+    for(const ids of [[0,2,1],[1,2,3]])if(ids.every(i=>landAt(...ps[i]))){
+      for(let j=0;j<3;j++){const a=ps[ids[j]],b=ps[ids[(j+1)%3]],key=[a.join(':'),b.join(':')].sort().join('/');if(hillEdges.has(key))hillEdges.get(key).count++;else hillEdges.set(key,{a,b,count:1});}
+      for(const i of ids){const [px,pz]=ps[i];hillVertices.push(px,terrainHeight(px,pz),pz);hillUV.push(px*.14,pz*.14);}
+    }
   }
+  for(const {a,b,count}of hillEdges.values())if(count===1){const ah=terrainHeight(...a),bh=terrainHeight(...b);for(const [x,y,z]of[[a[0],ah,a[1]],[a[0],.56,a[1]],[b[0],bh,b[1]],[a[0],.56,a[1]],[b[0],.56,b[1]],[b[0],bh,b[1]]]){hillVertices.push(x,y,z);hillUV.push(x*.14,z*.14);}}
   const hill=new THREE.BufferGeometry();hill.setAttribute('position',new THREE.Float32BufferAttribute(hillVertices,3));hill.setAttribute('uv',new THREE.Float32BufferAttribute(hillUV,2));hill.computeVertexNormals();root.add(new THREE.Mesh(hill,grass));
   // Footprints and available levels are geographic data; facade details are original.
-  mapData.buildings.forEach((b,index)=>{
-    if(!landAt(...b.points[0]))return;
-    surface(root,b,.65+b.h,walls[index%4],b.h);
-    surface(root,b,.65+b.h+.35,roofs[index%3],.35);
-    for(let i=1;i<b.points.length;i++){
-      const a=b.points[i-1],c=b.points[i],dx=c[0]-a[0],dz=c[1]-a[1],len=Math.hypot(dx,dz);
-      if(len<4)continue;
-      const floors=Math.min(12,Math.max(1,Math.round(b.h/3.2)));
-      for(let floor=0;floor<floors;floor++){
-        const mesh=segment(a,c,.12,2.5+floor*(b.h/floors),1.25,windows);if(mesh){mesh.scale.z=.72;mesh.scale.x=1;}
-        if(b.h>11){const ledge=segment(a,c,.65,1.1+floor*(b.h/floors),.16,concrete);if(ledge)ledge.scale.z=.95;}
-      }
-    }
-  });
+  const architectureStats=buildMappedBuildings(root,mapData.buildings.filter(b=>landAt(...b.points[0])),mapData.roads,surface,segment,{walls,roofs,windows,fence,concrete,heightAt:terrainHeight});
   for(const p of mapData.piers){
     if(p.area){surface(root,p,1.15,timber,.35);}
     else for(let i=1;i<p.points.length;i++){
@@ -85,8 +90,8 @@ export function buildEstuaryScenery(scene,quality,solids){
       g.setAttribute('position',new THREE.Float32BufferAttribute([-a,y,-b,a,y,-b,-a,y,b,a,y,b,0,y+2,-b,0,y+2,b],3));g.setIndex([0,2,5,0,5,4,4,5,3,4,3,1,0,4,1,2,3,5]);g.computeVertexNormals();group.add(new THREE.Mesh(g,roof));
     }
     for(let y=2;y<h;y+=3){
-      for(let wx=-w/2+2;wx<w/2-1;wx+=3.8)box(group,2.2,1.5,.1,wx,y,d/2+.06,windows);
-      box(group,w*.6,1.7,.12,0,y,-d/2-.08,windows);
+      for(let wx=-w/2+2;wx<w/2-1;wx+=3.8)box(group,2.2,1.5,.1,wx,y,d/2+.06,homeGlass);
+      box(group,w*.6,1.7,.12,0,y,-d/2-.08,homeGlass);
       box(group,w+.7,.16,2.4,0,y-1.0,d/2+1,concrete);
       box(group,w+.4,.65,.12,0,y-.6,d/2+2.1,fence);
     }
@@ -103,10 +108,12 @@ export function buildEstuaryScenery(scene,quality,solids){
     if(len<28)continue;
     for(let t=.5;t<len;t+=39){
       const px=a[0]+(b[0]-a[0])*t/len,pz=a[1]+(b[1]-a[1])*t/len;
-      if(pz<-1050||pz>240||px>1140||px<-1120)continue;
+      if(pz<-1050||pz>1150||px>1140||px<-1120)continue;
       for(const side of [-1,1]){
         const nx=(b[1]-a[1])/len*side,nz=-(b[0]-a[0])/len*side,x=px+nx*25,z=pz+nz*25;
         if(!landAt(x,z)||!landAt(x+nx*10,z+nz*10)||shorelineDistance(x,z)<17)continue;
+        if(!mapData.residential.some(r=>pointInPoly(x,z,r.points)))continue;
+        if(mapData.roads.some(r=>r.points.some((p,i)=>i&&edgeDistance(x,z,r.points[i-1],p)<r.w/2+10)))continue;
         if(mapData.parks.some(p=>pointInPoly(x,z,p.points))||mapData.buildings.some(b=>b.points.some(p=>Math.hypot(x-p[0],z-p[1])<25))||homeSites.some(p=>Math.hypot(x-p[0],z-p[1])<35))continue;
         homeSites.push([x,z]);coastalHome(x,z,Math.atan2(-nx,-nz),12+random()*5,12+random()*5,homeSites.length);break;
       }
@@ -123,26 +130,31 @@ export function buildEstuaryScenery(scene,quality,solids){
     const scale=.65+random()*.9,ground=(x>1120&&z<-1280)?terrainHeight(x,z):.6;trunks.push([x,ground+3*scale,z,scale]);crowns.push([x,ground+6*scale,z,scale]);
   }
   const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),q=new THREE.Quaternion();
-  const trunkGeo=new THREE.CylinderGeometry(.23,.5,6,5),crownGeo=new THREE.IcosahedronGeometry(1,quality.trees>.6?1:0),foliageMat=material('#ffffff');
+  const trunkGeo=new THREE.CylinderGeometry(.23,.5,6,7),canopy=coastalCanopy(),crownGeo=canopy.geometry,foliageMat=canopy.material;
   const tiles=new Map();
   trunks.forEach((p,i)=>{const key=`${Math.floor(p[0]/250)}:${Math.floor(p[2]/250)}`;if(!tiles.has(key))tiles.set(key,[]);tiles.get(key).push(i);});
   for(const indices of tiles.values()){
     const tmesh=new THREE.InstancedMesh(trunkGeo,timber,indices.length),cmesh=new THREE.InstancedMesh(crownGeo,foliageMat,indices.length);
     indices.forEach((i,j)=>{let p=trunks[i];position.set(p[0],p[1],p[2]);scale.setScalar(p[3]);matrix.compose(position,q,scale);tmesh.setMatrixAt(j,matrix);
-      p=crowns[i];position.set(p[0],p[1],p[2]);scale.set(3.9*p[3],2.9*p[3],3.7*p[3]);matrix.compose(position,q,scale);cmesh.setMatrixAt(j,matrix);cmesh.setColorAt(j,new THREE.Color(['#426c51','#63835d','#537756'][i%3]));});
-    tmesh.computeBoundingSphere();cmesh.computeBoundingSphere();root.add(tmesh,cmesh);
+      p=crowns[i];position.set(p[0],p[1],p[2]);scale.set(3.9*p[3],2.9*p[3],3.7*p[3]);matrix.compose(position,q,scale);cmesh.setMatrixAt(j,matrix);cmesh.setColorAt(j,new THREE.Color(['#b9c5a0','#c7cba5','#a9ba93'][i%3]));});
+    tmesh.computeBoundingSphere();cmesh.computeBoundingSphere();tmesh.castShadow=cmesh.castShadow=true;cmesh.receiveShadow=true;root.add(tmesh,cmesh);
   }
+  const leafCanvas=document.createElement('canvas');leafCanvas.width=128;leafCanvas.height=256;
+  const lc=leafCanvas.getContext('2d');lc.strokeStyle='#5a7950';lc.lineWidth=4;lc.beginPath();lc.moveTo(64,0);lc.lineTo(64,256);lc.stroke();
+  for(let y=12;y<245;y+=8){const spread=Math.sin(y/256*Math.PI)*61;lc.lineWidth=5;lc.strokeStyle=y%16?'#5c824c':'#789258';for(const side of [-1,1]){lc.beginPath();lc.moveTo(64,y-5);lc.lineTo(64+side*spread,y+15);lc.stroke();}}
+  const leafTexture=new THREE.CanvasTexture(leafCanvas);leafTexture.colorSpace=THREE.SRGBColorSpace;
+  const leafMaterial=new THREE.MeshStandardMaterial({color:'#e0e7ca',map:leafTexture,alphaTest:.45,side:THREE.DoubleSide,roughness:.85});
   function palm(x,z,size=1){
     const base=(x>1120&&z<-1280)?terrainHeight(x,z):.6;
     tube(root,[[x,base,z],[x+.5*size,base+5*size,z],[x+size,base+8.5*size,z]],.19*size,timber,6);
     for(let j=0;j<7;j++){
-      const angle=j*Math.PI*2/7,v=[],indices=[];
+      const angle=j*Math.PI*2/7,v=[],indices=[],uv=[];
       for(let i=0;i<=8;i++){
         const t=i/8,w=Math.sin(t*Math.PI)*.45*size,px=x+(1+Math.sin(angle)*t*4.8)*size,pz=z+Math.cos(angle)*t*4.8*size,py=base+(8.5+Math.sin(t*Math.PI)-t*t*2.2)*size;
-        for(const side of [-1,1])v.push(px+Math.cos(angle)*w*side,py,pz-Math.sin(angle)*w*side);
+        for(const side of [-1,1]){v.push(px+Math.cos(angle)*w*side,py,pz-Math.sin(angle)*w*side);uv.push(side<0?0:1,t);}
         if(i<8){const a=i*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}
       }
-      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(indices);g.computeVertexNormals();const m=garden.clone();m.side=THREE.DoubleSide;root.add(new THREE.Mesh(g,m));
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(indices);g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.computeVertexNormals();root.add(new THREE.Mesh(g,leafMaterial));
     }
   }
   // Original palms decorate the real shoreline, without changing its geometry.
@@ -161,17 +173,31 @@ export function buildEstuaryScenery(scene,quality,solids){
       for(let j=0;j<3;j++){const c=new THREE.Mesh(new THREE.IcosahedronGeometry(1,quality.trees>.6?1:0),garden);c.position.set(x+(j-1)*1.8,3.4+(j%2)*.5,z+(j%2)*1.5);c.scale.set(2.8,1.8,2.5);root.add(c);}
     }
   }
-  // Simple original moored cruisers at mapped marina fingers.
+  const tinnySites=[],boatSites=[],boatRandom=seeded(8051);
+  // Original boats at mapped marina fingers; not claims of actual moorings.
   for(const p of mapData.piers){
-    if(p.area||random()>.32)continue;
-    const a=p.points[0],b=p.points.at(-1),len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<8||len>80)continue;
+    if(boatRandom()>.78||boatSites.length>=24)continue;
+    let a=p.points[0],b=p.points.at(-1);
+    if(p.area){let longest=0;for(let i=1;i<p.points.length;i++){const d=Math.hypot(p.points[i][0]-p.points[i-1][0],p.points[i][1]-p.points[i-1][1]);if(d>longest){longest=d;a=p.points[i-1];b=p.points[i];}}}
+    const len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<8||len>130)continue;
     const x=(a[0]+b[0])/2+(b[1]-a[1])/len*6,z=(a[1]+b[1])/2-(b[0]-a[0])/len*6;
-    if(landAt(x,z)||Math.hypot(x-mapData.spawn.x,z-mapData.spawn.z)<90||mapData.race.some(g=>Math.hypot(x-g[0],z-g[1])<22))continue;
+    if(landAt(x,z)||Math.hypot(x-mapData.spawn.x,z-mapData.spawn.z)<90||mapData.race.some((g,i)=>edgeDistance(x,z,g,mapData.race[(i+1)%mapData.race.length])<10)||boatSites.some(p=>Math.hypot(x-p[0],z-p[1])<8)||mapData.piers.some(p=>p.area?pointInPoly(x,z,p.points):p.points.some((q,i)=>i&&edgeDistance(x,z,p.points[i-1],q)<3)))continue;
+    if(mapData.channels.some(c=>c.points.some((q,i)=>i&&edgeDistance(x,z,c.points[i-1],q)<7)))continue;
+    boatSites.push([x,z]);
+    if(tinnySites.length<30&&boatRandom()<.72){tinnySites.push({x,z,heading:Math.atan2(b[0]-a[0],b[1]-a[1])});solids.push({name:'Moored tinny',x,z,w:3,d:5,height:2.5});continue;}
     const boat=new THREE.Group();boat.position.set(x,0,z);boat.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);root.add(boat);
     const hull=new THREE.Mesh(new THREE.CapsuleGeometry(1.25,4.5,3,8),walls[0]);hull.rotation.x=Math.PI/2;hull.scale.z=.5;hull.position.y=.3;boat.add(hull);
     box(boat,1.85,1.4,3,0,1.2,-.4,walls[0],true);box(boat,1.9,.5,2.4,0,1.8,-.3,windows,true);box(boat,2.15,.15,3.1,0,2.13,-.4,navy);
     solids.push({name:'Moored boat',x,z,w:3,d:7,height:3});
   }
+  const updateTinnies=createMooredTinnies(root,tinnySites);updateTinnies(0);root.userData.update=updateTinnies;
+  // Mapped entrance breakwater, dressed with original interlocking stone blocks.
+  const stone=material('#697575'),stoneGeo=new THREE.IcosahedronGeometry(1,1),rockSites=[];
+  for(const wall of mapData.breakwaters)for(let i=1;i<wall.points.length;i++){
+    const a=wall.points[i-1],b=wall.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    for(let d=0;d<len;d+=2.2)for(const side of [-1,0,1])rockSites.push([a[0]+(b[0]-a[0])*d/len+(b[1]-a[1])/len*side*1.1,.2+(side===0?.6:0)+random()*.4,a[1]+(b[1]-a[1])*d/len-(b[0]-a[0])/len*side*1.1]);
+  }
+  const rocks=new THREE.InstancedMesh(stoneGeo,stone,rockSites.length);rockSites.forEach(([x,y,z],i)=>{const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(random(),random()*6,random()));matrix.compose(new THREE.Vector3(x,y,z),q,new THREE.Vector3(1.3+random()*.5,.7+random()*.5,1.2+random()*.7));rocks.setMatrixAt(i,matrix);rocks.setColorAt(i,new THREE.Color().setHSL(.48,.045,.26+random()*.14));});rocks.computeBoundingSphere();rocks.castShadow=rocks.receiveShadow=true;root.add(rocks);
   function sign(text,x,y,z,width){
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;const ctx=canvas.getContext('2d');ctx.fillStyle='#254d51';ctx.fillRect(0,0,512,96);ctx.fillStyle='#f4e8cb';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 36px sans-serif';ctx.fillText(text,256,48,490);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(width,width*96/512),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));m.position.set(x,y,z);root.add(m);
@@ -190,12 +216,13 @@ export function buildEstuaryScenery(scene,quality,solids){
   // Merge compatible static meshes. Instanced foliage remains separate.
   root.updateMatrixWorld(true);const batches=new Map(),originals=[];
   root.traverse(mesh=>{
-    if(!mesh.isMesh||mesh.isInstancedMesh||Array.isArray(mesh.material))return;
+    if(!mesh.isMesh||mesh.isInstancedMesh||mesh.userData.dynamic||Array.isArray(mesh.material))return;
     const m=mesh.material;
     let g=mesh.geometry.clone();if(g.index)g=g.toNonIndexed();g.applyMatrix4(mesh.matrixWorld);g.computeBoundingSphere();
     const sphere=g.boundingSphere,tile=sphere.radius<150?`${Math.floor(sphere.center.x/400)}:${Math.floor(sphere.center.z/400)}`:'large';
-    const key=[tile,m.type,m.color?.getHex(),m.roughness,m.metalness,m.map?.uuid,m.side].join(':');
-    if(!batches.has(key))batches.set(key,{material:m,geometries:[]});
+    const key=[tile,m.type,m.roughness,m.metalness,m.map?.uuid,m.normalMap?.uuid,m.alphaTest,m.transparent,m.opacity,m.side].join(':');
+    const colour=m.color||new THREE.Color('white'),colours=new Float32Array(g.attributes.position.count*3);for(let i=0;i<g.attributes.position.count;i++)colours.set([colour.r,colour.g,colour.b],i*3);g.setAttribute('color',new THREE.BufferAttribute(colours,3));
+    if(!batches.has(key)){const mergedMaterial=m.clone();mergedMaterial.vertexColors=true;mergedMaterial.color.set('#ffffff');batches.set(key,{material:mergedMaterial,geometries:[]});}
     if(!g.attributes.uv)g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
     batches.get(key).geometries.push(g);originals.push(mesh);
   });
@@ -203,5 +230,6 @@ export function buildEstuaryScenery(scene,quality,solids){
     const g=mergeGeometries(geometries,false);if(!g)throw new Error('Scenery batching failed');const m=new THREE.Mesh(g,mat);m.castShadow=true;m.receiveShadow=true;root.add(m);geometries.forEach(g=>g.dispose());
   }
   for(const m of originals){m.removeFromParent();m.geometry.dispose();}
+  root.userData.stats={...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mooredTinnies:tinnySites.length,breakwaterRocks:rockSites.length};
   return root;
 }

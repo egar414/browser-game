@@ -106,3 +106,70 @@ certificate validation remained enabled.
   rendering performance is not representative of a phone or laptop GPU.
 - Extended play checks of battle AI, flooding balance and garage progression
   remain in progress. This preview is published at the player's request.
+
+## Hourly swell, video-referenced spray and coastal detail update
+
+15 October 2026, same Linux/Chromium 154 SwiftShader environment. The supplied
+22.8-second video was sampled across its different shots and visually inspected.
+It informed the spray; no calibrated real-world measurements are claimed.
+
+- **51 Node checks pass.** Added deterministic hourly-boundary continuity,
+  deep-water dispersion, sheltering, long-run finite waves, rotated house
+  footprint frames, source provenance, and one-time saved-weather migration.
+  Both craft still hop natural swell and bank a landed trick, and the
+  Thundercat retains its tested minute-long powered bow ride beyond 60 game km/h.
+- A real WebGL 2 floating-point render/readback check compares the shared GPU
+  wave function with CPU heights offshore, at the mouth, at the ramps and in
+  sheltered water. Maximum sampled difference was **0.0000101 m**. This is a
+  numerical consistency check, not physical accuracy or full mesh-fit validation.
+- The production build passes. Assets, textures, geometry and simulated weather
+  are local; no imagery/forecast service, account or API key is needed to play.
+- World views of the entrance/headland, ocean at riding height, close waterfront
+  house, marina and aluminium tinny were opened in Chromium. Initial inspection
+  found exposed headland edges and overly expensive window geometry; terrain
+  skirts were closed, and an original window atlas plus colour batching reduced
+  geometry/draw calls. Alpha-masked leaf cards subsequently replaced solid
+  polygon canopy balls. The result remains stylised, not photorealistic.
+- The mapped data remains 422 building footprints, 828 road segments, 60
+  residential areas and the entrance breakwater. 313 additional homes have
+  estimated positions within residential areas. 19 original moored tinnies use
+  three styles and sampled water height/pitch/roll. Mooring placements use a
+  separate deterministic seed so visual quality does not alter their collision
+  layout. Major collision/bridge/route checks still pass.
+- The first extended browser run passed nine of eleven flows. Thundercat reverse
+  reached -0.879 m/s before a 35-second wall-time limit, and its trim reached
+  4.2° before a five-second limit. These checks are rerun separately with the
+  same motion/trim assertions and more software-rendering time. The combined
+  settings/reload/focus flow passed after closing the old rendered tab.
+- Physical phones, mobile Safari, hardware GPU frame rates and subjective human
+  handling feel remain unverified. Phone checks are Chromium touch emulation.
+  A real-time one-hour unattended session has not been run; deterministic tests
+  cross 72 hourly boundaries and the runtime uses the clock.
+
+Final browser/race/deployment results follow below when complete.
+
+The four targeted reruns **all passed** on the final application build, including
+the two unchanged Thundercat assertions with longer software-rendering budgets,
+portrait rotate/fallback and landscape touch controls, and sea/garage/battle
+menus. The new optional-mode flow checks two AI rivals, pause freezing the battle
+clock, recovery, switching back to race/free roam, and saving sea/design/tuning.
+No error was fixed by reducing motion/trim thresholds. The initial combined
+run plus targeted reruns cover all twelve browser flows (seven desktop, three
+phone, one shared GPU/CPU, one coastal menus), with no unresolved assertion
+failure. A single uninterrupted twelve-test run has not been claimed.
+
+An additional continuous-passage test confirms a three-metre-clear route from
+the launch river, around the mapped entrance wall, to exposed ocean, while the
+wall itself blocks hulls. The new scenery still uses estimated elevations.
+
+The full keyboard-only island race completed all 15 gates in **70.03 simulated
+seconds**, then restarted successfully, with no page errors. Low 800×500
+SwiftShader finished at **3.3 FPS**. A first attempt was interrupted partway
+through after its wall-time budget proved too short; the completed rerun used
+a seven-minute budget with identical gameplay controls and completion criteria.
+These software frame rates do not establish hardware GPU performance.
+
+Final Low/Medium/High rendering and reflection switching passed again after
+alpha-masked canopy cards and the wider High-quality shadow region were added.
+The final High screenshot was visually inspected; no shader/runtime errors were
+reported. Prior GPU wave/race checks use unchanged wave/handling coefficients.

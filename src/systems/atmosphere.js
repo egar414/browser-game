@@ -13,6 +13,7 @@ export function createAtmosphere(scene, renderer) {
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
         return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
+      float fbm(vec2 p){return noise(p)*.53+noise(p*2.03+7.1)*.27+noise(p*4.07+3.8)*.13+noise(p*8.13)*.07;}
       void main(){
         vec3 d=normalize(vDirection);float elevation=max(d.y,0.);
         vec3 colour=mix(vec3(.54,.72,.77),vec3(.045,.22,.43),pow(elevation,.42));
@@ -20,9 +21,13 @@ export function createAtmosphere(scene, renderer) {
         colour+=vec3(.52,.32,.14)*pow(towardSun,24.)*.23;
         colour+=vec3(7.,4.9,2.6)*pow(towardSun,9000.);
         vec2 p=d.xz/max(d.y+.12,.13)*1.9+vec2(uTime*.0015,0.);
-        float cloud=noise(p)*.57+noise(p*2.03+8.)*.28+noise(p*4.07)*.15;
-        float density=smoothstep(.54,.76,cloud)*smoothstep(.035,.18,d.y);
-        colour=mix(colour,mix(vec3(.49,.61,.65),vec3(1.,.94,.82),cloud),density*.8);
+        float cloud=fbm(p+fbm(p*.7)*.8);
+        float density=smoothstep(.49,.70,cloud)*smoothstep(.035,.18,d.y);
+        float sunlight=clamp(.55+(fbm(p+uSun.xz*.3)-cloud)*3.5,0.,1.);
+        vec3 cloudColour=mix(vec3(.38,.49,.57),vec3(1.08,1.02,.91),sunlight);
+        colour=mix(colour,cloudColour,density*.94);
+        float highCloud=smoothstep(.60,.75,fbm(p*vec2(.55,3.)+22.))*smoothstep(.15,.5,d.y);
+        colour=mix(colour,vec3(.84,.88,.86),highCloud*.17);
         colour=mix(colour,vec3(.37,.57,.63),1.-smoothstep(-.2,.01,d.y));
         gl_FragColor=vec4(colour,1.);
         #include <tonemapping_fragment>

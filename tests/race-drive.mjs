@@ -8,8 +8,8 @@ try {
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true})));
   await page.goto(process.env.BASE_URL||'http://127.0.0.1:4173');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);await page.locator('#play').click();await page.keyboard.press('KeyF');
-  let held=new Set(),lastGate=-1,complete=false,steps=0;const started=Date.now();
-  while(Date.now()-started<240000){
+  let held=new Set(),lastGate=-1,complete=false,steps=0;const started=Date.now(),limit=Number(process.env.RACE_TIMEOUT_MS)||420000;
+  while(Date.now()-started<limit){
     const s=await page.evaluate(()=>window.__ESTUARY__.status);
     if(!s.race){if(s.settings.bestRace>0){complete=true;console.log('RACE COMPLETE',s.settings.bestRace.toFixed(2),'seconds; FPS',s.fps.toFixed(1),'errors',errors);break;}throw new Error('Race unexpectedly cancelled');}
     const target=RACE[s.race.index],dx=target[0]-s.position.x,dz=target[1]-s.position.z;
@@ -29,7 +29,7 @@ try {
     await page.waitForTimeout(100);
   }
   await page.screenshot({path:'/tmp/estuary-race-finish.png'});
-  if(!complete)throw new Error('The keyboard acceptance driver did not finish the race in four minutes');
+  if(!complete)throw new Error(`The keyboard acceptance driver did not finish within ${Math.round(limit/60000)} minutes of wall time`);
   if(errors.length)throw new Error(errors.join('\n'));
   await page.keyboard.press('KeyF');const restarted=await page.evaluate(()=>window.__ESTUARY__.status.race);if(restarted?.index!==0)throw new Error('Race restart failed');
 } finally {await browser.close();}

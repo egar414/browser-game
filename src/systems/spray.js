@@ -173,7 +173,7 @@ export class Spray {
       vertexShader:`attribute float aSize;attribute float aAlpha;attribute float aKind;varying float vAlpha;varying float vKind;uniform float uScale;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uScale/max(1.,-mv.z),1.,(aKind<.5||aKind>1.5)?52.:112.);vAlpha=aAlpha;vKind=aKind;}`,
       fragmentShader:`uniform sampler2D uNoise;varying float vAlpha;varying float vKind;void main(){vec2 q=gl_PointCoord-.5;float d=length(q*vec2((vKind<.5||vKind>1.5)?1.5:1.,1.));if(d>.5)discard;
         float noise=texture2D(uNoise,gl_PointCoord*1.7).r;float alpha=(vKind<.5||vKind>1.5)?(1.-smoothstep(.2,.5,d)):(1.-smoothstep(.08,.5,d))*(.1+noise*.18);
-        gl_FragColor=vec4(mix(vec3(.69,.88,.91),vec3(.98,1.,.95),1.-d),alpha*vAlpha);
+        gl_FragColor=vec4(mix(vec3(.69,.88,.91),vec3(.98,1.,.95),1.-d),alpha*vAlpha*(vKind>1.5?(.25+noise*.75):1.));
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`});
@@ -184,7 +184,7 @@ export class Spray {
     this.state={left:0,right:0,rate:0};this.time=0;
   }
   clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.mesh.visible=false;}}
-  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=kind===2?1.5:kind===0?.55+Math.random()*.5:1.25;Object.assign(target,{birthStep:null,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===2?.10+Math.random()*.12:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
+  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=kind===2?1.5:kind===0?.55+Math.random()*.5:1.25;Object.assign(target,{birthStep:null,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
   splash(v,impact) {
     const count=Math.min(this.count*.4,40+impact*13);
     for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:v.x,y:waveHeight(v.x,v.z,this.time)+.1,z:v.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},i%8===0?1:0);}
@@ -200,14 +200,14 @@ export class Spray {
       this.emit(launchSpray(v,this.state,side),i%5===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
     }
     const discharge=active?pumpDischarge(v,time):null;this.stream.update(v,discharge);
-    const plume=jetPlumeSource(v,discharge,time);this.plume.update(dt,plume,time);
-    this.jetAccumulator+=dt*this.state.jet*(v.type==='ski'?240:90);
+    const plume=jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
+    this.jetAccumulator+=dt*this.state.jet*(v.type==='ski'?200:90);
     const jetCount=Math.min(30,Math.floor(this.jetAccumulator));this.jetAccumulator-=jetCount;
     for(let i=0;i<jetCount&&discharge;i++){
       const {origin,velocity,aerial}=discharge;
       if(plume){
         const spread=.35+Math.random()*.6,age=(i+.5)/Math.max(1,jetCount)*dt;
-        this.emit({birthStep:age,x:plume.origin.x-(v.vx||0)*age+(Math.random()-.5)*.13,y:plume.origin.y,z:plume.origin.z-(v.vz||0)*age,vx:plume.velocity.x+(Math.random()-.5)*spread,vy:plume.velocity.y+(Math.random()-.5)*1.5,vz:plume.velocity.z+(Math.random()-.5)*spread,diameter:.009},i%5===0?1:2);
+        this.emit({birthStep:age,x:plume.origin.x-(v.vx||0)*age+(Math.random()-.5)*.13,y:plume.origin.y,z:plume.origin.z-(v.vz||0)*age,vx:plume.velocity.x+(Math.random()-.5)*spread,vy:plume.velocity.y+(Math.random()-.5)*1.5,vz:plume.velocity.z+(Math.random()-.5)*spread,diameter:.0035+Math.random()*.003},i%5===0?1:2);
       }else if(aerial){
         const spread=.28+discharge.reverse*.6;
         this.emit({x:origin.x,y:origin.y,z:origin.z,vx:velocity.x+(Math.random()-.5)*spread,vy:velocity.y+(Math.random()-.5)*spread,vz:velocity.z+(Math.random()-.5)*spread,diameter:.003+Math.random()*.002});

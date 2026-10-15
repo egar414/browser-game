@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { setSeaState, seaAmplitude } from '../src/config.js';
+import { setSeaState, seaAmplitude, setWeatherClock } from '../src/config.js';
 import { VehiclePhysics } from '../src/vehicles/physics.js';
 import { earnProgress, validLoadout } from '../src/systems/progression.js';
 import { Activities } from '../src/systems/activities.js';
@@ -10,7 +10,7 @@ import { loadSettings } from '../src/systems/storage.js';
 const drive={throttle:1,steer:0,trim:0,freestyle:false};
 test('sea conditions blend continuously and changing weather varies without phase resets',()=>{
  setSeaState('calm',0,true);const before=seaAmplitude(20);setSeaState('swell',20);assert.equal(seaAmplitude(20),before);assert(seaAmplitude(26)>before);assert.equal(seaAmplitude(33),3.4);
- setSeaState('changing',40,true);assert.notEqual(seaAmplitude(90),seaAmplitude(180));setSeaState('calm',0,true);
+ setWeatherClock(0);setSeaState('changing',40,true);const initial=seaAmplitude(90);setWeatherClock(3600);assert.notEqual(initial,seaAmplitude(180));setSeaState('calm',0,true);
 });
 test('both craft launch from natural swell and bank wave hops after landing',()=>{
  try{setSeaState('swell',0,true);for(const type of ['ski','cat']){

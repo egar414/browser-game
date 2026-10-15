@@ -217,3 +217,40 @@ combo XP; the tuning changes are original gameplay coefficients.
 Google Earth reference access was attempted and retried with the required
 network approval, but the proxy returned 403. No Google imagery was inspected
 or used. Existing OSM geometry remains the geographic source.
+
+## Hourly ocean and supplied video (15 October 2026)
+
+The user supplied `v14044g50000db5mr1fog65ue57glbeg.mp4` (576×1024, 30 fps,
+22.8 seconds). Key frames across the clip were extracted and inspected. They
+show a dense high loaded-turn sheet, finer spray at its edges and falling
+droplets, and lower turbulent wash behind the ski. These observations informed
+the breakup/opacity and load-sensitive plume. No exact distances, discharge
+velocities, manufacturer identity or calibrated measurements are inferred
+from the video. It is not bundled or used as a texture.
+
+The central plume now tapers and loses momentum through a small effective air
+drag term; fine particles keep their aerodynamic drag. Straight-line lift is
+lower, while nozzle trim and actual chine load produce a taller turn plume.
+Thundercat fans are wider and primarily lateral; their spray sheets persist
+long enough to rise, break up and fall. Dense visual volumes remain artistic
+representations of groups of droplets.
+
+Offshore components use deep-water dispersion `omega² = g k`, with periods
+7, 8.5 and 10.2 seconds, differing directions, a slowly moving set envelope and
+a small second harmonic for sharper crests. The exposure field introduces
+these components across the mouth and removes them in the canals. Shorter
+wind chop remains. Height/analytic slope GLSL is generated from the CPU wave
+coefficients. A GPU readback check compares actual rendered heights to CPU
+buoyancy at multiple ocean/river/canal samples; numerical agreement does not
+validate hydrodynamic realism. Natural crest launch also allows unweighting
+when maintaining water contact would demand downward acceleration beyond gravity.
+
+The hourly forecast is deterministic offline gameplay weather, smoothly blended
+through 3600-second clock intervals. No forecast API is contacted. Displayed
+height is an approximate game swell setting, not a local navigational forecast.
+Refraction around the headland, tides/currents, shoaling from real bathymetry,
+breaking curls, wave interference with solid objects and fluid flooding are
+not solved. An official BOM wave-reference URL was attempted with the required
+retry but returned proxy 403; it was not inspected. Additional open building
+search via ArcGIS was likewise blocked. Existing OSM extract tags were inspected
+and reused; no additional imagery or building survey was obtained.

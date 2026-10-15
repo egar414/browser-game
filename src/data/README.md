@@ -47,3 +47,14 @@ not claims about real navigation facilities. Never use the game as a chart.
 The 128 × 128 wave-exposure field is derived from shoreline clearance and ocean
 distance. CPU buoyancy and GPU water use the same bilinear interpolation. Narrow
 canals are calmer, the river is intermediate and the ocean is choppier.
+
+## Additional extract tags used in the ocean/detail update
+
+The same hashed XML inputs now retain building kind, any mapped roof shape,
+and height provenance (`mapped height`, `mapped levels`, or `estimate`). Road
+name/class, 60 clipped residential areas and the `Rock Wall Mooloolaba`
+breakwater alignment are retained. Counts are 422 building footprints, 828
+road segments, 166 piers and nine road bridges. No satellite imagery or Google
+Earth geometry was used. Additional waterfront houses, facade/roof details,
+rock dressing and moored boats remain artistic additions; the physical
+headland heights are estimated.

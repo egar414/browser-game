@@ -36,8 +36,8 @@ for(const type of ['ski','cat'])test(`phone ${type}: native multi-touch drives, 
 });
 test('phone portrait, buttons, modes, trim, camera, pause, focus and rotation remain usable',async({page})=>{
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:'test-results/phone-portrait-home.png'});
-  await page.locator('#play').tap();
-  const boxes=await page.locator('.touch-controls button').evaluateAll(buttons=>buttons.map(b=>{const r=b.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height};}));
+  await page.locator('#play').tap();await expect(page.locator('.rotate-hint')).toBeVisible();await page.locator('#keep-portrait').tap();
+  const boxes=await page.locator('.touch-controls button[data-code], #touch-fullscreen').evaluateAll(buttons=>buttons.map(b=>{const r=b.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height};}));
   for(const b of boxes){expect(b.x).toBeGreaterThanOrEqual(0);expect(b.y).toBeGreaterThan(0);expect(b.x+b.w).toBeLessThanOrEqual(391);expect(b.y+b.h).toBeLessThanOrEqual(845);}
   await page.locator('[data-code="KeyT"]').tap();expect((await status(page)).rideMode).toBe('freestyle');
   const trim=(await status(page)).trim;await page.locator('[data-code="KeyQ"]').tap();await expect.poll(async()=>(await status(page)).trim).toBeGreaterThan(trim);

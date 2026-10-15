@@ -100,7 +100,7 @@ export class VehiclePhysics {
       this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-1.6,1.6);
     } else {
       this.lateralAcceleration=damp(this.lateralAcceleration,0,6,dt);
-      this.yawRate = damp(this.yawRate, this.steer * c.airSteer, 2.5, dt);
+      this.yawRate = damp(this.yawRate, this.steer * c.airSteer, this.type==='ski'?3.2:2.5, dt);
       this.spin += this.yawRate * dt; this.airTime += dt;
       this.pitch = clamp(this.pitch + input.trim * dt * (this.type === 'ski' ? 0.9 : 0.45), -0.9, 1.1);
       this.vy -= 9.81 * dt;
@@ -143,7 +143,8 @@ export class VehiclePhysics {
       // As the bow rises, support moves toward the stern. Raise the body origin
       // around that support instead of submerging the transom a metre deep.
       const sternSupportLift=Math.sin(Math.max(0,this.pitch))*c.length*.29*clamp((this.pitch-.18)/.4,0,1);
-      this.vy += ((water+sternSupportLift - this.y) * c.spring - this.vy * c.damping+verticalReaction) * dt;
+      const supportAcceleration=(water+sternSupportLift-this.y)*c.spring-this.vy*c.damping+verticalReaction;
+      this.vy+=supportAcceleration*dt;
       this.y += this.vy * dt;
       if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe('Over the balance point');
       let onRamp=false;
@@ -157,7 +158,7 @@ export class VehiclePhysics {
         }
       }
       // Large steep chop can unweight a fast hull. No jump input or repeated aerial launch.
-      if (!this.airborne && !onRamp && waveChop(this.x,this.z) > .52 && this.speed > 14 && Math.abs(this.pitch)<.45 && this.y > water + .07 && this.vy > .65) this.launch(this.vy, this.pitch,true);
+      if (!this.airborne && !onRamp && waveChop(this.x,this.z) > .52 && this.speed > 14 && Math.abs(this.pitch)<.45 && (this.y > water + .07 || supportAcceleration < -9.81) && this.vy > .65) this.launch(this.vy, this.pitch,true);
       if (!this.airborne && this.pitch > 0.65 && this.speed > 7) {
         this.wheelieTime += dt;
         if (this.wheelieTime > 1.6 && !this.trickCooldown) { this.onEvent({ type: 'score', label: 'Bow rider', points: 100 }); this.trickCooldown = 4; this.wheelieTime = 0; }

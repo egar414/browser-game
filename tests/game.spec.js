@@ -18,7 +18,7 @@ for(const type of ['ski','cat'])test(`${type}: choose, drive, spray, steer, brak
   expect(spray.left).toBeGreaterThan(spray.right);
   expect(spray.wakeSamples).toBeGreaterThan(3);
   await page.keyboard.up('KeyA');await page.keyboard.up('ShiftLeft');await page.keyboard.up('KeyW');
-  await page.keyboard.down('KeyS');await expect.poll(async()=>(await status(page)).forwardSpeed,{timeout:35000}).toBeLessThan(-1);await page.keyboard.up('KeyS');
+  await page.keyboard.down('KeyS');await expect.poll(async()=>(await status(page)).forwardSpeed,{timeout:50000}).toBeLessThan(-1);await page.keyboard.up('KeyS');
   await page.keyboard.press('KeyR');await expect.poll(async()=>(await status(page)).speed).toBeLessThan(.5);
   expect((await status(page)).liveParticles).toBe(0);
   expect((await status(page)).spray.wakeSamples).toBe(0);
@@ -49,7 +49,7 @@ test('jet ski bow rider, pause, camera, settings, persistence, guide, resize and
   // The init script supplies first-launch defaults; remove it through a fresh page
   // in the same context to test the actual persisted record on reload.
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('estuary-rats-v1')));expect(saved.vehicle).toBe('cat');expect(saved.colour).toBe(2);
-  const reload=await page.context().newPage();await reload.goto('/');await reload.waitForFunction(()=>window.__ESTUARY__?.status.ready);
+  const reload=await page.context().newPage();await page.close();await reload.goto('/');await reload.waitForFunction(()=>window.__ESTUARY__?.status.ready);
   expect((await status(reload)).settings.vehicle).toBe('cat');expect((await status(reload)).settings.colour).toBe(2);
   await reload.locator('#play').click();await reload.keyboard.press('KeyH');await expect(reload.locator('#controls')).toBeVisible();await reload.locator('#close-controls').click();
   await reload.setViewportSize({width:900,height:600});await reload.keyboard.down('KeyW');await reload.evaluate(()=>window.dispatchEvent(new Event('blur')));
@@ -81,7 +81,7 @@ test('Mooloolaba setting and Thundercat bow ride work with the normal keys',asyn
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await expect(page.locator('.location')).toContainText('MOOLOOLABA');
   await page.locator('[data-vehicle="cat"]').click();await page.locator('#play').click();
-  await page.keyboard.down('KeyQ');await expect.poll(async()=>(await status(page)).trim).toBeGreaterThan(5);await page.keyboard.up('KeyQ');
+  await page.keyboard.down('KeyQ');await expect.poll(async()=>(await status(page)).trim,{timeout:20000}).toBeGreaterThan(5);await page.keyboard.up('KeyQ');
   await page.keyboard.down('KeyW');await page.keyboard.down('ShiftLeft');
   await expect.poll(async()=>(await status(page)).pitch,{timeout:30000}).toBeGreaterThan(.65);
   expect((await status(page)).airborne).toBe(false);

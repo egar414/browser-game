@@ -31,5 +31,6 @@ export function geographicSolids(){
   for(const bridge of mapData.bridges)for(let i=1;i<bridge.points.length;i++)for(const t of [.06,.94]){
     const a=bridge.points[i-1],b=bridge.points[i];result.push({name:'Bridge support',x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,w:1.4,d:1.4,height:10});
   }
+  for(const wall of mapData.breakwaters||[])for(let i=1;i<wall.points.length;i++)result.push({name:'Entrance rock wall',a:wall.points[i-1],b:wall.points[i],width:3.8,height:3});
   return result;
 }

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { WAVES, WORLD, WAVE_FIELD, seaAmplitude } from '../config.js';
+import { WAVE_GLSL } from '../ocean.js';
 import { lands } from './environment.js';
 import { SUN_DIRECTION } from './atmosphere.js';
 export { Spray } from './spray.js';
@@ -50,21 +51,21 @@ export class Water {
       },
       vertexShader:`
         uniform float uSea;uniform float uTime;uniform vec4 uMapBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
-        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;
-        float wave(vec2 p){vec2 uv=(clamp((p-uMapBounds.xy)/uMapBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;float chop=texture2D(uWaveField,uv).r;
-          return (${WAVES.map(w=>`${w.amplitude}*sin(p.x*${w.kx}+p.y*${w.kz}+uTime*${w.speed})`).join('+')})*chop*uSea;}
+        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;
+        ${WAVE_GLSL}
         void main(){
-          vec3 p=position;p.xz+=uCenter;p.y=wave(p.xz);
-          float dx=(wave(p.xz+vec2(.15,0.))-wave(p.xz-vec2(.15,0.)))/.3;
-          float dz=(wave(p.xz+vec2(0.,.15))-wave(p.xz-vec2(0.,.15)))/.3;
-          vWorld=p;vNormal=normalize(vec3(-dx,1.,-dz));
+          vec3 p=position;p.xz+=uCenter;
+          vec2 uv=(clamp((p.xz-uMapBounds.xy)/uMapBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;
+          float chop=texture2D(uWaveField,uv).r;vOcean=smoothstep(.48,.94,chop);
+          vec3 w=oceanWave(p.xz,uTime,uSea,chop);p.y=w.x;
+          vWorld=p;vNormal=normalize(vec3(-w.y,1.,-w.z));
           vReflection=uReflectionMatrix*vec4(p.x,-p.z,0.,1.);
           gl_Position=projectionMatrix*viewMatrix*vec4(p,1.);
         }`,
       fragmentShader:`
         uniform float uTime;uniform vec4 uMapBounds;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
         uniform sampler2D uReflection;uniform float uReflect;uniform vec4 uHull;uniform float uHeading;uniform float uContact;
-        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;
+        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;
         void main(){
           vec2 p=vWorld.xz;float distanceToEye=length(cameraPosition-vWorld);
           vec3 view=normalize(cameraPosition-vWorld);
@@ -81,12 +82,12 @@ export class Water {
           vec3 sky=mix(vec3(.50,.70,.75),vec3(.055,.245,.44),pow(max(reflected.y,0.),.42));
           vec3 reflection=sky;
           if(uReflect>.5){
-            vec2 uv=vReflection.xy/vReflection.w+ripples*.027;
+            vec2 uv=vReflection.xy/vReflection.w+ripples*.065+vNormal.xz*.028;
             vec3 planar=texture2D(uReflection,clamp(uv,vec2(.002),vec2(.998))).rgb;
             reflection=mix(sky,planar,.78);
           }
           vec3 colour=mix(deep,reflection,.12+fresnel*.77);
-          float crest=smoothstep(-.02,.3,vWorld.y)*.035;
+          float crest=smoothstep(.15,.9,vWorld.y)*.07;
           colour+=vec3(.08,.31,.26)*crest;
           vec3 halfVector=normalize(view+uSun);
           float spec=pow(max(dot(n,halfVector),0.),350.);
@@ -97,6 +98,13 @@ export class Water {
           float foam=smoothstep(.23,.43,shore)*(1.-smoothstep(.53,.82,shore));
           foam*=smoothstep(.55,.87,r1.b*.55+r2.b*.3+sin(shore*40.-uTime*1.7)*.15);
           colour=mix(colour,vec3(.66,.83,.77),foam*.32);
+          // Broken whitecaps cluster on the steep upper faces of exposed swell.
+          float face=smoothstep(.0025,.022,1.-vNormal.y);
+          float breaking=vOcean*smoothstep(.35,1.05,vWorld.y)*(.2+face*.8);
+          float bubbles=smoothstep(.44,.7,r1.b*.72+r2.b*.28);
+          colour=mix(colour,vec3(.86,.93,.89),breaking*bubbles*.75);
+          float trough=1.-smoothstep(-.7,.05,vWorld.y)*vOcean;
+          colour*=1.-trough*.09;
           vec2 local=p-uHull.xy;float s=sin(uHeading),c=cos(uHeading);
           vec2 hullSpace=vec2(local.x*c-local.y*s,local.x*s+local.y*c);
           float shadow=exp(-dot(hullSpace/uHull.zw,hullSpace/uHull.zw)*2.4)*uContact;

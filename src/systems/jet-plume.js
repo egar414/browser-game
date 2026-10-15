@@ -12,11 +12,14 @@ export class JetPlume {
     this.geometry=new THREE.BufferGeometry();this.geometry.setAttribute('position',new THREE.BufferAttribute(p,3));this.geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));this.geometry.setAttribute('aAlpha',new THREE.BufferAttribute(alpha,1));this.geometry.setIndex(indices);
     this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,
       uniforms:{uNoise:{value:texture},uTime:{value:0}},
-      vertexShader:`attribute float aAlpha;varying float vAlpha;varying vec2 vUv;void main(){vAlpha=aAlpha;vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-      fragmentShader:`uniform sampler2D uNoise;uniform float uTime;varying float vAlpha;varying vec2 vUv;
+      vertexShader:`attribute float aAlpha;varying float vAlpha;varying vec2 vUv;varying vec3 vWorld;void main(){vAlpha=aAlpha;vUv=uv;vWorld=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+      fragmentShader:`uniform sampler2D uNoise;uniform float uTime;varying float vAlpha;varying vec2 vUv;varying vec3 vWorld;
         void main(){float n=texture2D(uNoise,vUv*vec2(2.,3.)+vec2(uTime*.06,-uTime*.3)).r;
         float detail=texture2D(uNoise,vUv*vec2(5.,9.)-uTime*.1).r;
-        float alpha=vAlpha*(.5+smoothstep(.2,.8,n*.7+detail*.3)*.45);
+        float breakup=smoothstep(.25,.75,n*.65+detail*.35);
+        vec3 normal=normalize(cross(dFdx(vWorld),dFdy(vWorld)));
+        float facing=pow(abs(dot(normal,normalize(cameraPosition-vWorld))),.5);
+        float alpha=vAlpha*(.14+breakup*.75)*facing;
         if(alpha<.008)discard;gl_FragColor=vec4(mix(vec3(.66,.81,.83),vec3(.98,.99,.96),n*.6+detail*.4),alpha);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -40,15 +43,16 @@ export class JetPlume {
       const s={origin:{},velocity:{},power:mix(older.source?.power||0,newer.source?.power||0)};
       for(const axis of ['x','y','z']){s.origin[axis]=mix(a.origin[axis],b.origin[axis]);s.velocity[axis]=mix(a.velocity[axis],b.velocity[axis]);}
       const exists=wanted>=this.history.at(-1).time;
-      const x=s.origin.x+s.velocity.x*age,z=s.origin.z+s.velocity.z*age,y=s.origin.y+s.velocity.y*age-4.905*age*age;
+      const drag=JET_PLUME.drag,decay=Math.exp(-drag*age),travel=(1-decay)/drag;
+      const x=s.origin.x+s.velocity.x*travel,z=s.origin.z+s.velocity.z*travel,y=s.origin.y+(s.velocity.y+9.81/drag)*travel-9.81*age/drag;
       const tangent=new THREE.Vector3(s.velocity.x,s.velocity.y-9.81*age,s.velocity.z).normalize();
       const side=new THREE.Vector3().crossVectors(tangent,new THREE.Vector3(0,1,0));if(side.lengthSq()<.001)side.set(1,0,0);side.normalize();
       const up=new THREE.Vector3().crossVectors(side,tangent).normalize();
       const radius=.07+(Math.sin(Math.min(1,t)*Math.PI*.7)*JET_PLUME.spread+.16*t)*s.power;
       for(let j=0;j<=this.sides;j++){
-        const a=j/this.sides*Math.PI*2,r=radius*(1+.10*Math.sin(a*3+age*18-time*3)),c=Math.cos(a)*r,sn=Math.sin(a)*r,k=i*(this.sides+1)+j;
+        const a=j/this.sides*Math.PI*2,r=radius*(1+.25*Math.sin(a*3+age*18-time*3)+.12*Math.sin(a*5-age*23+time*2)),c=Math.cos(a)*r,sn=Math.sin(a)*r,k=i*(this.sides+1)+j;
         p.setXYZ(k,x+side.x*c+up.x*sn,y+side.y*c+up.y*sn,z+side.z*c+up.z*sn);
-        alpha.setX(k,(exists?s.power:0)*clamp((y-waveHeight(x,z,time))/.22)*clamp(1-t*t)*.66);
+        alpha.setX(k,(exists?s.power:0)*clamp((y-waveHeight(x,z,time))/.22)*Math.pow(clamp(1-t),.9)*.66);
       }
     }
     p.needsUpdate=true;alpha.needsUpdate=true;this.material.uniforms.uTime.value=time;

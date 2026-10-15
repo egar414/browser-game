@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Estuary visual inspection</title><link rel="icon" href="data:,"><style>body{margin:0}canvas{display:block}#label{position:fixed;top:18px;left:20px;color:white;font:14px sans-serif;background:#123b3bc0;padding:12px}</style></head><body><canvas id="game"></canvas><div id="label">Preparing inspection…</div><script type="module">
+import * as THREE from 'three';
+import {createAtmosphere,SUN_DIRECTION}from'/src/systems/atmosphere.js';
+import {buildEnvironment}from'/src/systems/environment.js';
+import {Water}from'/src/systems/water.js';
+import{QUALITY,setSeaState,SPAWN,waveHeight,setWeatherClock}from'/src/config.js';
+const view=new URLSearchParams(location.search).get('view')||'mouth',scene=new THREE.Scene();scene.fog=new THREE.FogExp2('#a2b9bd',.00082);
+const renderer=new THREE.WebGLRenderer({canvas:document.querySelector('canvas'),antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(1);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;
+const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,2600),atmosphere=createAtmosphere(scene,renderer);scene.add(new THREE.HemisphereLight('#bddde8','#526254',.8));const sun=new THREE.DirectionalLight('#ffe4bb',2.5);sun.position.copy(SUN_DIRECTION).multiplyScalar(400);scene.add(sun);
+const environment=buildEnvironment(scene,QUALITY.Medium),water=new Water(scene,QUALITY.Medium);setWeatherClock(0);setSeaState('swell',0,true);
+const views={mouth:{eye:[1630,4,-1650],look:[1260,0,-1460]},homes:{eye:[340,16,-755],look:[260,4,-850]},marina:{eye:[SPAWN.x,8,SPAWN.z],look:[SPAWN.x-110,4,SPAWN.z-50]},overview:{eye:[100,250,-800],look:[100,0,-820]}};
+if(view==='house-close'){
+ const home=environment.children.find(g=>g.isGroup&&g.position.length()>0&&g.position.z>-1000&&g.position.z<0);
+ if(home){const eye=home.localToWorld(new THREE.Vector3(18,5,34)),look=home.localToWorld(new THREE.Vector3(0,3,0));views['house-close']={eye:eye.toArray(),look:look.toArray()};}
+}
+if(view==='tinny'){
+ const boat=environment.children.find(g=>g.isInstancedMesh&&g.userData.dynamic),matrix=new THREE.Matrix4();boat.getMatrixAt(0,matrix);const eye=new THREE.Vector3(5,2.4,6).applyMatrix4(matrix),look=new THREE.Vector3(0,.35,0).applyMatrix4(matrix);views.tinny={eye:eye.toArray(),look:look.toArray()};
+}
+views.ocean={eye:[1650,1.6,-1000],look:[1790,.2,-1260]};
+const v=views[view]||views.mouth;camera.position.fromArray(v.eye);camera.lookAt(new THREE.Vector3(...v.look));document.querySelector('#label').textContent=`${view.toUpperCase()} · ORIGINAL DETAIL / OSM GEOMETRY`;
+let t=40,last=performance.now();function frame(now){requestAnimationFrame(frame);t+=Math.max(0,Math.min(.1,(now-last)/1000));last=now;environment.userData.update(t);water.update(t,v.eye[0],v.eye[2]);atmosphere.update(t,camera.position);water.reflect(renderer,camera);renderer.render(scene,camera);window.inspection={ready:true,time:t,stats:environment.userData.stats,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};}requestAnimationFrame(frame);
+</script></body></html>

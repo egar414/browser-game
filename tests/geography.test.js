@@ -27,3 +27,8 @@ test('shared exposure field is bounded, interpolates grid samples and leaves can
   assert(waveChop(SPAWN.x,SPAWN.z)<waveChop(1650,-1050));
   assert(waveChop(-10000,-10000)>=.2);assert(waveChop(10000,10000)<=1);
 });
+test('the mapped entrance rock wall collides while a continuous river-to-ocean passage stays open',()=>{
+  const wall=solids.find(s=>s.name==='Entrance rock wall');assert(wall);assert(collision((wall.a[0]+wall.b[0])/2,(wall.a[1]+wall.b[1])/2,.2));
+  const route=[[SPAWN.x,SPAWN.z],[-225.4,-1003.5],[-32.3,-992.8],[181.4,-891.2],[330.9,-755.6],[583.5,-744.2],[804.3,-782.6],[926.8,-844.7],[1011.4,-915.8],[1096.6,-1034.7],[1117.6,-1319.6],[1040,-1420],[990,-1500],[910,-1580],[840,-1660],[840,-1710],[1480,-1710],[1640,-1740]];
+  for(let i=1;i<route.length;i++){const a=route[i-1],b=route[i];for(let t=0;t<=1;t+=.01)assert.equal(collision(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,3),null,`river mouth segment ${i}`);}
+});

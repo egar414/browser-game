@@ -1,6 +1,6 @@
 import { waveHeight } from '../config.js';
 import { bodyPoint, bodyVector, propulsionPose, hullImmersion } from '../vehicles/propulsion.js';
-export const SPRAY_TUNING = { minimumSpeed:.7, maximumSpeed:32, gravity:9.81, wakeLifetime:7, wakeSpread:.16, sampleSpacing:.48, fanLife:.8 };
+export const SPRAY_TUNING = { minimumSpeed:.7, maximumSpeed:32, gravity:9.81, wakeLifetime:7, wakeSpread:.16, sampleSpacing:.48, fanLife:1.35 };
 export const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 
 // Find the waterline along each physical chine/pontoon. A dry hull cannot throw water.
@@ -33,7 +33,7 @@ export function sprayState(v,_freestyle=false,time=0) {
 }
 export function launchSpray(v,state,side,random=Math.random) {
   const strength=side===-1?state.left:state.right,p=state.contacts[side===-1?0:1];
-  const broad=v.type==='cat'?1.32:1.06,lift=v.type==='cat'?.86:1.22;
+  const broad=v.type==='cat'?1.48:1.06,lift=v.type==='cat'?.98:1.32;
   const spread=random(),angle=-.2+spread*1.45,flow=(2+strength*3.2)*broad;
   const local=bodyVector(v,[side*flow*Math.cos(angle),(.8+strength*1.7)*lift*(.8+Math.sin(spread*Math.PI)*.35),-state.speed*(v.type==='cat'?.36:.5)-flow*Math.sin(angle)]);
   return {x:p.x,y:p.y,z:p.z,vx:(v.vx||0)+local.x,vy:(v.vy||0)*.25+local.y,vz:(v.vz||0)+local.z,strength};
@@ -66,12 +66,14 @@ export function stepDroplet(p,dt) {
 
 // Larger visible breakup around the central pump wash, independently tunable
 // from the unchanged chine spray and hydraulic reaction-force calculation.
-export const JET_PLUME = { lifetime:1.3, minimumFlow:.008, lift:8, trimLift:2.2, rearSpeed:6, spread:1.0 };
-export function jetPlumeSource(v,discharge,time=0){
+export const JET_PLUME = { lifetime:1.3, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:7.5, spread:.78, drag:.32 };
+export function jetPlumeSource(v,discharge,time=0,state=null){
   if(v.type!=='ski'||!discharge||v.airborne||v.wipeout||discharge.reverse>.08||discharge.flow<JET_PLUME.minimumFlow||v.throttle<.08)return null;
   const power=clamp(discharge.flow/.16)*clamp(v.throttle),trim=clamp((v.drive?.trimAngle||0)/.33);
   const dx=discharge.velocity.x-(v.vx||0),dz=discharge.velocity.z-(v.vz||0),len=Math.hypot(dx,dz)||1;
-  const lift=Math.max(discharge.aerial?discharge.velocity.y:0,2+power*JET_PLUME.lift+trim*JET_PLUME.trimLift);
+  const loaded=state?clamp((Math.max(state.left,state.right)-.8)/2.5):0;
+  const washLift=1.1+power*JET_PLUME.lift+trim*JET_PLUME.trimLift+loaded*loaded*5.8;
+  const lift=Math.min(13,Math.max(discharge.aerial?discharge.velocity.y:0,washLift));
   return {origin:{...discharge.origin,y:Math.max(discharge.origin.y,waveHeight(discharge.origin.x,discharge.origin.z,time)+.055)},
     velocity:{x:(v.vx||0)+dx/len*(3+power*JET_PLUME.rearSpeed),y:lift,z:(v.vz||0)+dz/len*(3+power*JET_PLUME.rearSpeed)},power};
 }

@@ -19,25 +19,7 @@ export const VEHICLES = {
     wheelieAngle: 0.75, wipeoutAngle: 1.08, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
   },
 };
-export const WAVES = [
-  { amplitude: 0.19, kx: 0.12, kz: 0.055, speed: 1.45 },
-  { amplitude: 0.105, kx: -0.24, kz: 0.18, speed: 2.1 },
-  { amplitude: 0.055, kx: 0.53, kz: 0.36, speed: 2.9 },
-];
-export const WAVE_FIELD=mapData.waveField;
-export function waveChop(x,z){
-  const n=WAVE_FIELD.size,u=Math.max(0,Math.min(n-1,(x-WORLD.minX)/(WORLD.maxX-WORLD.minX)*(n-1))),v=Math.max(0,Math.min(n-1,(z-WORLD.minZ)/(WORLD.maxZ-WORLD.minZ)*(n-1)));
-  const ix=Math.min(n-2,Math.floor(u)),iz=Math.min(n-2,Math.floor(v)),fx=u-ix,fz=v-iz,a=iz*n+ix,d=WAVE_FIELD.values;
-  return ((d[a]*(1-fx)+d[a+1]*fx)*(1-fz)+(d[a+n]*(1-fx)+d[a+n+1]*fx)*fz)/255;
-}
-export const SEA_STATES={calm:{name:'Calm canals',amplitude:1},chop:{name:'Estuary chop',amplitude:2.2},swell:{name:'Rolling swell',amplitude:3.4},changing:{name:'Changing conditions',amplitude:1}};
-let seaState='calm',seaFrom=1,seaStart=-20;
-export function seaAmplitude(time){
-  const target=seaState==='changing'?2.2-1.2*Math.cos(time*Math.PI/90):SEA_STATES[seaState].amplitude;
-  const t=Math.max(0,Math.min(1,(time-seaStart)/12)),blend=t*t*(3-2*t);return seaFrom+(target-seaFrom)*blend;
-}
-export function setSeaState(name,time=0,immediate=false){if(!SEA_STATES[name])return;seaFrom=seaAmplitude(time);seaState=name;seaStart=immediate?time-20:time;}
-export function waveHeight(x,z,time){return WAVES.reduce((h,w)=>h+Math.sin(x*w.kx+z*w.kz+time*w.speed)*w.amplitude,0)*waveChop(x,z)*seaAmplitude(time);}
+export { WAVES,WAVE_FIELD,SEA_STATES,OCEAN_SWELL,OCEAN_TUNING,waveChop,waveHeight,seaAmplitude,setSeaState,setWeatherClock,hourlyForecast,oceanReport,oceanExposure } from './ocean.js';
 export const QUALITY = {
   Low: { pixelRatio: .75, waterSegments: 100, particles: 600, wakeSamples: 125, fanSegments: 8, reflectionSize: 0, shadows: false, trees: 0.5 },
   Medium: { pixelRatio: 1.25, waterSegments: 160, particles: 1400, wakeSamples: 180, fanSegments: 12, reflectionSize: 256, shadows: false, trees: 0.75 },

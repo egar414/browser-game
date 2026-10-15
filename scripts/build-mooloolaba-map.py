@@ -56,7 +56,7 @@ n=math.ceil(d/82);race=[course.interpolate((start+sign*(i+1)*d/n)%d) for i in ra
 for a,b in zip([p0,*race[:-1]],race):
  if not water.buffer(-2).covers(LineString([a,b])):raise RuntimeError('Race chord crosses shore; increase sampling density')
 p1=race[0];spawn={'x':round(p0.x,1),'z':round(p0.y,1),'heading':math.atan2(p1.x-p0.x,p1.y-p0.y)}
-features={'buildings':[],'roads':[],'piers':[],'bridges':[],'channels':[],'parks':[],'beaches':[],'pois':[]}
+features={'buildings':[],'roads':[],'piers':[],'bridges':[],'channels':[],'parks':[],'beaches':[],'pois':[],'residential':[],'breakwaters':[]}
 for ident,w in ways.items():
  t=tags(w);points=coords(w)
  if len(points)<2:continue
@@ -69,10 +69,16 @@ for ident,w in ways.items():
   except (ValueError,IndexError):
    try:h=float(t.get('building:levels','1'))*3.1
    except ValueError:h=4.5
-  features['buildings'].append({'id':ident,'points':rounded(points),'h':round(max(3.5,min(h,52)),1),'name':t.get('name','')})
+  features['buildings'].append({'id':ident,'points':rounded(points),'h':round(max(3.5,min(h,52)),1),'name':t.get('name',''),'kind':t.get('building','yes'),'roofShape':t.get('roof:shape',''),'heightSource':'mapped height' if t.get('height') else 'mapped levels' if t.get('building:levels') else 'estimate'})
  if t.get('highway') in ['residential','tertiary','secondary','primary','trunk','unclassified','service'] and not t.get('bridge'):
   for seg in geometry_parts(line.intersection(world_box),'LineString'):
-   features['roads'].append({'points':rounded(seg.simplify(2).coords),'w':9 if t.get('highway') in ['primary','trunk','secondary'] else 5})
+   features['roads'].append({'points':rounded(seg.simplify(2).coords),'name':t.get('name',''),'kind':t.get('highway',''),'w':9 if t.get('highway') in ['primary','trunk','secondary'] else 5})
+ if t.get('landuse')=='residential' and len(points)>3 and points[0]==points[-1]:
+  for p in geometry_parts(Polygon(points).buffer(0).intersection(world_box),'Polygon'):
+   features['residential'].append({'points':rounded(p.exterior.coords)})
+ if t.get('man_made')=='breakwater':
+  for p in geometry_parts(line.intersection(world_box),'LineString'):
+   features['breakwaters'].append({'points':rounded(p.coords),'name':t.get('name','Breakwater')})
  if t.get('man_made')=='pier':
   for seg in geometry_parts(line.intersection(world_box),'LineString'):
    if seg.length>5:features['piers'].append({'id':ident,'points':rounded(seg.simplify(.6).coords),'area':points[0]==points[-1]})
