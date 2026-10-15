@@ -11,7 +11,7 @@ and do not imply an association with a watercraft or outboard manufacturer.
 
 Dependencies retain their own licenses:
 
-- Three.js (including Sky and BufferGeometryUtils): MIT.
+- Three.js (including Reflector, RoundedBoxGeometry and BufferGeometryUtils): MIT.
 - Vite and its build dependencies: see installed package license files.
 - Playwright: Apache-2.0; development and testing only.
 

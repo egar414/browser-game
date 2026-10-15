@@ -7,6 +7,13 @@ pick a compact freestyle jet ski or a twin-pontoon racing inflatable and launch
 into a fictional Australian estuary. No account, API key, or external asset
 service is required to play.
 
+The graphics upgrade adds a moving cloud sky, reflected scenery on Medium/High,
+layered water ripples and sun highlights, shallow-water colour and shoreline
+foam, sky-lit glossy hulls, and a wider chase view across the water. Spray now
+comes from the chines and jet/propeller, with stronger outside-turn fans,
+ballistic droplets, mist, persistent V wakes, and expanding landing foam.
+Vehicle movement tuning, controls, map routes and activities are preserved.
+
 ## Run locally
 
 Use Node.js 22.12+ (Node 24 is used in this cloud environment).
@@ -65,7 +72,10 @@ Storage failures fall back to playable defaults.
 | `src/config.js` | Vehicle tuning, quality profiles, shared wave equations, race route |
 | `src/vehicles/physics.js` | Fixed-step movement, four-point buoyancy, planing, slides, air control, scoring events |
 | `src/vehicles/models.js` | Original procedural craft, rider, outboard and tiller |
-| `src/systems/water.js` | Adaptive water mesh, shader, pooled spray and foam wakes |
+| `src/systems/water.js` | Adaptive water mesh, ripples, shallow colour, sun highlights and planar reflections |
+| `src/systems/atmosphere.js` | Sky/cloud lighting, shared sun direction and filtered material reflections |
+| `src/systems/spray.js` | Pooled droplets, turn fans, jet stream, foam wake ribbons and landing rings |
+| `src/systems/spray-model.js` | Spray tuning and speed/throttle/slip/turn response |
 | `src/systems/environment.js` | Land polygons, simplified collision shapes, scenery and floating ramps |
 | `src/systems/input.js` | Keyboard, orbit drag, blur/visibility cleanup |
 | `src/systems/camera.js` | Chase camera, smoothing, views and shoreline avoidance |
@@ -95,6 +105,14 @@ buoyancy, steering differences, collisions, route clearance, wipeouts, recovery,
 world limits and score exploits. Read-only runtime diagnostics are available at
 `window.__ESTUARY__.status`; the shipped application exposes no teleport or score
 mutation interface.
+
+Low retains the water shading and spray systems at reduced render resolution
+without the extra reflection pass. Medium uses 256-pixel reflections; High uses
+512-pixel reflections and shadows. `QUALITY` in `src/config.js` controls render
+resolution, water density, particle/wake budgets, fan density and reflections.
+`SPRAY_TUNING` in `src/systems/spray-model.js` controls spray force response and
+wake lifetime/spread. The water shader's colours and optical detail are in
+`src/systems/water.js`. These visual parameters do not alter boat physics.
 
 To run the complete keyboard-controlled race acceptance drive against a frozen
 production build (avoids development hot reload interrupting the test):
@@ -131,7 +149,9 @@ runtime errors or failed requests.
 - Visible foam wakes persist, but their trails do not add separate buoyancy forces.
 - Camera avoids shores and major low objects; it has no general mesh raycast solver.
 - Procedural audio; no recorded real engine samples or external music.
-- No comparison to SumbaSurf has been established; that reference was not inspected.
+- SumbaSurf's supplied reference URL is https://wavedash.com/games/sumbasurf.
+  Access is currently blocked by the cloud network policy; `wavedash.com` has
+  been added to the environment draft for review. No visual-parity claim is made.
 - Software rendering in the cloud is useful for correctness checks and does not
   establish performance or subjective handling quality on an ordinary laptop.
 

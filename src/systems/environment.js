@@ -60,31 +60,56 @@ export function buildEnvironment(scene, quality) {
     if (!land || land.city || land.name === 'North shore' || (land.name.includes('island') && !land.sand)) continue;
     if (Math.abs(x) < 40 && z > 300) continue;
     const scale = 0.7 + random() * 0.9;
-    trunkPositions.push([x, 3 * scale, z, scale]); leafPositions.push([x, 6 * scale, z, scale]);
+    trunkPositions.push([x, 3 * scale, z, scale]);
+    leafPositions.push([x, 6.3 * scale, z, scale]);
+    leafPositions.push([x+2*scale, 5.7*scale, z+.8*scale, scale*.68]);
+    leafPositions.push([x-1.7*scale, 5.9*scale, z-1.1*scale, scale*.72]);
   }
   const matrix = new THREE.Matrix4(), position = new THREE.Vector3(), scale = new THREE.Vector3(), quaternion = new THREE.Quaternion();
   const trunks = new THREE.InstancedMesh(trunkGeo, timber, trunkPositions.length);
-  const foliage = new THREE.InstancedMesh(canopyGeo, leaves[0], leafPositions.length);
+  const foliage = new THREE.InstancedMesh(canopyGeo, material('#ffffff'), leafPositions.length);
   trunkPositions.forEach((p, i) => { position.set(...p.slice(0,3)); scale.setScalar(p[3]); matrix.compose(position, quaternion, scale); trunks.setMatrixAt(i, matrix); });
-  leafPositions.forEach((p, i) => { position.set(...p.slice(0,3)); scale.set(3.5*p[3], 2.6*p[3], 3.4*p[3]); matrix.compose(position, quaternion, scale); foliage.setMatrixAt(i, matrix); foliage.setColorAt(i, new THREE.Color(['#527757','#69825b','#456850'][i%3])); });
+  leafPositions.forEach((p, i) => { position.set(...p.slice(0,3)); scale.set(3.5*p[3], 2.6*p[3], 3.4*p[3]); matrix.compose(position, quaternion, scale); foliage.setMatrixAt(i, matrix); foliage.setColorAt(i, new THREE.Color(['#52755b','#6b835b','#3f6754'][i%3])); });
   root.add(trunks, foliage);
   function palm(x, z, size = 1) {
     tube(root, [[x,0.5,z],[x+size,5*size,z],[x+1.5*size,9*size,z]], 0.23*size, timber, 8);
-    for (let j = 0; j < 6; j++) {
-      const angle = j * Math.PI / 3;
-      tube(root, [[x+1.5*size,9*size,z], [x+(1.5+Math.sin(angle)*2.8)*size,9.4*size,z+Math.cos(angle)*2.8*size], [x+(1.5+Math.sin(angle)*4.6)*size,7.9*size,z+Math.cos(angle)*4.6*size]], 0.35*size, leaves[j%3], 5);
+    for (let j = 0; j < 8; j++) {
+      const angle = j * Math.PI / 4,positions=[],indices=[];
+      for(let i=0;i<=10;i++){
+        const t=i/10,width=Math.pow(Math.sin(t*Math.PI),.65)*.48*size;
+        const cx=x+(1.5+Math.sin(angle)*t*5)*size,cz=z+Math.cos(angle)*t*5*size;
+        const cy=(9+Math.sin(t*Math.PI)*.9-t*t*2.4)*size;
+        for(const side of [-1,1])positions.push(cx+Math.cos(angle)*width*side,cy-Math.abs(width)*.12,cz-Math.sin(angle)*width*side);
+        if(i<10){const a=i*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}
+      }
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setIndex(indices);g.computeVertexNormals();
+      const leafMaterial=leaves[j%3];leafMaterial.side=THREE.DoubleSide;
+      const frond=new THREE.Mesh(g,leafMaterial);frond.castShadow=true;root.add(frond);
     }
   }
   function home(x, z, w, d, h, index, tower = false) {
     const walls = material(['#e9e4d3','#cbd2c4','#d1b19b','#adc6c3'][index%4]);
     box(root,w,h,d,x,h/2+0.65,z,walls);
     box(root,w+1.6,0.6,d+1.6,x,h+0.8,z,material(tower?'#566969':['#657c79','#e4c19a','#727b76'][index%3]));
-    const windows = material('#567f85');
+    const windows = new THREE.MeshStandardMaterial({color:'#315c69',roughness:.16,metalness:.46});
     for (let floor = 0; floor < h-2; floor += 3.3) {
       for (let wx=-w/2+2; wx<w/2-1; wx+=4.5) box(root,2,1.5,0.09,x+wx,2.5+floor,z+d/2+0.06,windows);
       for (let wz=-d/2+2; wz<d/2-1; wz+=4.5) box(root,0.09,1.5,2,x+w/2+0.06,2.5+floor,z+wz,windows);
+      if(tower){
+        box(root,2.5,.2,d+1.2,x+w/2+1.1,1.2+floor,z,concrete);
+        box(root,.12,.8,d+.9,x+w/2+2.3,1.72+floor,z,walls);
+      }
     }
-    if (!tower) { box(root,w+3,0.15,5,x,0.9,z+d/2+2,concrete); palm(x-w*0.7,z+2,0.85); }
+    if (!tower) {
+      // Pitched coastal roofs and shaded verandas break up the old flat boxes.
+      const roof=new THREE.BufferGeometry(),rw=w*.56,rd=d*.56,base=h+1.0;
+      roof.setAttribute('position',new THREE.Float32BufferAttribute([x-rw,base,z-rd,x+rw,base,z-rd,x-rw,base,z+rd,x+rw,base,z+rd,x,base+2.8,z-rd,x,base+2.8,z+rd],3));
+      roof.setIndex([0,2,5,0,5,4,4,5,3,4,3,1,0,4,1,2,3,5]);roof.computeVertexNormals();
+      root.add(new THREE.Mesh(roof,material(['#7c8b8d','#b68c70','#637a7b'][index%3])));
+      box(root,w+3,0.15,5,x,0.9,z+d/2+2,concrete);
+      for(const side of [-1,1])box(root,.28,2.8,.28,x+side*w*.48,2.3,z+d/2+3.8,walls);
+      box(root,w+2,.15,4.5,x,3.75,z+d/2+2.1,walls);palm(x-w*.7,z+2,.85);
+    }
   }
   // Waterfront town, with a continuous esplanade and road behind it.
   box(root, 8,0.1,600,-204,0.75,-170,concrete);

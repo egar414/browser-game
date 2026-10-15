@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 const mat = (colour, roughness = 0.5) => new THREE.MeshStandardMaterial({ color: colour, roughness, metalness: 0.08 });
 const dark = mat('#182b32'), rubber = mat('#101a20', 0.9), skin = mat('#bd8867'), shirt = mat('#eee9d1');
 export function box(parent, w, h, d, x, y, z, material, radius = false) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+  const geometry=radius?new RoundedBoxGeometry(w,h,d,2,Math.min(w,h,d)*.15):new THREE.BoxGeometry(w,h,d);
+  const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
 }
 export function tube(parent, points, radius, material, segments = 20) {
@@ -38,7 +40,7 @@ function rider(parent, type) {
   const root = new THREE.Group(); root.position.set(type === 'cat' ? -0.42 : 0, 0.53, type === 'cat' ? -0.72 : -0.3); parent.add(root);
   const shorts = mat('#203c40'), vest = mat('#d0d8bf');
   ellipsoid(root, 1, 0, 0.74, 0, 0.23, 0.37, 0.16, shirt);
-  box(root, 0.46, 0.49, 0.28, 0, 0.76, 0.02, vest);
+  box(root, 0.46, 0.49, 0.28, 0, 0.76, 0.02, vest, true);
   box(root, 0.49, 0.06, 0.3, 0, 0.68, 0.02, dark);
   ellipsoid(root, 0.17, 0, 1.29, 0.05, 0.9, 1.15, 0.95, skin);
   ellipsoid(root, 0.18, 0, 1.4, 0.05, 1, 0.55, 1, dark);
@@ -56,7 +58,9 @@ function rider(parent, type) {
 }
 export function makeVehicle(type, colour) {
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const accent = mat(colour), pale = mat('#e0e9d7'), blue = mat('#344b61', 0.25), silver = mat('#8b9b9e', 0.3);
+  const accent = new THREE.MeshPhysicalMaterial({color:colour,roughness:.3,metalness:.08,clearcoat:.8,clearcoatRoughness:.24});
+  const pale = mat('#e0e9d7'), blue = new THREE.MeshPhysicalMaterial({color:'#344b61',roughness:.24,metalness:.25,clearcoat:.65});
+  const silver = new THREE.MeshStandardMaterial({color:'#a8b9bd',roughness:.26,metalness:.8});
   let motor, person;
   if (type === 'ski') {
     hull(body, [[-1.48, 0.42, 0.13, -0.2], [-1.15, 0.59, 0.22, -0.29], [-0.35, 0.62, 0.29, -0.3], [0.6, 0.54, 0.37, -0.22], [1.22, 0.3, 0.34, -0.12], [1.55, 0.025, 0.21, 0.05]], dark);
@@ -90,7 +94,7 @@ export function makeVehicle(type, colour) {
     box(body, 1.34, 0.08, 0.16, 0, 0.79, -1.38, accent);
     for (let z = -0.9; z < 1; z += 0.38) box(body, 0.95, 0.025, 0.025, 0, 0.37, z, dark);
     motor = new THREE.Group(); motor.position.set(0.18, 0.4, -1.65); body.add(motor);
-    box(motor, 0.48, 0.68, 0.56, 0, 0.42, 0, blue);
+    box(motor, 0.48, 0.68, 0.56, 0, 0.42, 0, blue, true);
     ellipsoid(motor, 1, 0, 0.74, 0, 0.24, 0.14, 0.28, blue);
     box(motor, 0.32, 0.05, 0.6, 0, 0.46, 0, silver);
     box(motor, 0.13, 0.8, 0.18, 0, -0.29, 0.02, blue);

@@ -1,104 +1,135 @@
 import * as THREE from 'three';
-import { WAVES, waveHeight } from '../config.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
+import { WAVES } from '../config.js';
 import { lands } from './environment.js';
+import { SUN_DIRECTION } from './atmosphere.js';
+export { Spray } from './spray.js';
+
+function makeRippleTexture() {
+  const size=128,data=new Uint8Array(size*size*4),heights=new Float32Array(size*size);
+  let seed=1359;const random=()=>((seed=Math.imul(seed,1664525)+1013904223|0)>>>0)/4294967296;
+  const layers=[4,8,16,32,64].map((n,i)=>({n,weight:Math.pow(.53,i),grid:Array.from({length:n*n},random)}));
+  const smooth=t=>t*t*(3-2*t);
+  // Periodic fractal noise avoids the regular cross-hatched sine pattern of
+  // the first pass. Wind stretches the small ripples without making stripes.
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+    let h=0;
+    for(const {n,weight,grid} of layers){
+      const u=x/size*n,v=y/size*n,a=Math.floor(u),b=Math.floor(v),fx=smooth(u-a),fy=smooth(v-b);
+      const at=(xx,yy)=>grid[(yy%n)*n+xx%n];
+      h+=THREE.MathUtils.lerp(THREE.MathUtils.lerp(at(a,b),at(a+1,b),fx),THREE.MathUtils.lerp(at(a,b+1),at(a+1,b+1),fx),fy)*weight;
+    }
+    heights[y*size+x]=h/2.05;
+  }
+  const at=(x,y)=>heights[((y+size)%size)*size+(x+size)%size];
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+    const dx=THREE.MathUtils.clamp((at(x+1,y)-at(x-1,y))*5,-1,1);
+    const dz=THREE.MathUtils.clamp((at(x,y+1)-at(x,y-1))*5,-1,1);
+    const i=(y*size+x)*4;data[i]=(dx*.5+.5)*255;data[i+1]=(dz*.5+.5)*255;data[i+2]=at(x,y)*255;data[i+3]=255;
+  }
+  const texture=new THREE.DataTexture(data,size,size);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  texture.magFilter=THREE.LinearFilter;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.generateMipmaps=true;texture.needsUpdate=true;
+  return texture;
+}
+
 export class Water {
   constructor(scene, quality) {
-    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
-    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#000'; ctx.fillRect(0,0,512,512);
-    ctx.fillStyle = '#fff'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 10;
-    for (const land of lands) { ctx.beginPath(); land.points.forEach((p,i) => ctx[i?'lineTo':'moveTo']((p[0]+800)/1600*512,(p[1]+800)/1600*512)); ctx.closePath(); ctx.fill(); }
-    const shore = new THREE.CanvasTexture(canvas);
-    this.material = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uCenter: { value: new THREE.Vector2() }, uSun: { value: new THREE.Vector3(-0.5,0.65,-0.3).normalize() }, uShore: { value: shore } },
-      vertexShader: `
-        uniform float uTime;uniform vec2 uCenter;
-        varying vec3 vWorld; varying vec3 vNormal;
-        float wave(vec2 p) {
-          float chop=.3+.7*clamp((p.y-40.)/230.,0.,1.);
-          return (${WAVES.map(w=>`${w.amplitude}*sin(p.x*${w.kx}+p.y*${w.kz}+uTime*${w.speed})`).join('+')})*chop;
-        }
-        void main() {
+    const canvas=document.createElement('canvas');canvas.width=canvas.height=1024;
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,1024,1024);
+    ctx.fillStyle='#fff';ctx.shadowColor='#fff';ctx.shadowBlur=19;
+    for(const land of lands){ctx.beginPath();land.points.forEach((p,i)=>ctx[i?'lineTo':'moveTo']((p[0]+800)/1600*1024,(p[1]+800)/1600*1024));ctx.closePath();ctx.fill();}
+    this.material=new THREE.ShaderMaterial({
+      uniforms:{
+        uTime:{value:0},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
+        uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
+        uReflection:{value:null},uReflectionMatrix:{value:new THREE.Matrix4()},uReflect:{value:0},
+        uHull:{value:new THREE.Vector4(0,0,1,2)},uHeading:{value:0},uContact:{value:1},
+      },
+      vertexShader:`
+        uniform float uTime;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
+        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;
+        float wave(vec2 p){float chop=.3+.7*clamp((p.y-40.)/230.,0.,1.);
+          return (${WAVES.map(w=>`${w.amplitude}*sin(p.x*${w.kx}+p.y*${w.kz}+uTime*${w.speed})`).join('+')})*chop;}
+        void main(){
           vec3 p=position;p.xz+=uCenter;p.y=wave(p.xz);
           float dx=(wave(p.xz+vec2(.15,0.))-wave(p.xz-vec2(.15,0.)))/.3;
           float dz=(wave(p.xz+vec2(0.,.15))-wave(p.xz-vec2(0.,.15)))/.3;
-          vNormal=normalize(vec3(-dx,1.,-dz));vWorld=p;
+          vWorld=p;vNormal=normalize(vec3(-dx,1.,-dz));
+          vReflection=uReflectionMatrix*vec4(p.x,-p.z,0.,1.);
           gl_Position=projectionMatrix*viewMatrix*vec4(p,1.);
         }`,
-      fragmentShader: `
-        uniform vec3 uSun;uniform float uTime;uniform sampler2D uShore;
-        varying vec3 vWorld;varying vec3 vNormal;
-        void main() {
+      fragmentShader:`
+        uniform float uTime;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
+        uniform sampler2D uReflection;uniform float uReflect;uniform vec4 uHull;uniform float uHeading;uniform float uContact;
+        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;
+        void main(){
+          vec2 p=vWorld.xz;float distanceToEye=length(cameraPosition-vWorld);
           vec3 view=normalize(cameraPosition-vWorld);
-          vec3 n=normalize(vNormal);
-          float ripple=sin(vWorld.x*2.1+vWorld.z*1.7+uTime*2.3)*sin(vWorld.z*3.2-uTime*2.);
-          n=normalize(n+vec3(ripple*.019,0.,ripple*.023));
-          float fresnel=pow(1.-max(dot(view,n),0.),3.);
-          float shallows=texture2D(uShore,vec2((vWorld.x+800.)/1600.,1.-(vWorld.z+800.)/1600.)).r;
-          vec3 deep=mix(vec3(.035,.30,.32),vec3(.18,.57,.48),shallows*.85);
-          vec3 sky=vec3(.54,.74,.75);
-          vec3 colour=mix(deep,sky,fresnel*.72);
-          float sun=pow(max(dot(reflect(-uSun,n),view),0.),150.);
-          colour+=vec3(1.,.86,.57)*sun*.95;
-          colour+=pow(max(dot(n,uSun),0.),12.)*.05;
-          float fog=1.-exp(-length(cameraPosition-vWorld)*.00095);
-          colour=mix(colour,vec3(.73,.81,.76),fog);
+          vec3 r1=texture2D(uRipples,p*.055+vec2(uTime*.013,-uTime*.009)).rgb;
+          vec3 r2=texture2D(uRipples,p*.16+vec2(-uTime*.019,uTime*.011)).rgb;
+          float micro=1.-smoothstep(25.,210.,distanceToEye);
+          vec2 ripples=(r1.rg*2.-1.)*.095+(r2.rg*2.-1.)*.045*micro;
+          vec3 n=normalize(vNormal+vec3(ripples.x,0.,ripples.y));
+          float ndv=max(dot(n,view),0.);float fresnel=.025+.975*pow(1.-ndv,5.);
+          float shore=texture2D(uShore,vec2((p.x+800.)/1600.,1.-(p.y+800.)/1600.)).r;
+          float bed=.82+.18*sin(p.x*.13+sin(p.y*.16))*sin(p.y*.18);
+          vec3 deep=mix(vec3(.008,.105,.125),vec3(.045,.35,.265)*bed,smoothstep(.01,.78,shore));
+          vec3 reflected=reflect(-view,n);
+          vec3 sky=mix(vec3(.50,.70,.75),vec3(.055,.245,.44),pow(max(reflected.y,0.),.42));
+          vec3 reflection=sky;
+          if(uReflect>.5){
+            vec2 uv=vReflection.xy/vReflection.w+ripples*.027;
+            vec3 planar=texture2D(uReflection,clamp(uv,vec2(.002),vec2(.998))).rgb;
+            reflection=mix(sky,planar,.78);
+          }
+          vec3 colour=mix(deep,reflection,.12+fresnel*.77);
+          float crest=smoothstep(-.02,.3,vWorld.y)*.035;
+          colour+=vec3(.08,.31,.26)*crest;
+          vec3 halfVector=normalize(view+uSun);
+          float spec=pow(max(dot(n,halfVector),0.),350.);
+          float sheen=pow(max(dot(n,halfVector),0.),45.);
+          colour+=vec3(1.55,1.25,.76)*(spec*.72+sheen*.035);
+          float caustic=pow(max(0.,sin(p.x*1.7+r1.b*3.)*sin(p.y*1.3-r2.b*2.)),7.);
+          colour+=vec3(.12,.22,.13)*caustic*shore*micro*.35;
+          float foam=smoothstep(.23,.43,shore)*(1.-smoothstep(.53,.82,shore));
+          foam*=smoothstep(.55,.87,r1.b*.55+r2.b*.3+sin(shore*40.-uTime*1.7)*.15);
+          colour=mix(colour,vec3(.66,.83,.77),foam*.32);
+          vec2 local=p-uHull.xy;float s=sin(uHeading),c=cos(uHeading);
+          vec2 hullSpace=vec2(local.x*c-local.y*s,local.x*s+local.y*c);
+          float shadow=exp(-dot(hullSpace/uHull.zw,hullSpace/uHull.zw)*2.4)*uContact;
+          colour*=1.-shadow*.42;
+          float fog=1.-exp(-distanceToEye*.00095);
+          colour=mix(colour,vec3(.47,.64,.68),fog);
           gl_FragColor=vec4(colour,1.);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
     });
-    this.scene = scene; this.mesh = null; this.setQuality(quality);
+    this.scene=scene;this.mesh=null;this.reflector=null;this.setQuality(quality);
   }
   setQuality(quality) {
     if(this.mesh){this.scene.remove(this.mesh);this.mesh.geometry.dispose();}
-    // Concentrate surface samples around the boat; distant water needs fewer
-    // triangles, while the visible hull contact must match buoyancy samples.
     const g=new THREE.PlaneGeometry(2,2,quality.waterSegments,quality.waterSegments);g.rotateX(-Math.PI/2);
-    const positions=g.attributes.position;
-    for(let i=0;i<positions.count;i++){const x=positions.getX(i),z=positions.getZ(i);positions.setX(i,Math.sign(x)*Math.pow(Math.abs(x),2.4)*1050);positions.setZ(i,Math.sign(z)*Math.pow(Math.abs(z),2.4)*1050);}
+    const p=g.attributes.position;
+    for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setX(i,Math.sign(x)*Math.pow(Math.abs(x),2.4)*1050);p.setZ(i,Math.sign(z)*Math.pow(Math.abs(z),2.4)*1050);}
     this.mesh=new THREE.Mesh(g,this.material);this.mesh.frustumCulled=false;this.scene.add(this.mesh);
-  }
-  update(t,x,z) { this.material.uniforms.uTime.value=t;this.material.uniforms.uCenter.value.set(x,z); }
-}
-export class Spray {
-  constructor(scene, count) {
-    this.count=count;this.next=0;this.accumulator=0;this.particles=Array.from({length:count},()=>({life:0}));
-    this.positions=new Float32Array(count*3);this.sizes=new Float32Array(count);this.alphas=new Float32Array(count);
-    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(this.positions,3));g.setAttribute('aSize',new THREE.BufferAttribute(this.sizes,1));g.setAttribute('aAlpha',new THREE.BufferAttribute(this.alphas,1));
-    this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uScale:{value:600}},
-      vertexShader:`attribute float aSize;attribute float aAlpha;varying float vAlpha;uniform float uScale;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uScale/max(1.,-mv.z),1.,90.);vAlpha=aAlpha;}`,
-      fragmentShader:`varying float vAlpha;void main(){float d=length(gl_PointCoord-.5);if(d>.5)discard;gl_FragColor=vec4(.87,.97,.94,(1.-smoothstep(.12,.5,d))*vAlpha);}`});
-    this.points=new THREE.Points(g,this.material);this.points.frustumCulled=false;scene.add(this.points);
-  }
-  emit(x,y,z,vx,vy,vz,foam=false) {
-    const p=this.particles[this.next++%this.count];Object.assign(p,{x,y,z,vx,vy,vz,foam,life:foam?4.5:0.8+Math.random()*.6,max:foam?4.5:1.4,size:foam?.35:.09+Math.random()*.18});
-  }
-  splash(v, impact) {
-    for(let i=0;i<Math.min(90,impact*7);i++){const a=Math.random()*Math.PI*2, s=2+Math.random()*impact*.5;this.emit(v.x,0.25,v.z,Math.sin(a)*s,2+Math.random()*impact*.45,Math.cos(a)*s);}
-  }
-  update(dt,v,time,active=true) {
-    const fX=Math.sin(v.heading),fZ=Math.cos(v.heading), sideX=fZ,sideZ=-fX;
-    const ground=!v.airborne&&!v.wipeout;
-    const intensity=Math.min(2.8,v.speed/18+Math.abs(v.steer)*v.speed/20+Math.abs(v.slip)/9);
-    this.accumulator+=active&&ground&&v.speed>1?dt*(25+intensity*90):0;
-    const count=Math.min(30,Math.floor(this.accumulator));this.accumulator-=count;
-    for(let i=0;i<count;i++){
-      const side=i%2?1:-1, width=v.config.width*.45;
-      const outside=side*-v.steer>0?1.8:0.6;
-      const spread=(1+Math.abs(v.slip)*.6+v.speed*.14)*outside;
-      const x=v.x-fX*v.config.length*.35+sideX*side*width,z=v.z-fZ*v.config.length*.35+sideZ*side*width;
-      this.emit(x,v.y+.04,z,sideX*side*spread-fX*v.speed*.16,0.6+intensity*outside+Math.random(),sideZ*side*spread-fZ*v.speed*.16);
-      if(i%3===0)this.emit(x,.05,z,sideX*side*.7,0,sideZ*side*.7,true);
+    this.reflector?.dispose();this.reflector?.geometry.dispose();this.reflector=null;
+    if(quality.reflectionSize){
+      this.reflector=new Reflector(new THREE.PlaneGeometry(2100,2100),{textureWidth:quality.reflectionSize,textureHeight:quality.reflectionSize,clipBias:.003,multisample:0});
+      this.reflector.rotation.x=-Math.PI/2;this.reflector.updateMatrixWorld();
+      this.material.uniforms.uReflection.value=this.reflector.getRenderTarget().texture;
+      this.material.uniforms.uReflectionMatrix.value=this.reflector.material.uniforms.textureMatrix.value;
     }
-    this.particles.forEach((p,i)=>{
-      p.life-=dt;
-      if(p.life>0){
-        p.x+=p.vx*dt;p.z+=p.vz*dt;
-        if(p.foam){p.y=waveHeight(p.x,p.z,time)+.035;p.size+=dt*.48;}
-        else{p.vy-=8*dt;p.y+=p.vy*dt;if(p.y<waveHeight(p.x,p.z,time)){p.foam=true;p.life=1.8;p.max=2;p.vy=0;p.vx*=.15;p.vz*=.15;}}
-        this.positions.set([p.x,p.y,p.z],i*3);this.sizes[i]=p.size;this.alphas[i]=Math.min(1,p.life/p.max)*(p.foam?.48:.75);
-      }else{this.alphas[i]=0;this.sizes[i]=0;}
-    });
-    for(const a of Object.values(this.points.geometry.attributes))a.needsUpdate=true;
+    this.material.uniforms.uReflect.value=0;
+  }
+  update(t,x,z,v) {
+    const u=this.material.uniforms;u.uTime.value=t;u.uCenter.value.set(x,z);
+    if(v){u.uHull.value.set(x,z,v.config.width*.72,v.config.length*.62);u.uHeading.value=v.heading;u.uContact.value=v.airborne?Math.max(0,1-v.y/4):1;}
+  }
+  reflect(renderer,camera) {
+    if(!this.reflector)return;
+    camera.updateMatrixWorld();this.mesh.visible=false;
+    try{this.reflector.onBeforeRender(renderer,this.scene,camera);this.material.uniforms.uReflect.value=1;}
+    finally{this.mesh.visible=true;}
   }
 }

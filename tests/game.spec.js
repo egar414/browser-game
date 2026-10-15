@@ -14,11 +14,27 @@ for(const type of ['ski','cat'])test(`${type}: choose, drive, spray, steer, brak
   await page.keyboard.down('KeyA');await page.keyboard.down('ShiftLeft');
   await expect.poll(async()=>Math.abs((await status(page)).heading-initial),{timeout:20000}).toBeGreaterThan(.65);
   expect(Math.abs((await status(page)).slip)).toBeGreaterThan(1);
+  const spray=(await status(page)).spray;
+  expect(spray.left).toBeGreaterThan(spray.right);
+  expect(spray.wakeSamples).toBeGreaterThan(3);
   await page.keyboard.up('KeyA');await page.keyboard.up('ShiftLeft');await page.keyboard.up('KeyW');
   await page.keyboard.down('KeyS');await expect.poll(async()=>(await status(page)).forwardSpeed,{timeout:35000}).toBeLessThan(-1);await page.keyboard.up('KeyS');
   await page.keyboard.press('KeyR');await expect.poll(async()=>(await status(page)).speed).toBeLessThan(.5);
+  expect((await status(page)).liveParticles).toBe(0);
+  expect((await status(page)).spray.wakeSamples).toBe(0);
   expect((await status(page)).position.y).toBeGreaterThan(-.6);expect(errors).toEqual([]);
   await page.screenshot({path:`test-results/${type}-driving.png`});
+});
+test('all graphics profiles render without errors and reflections switch safely',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  await page.setViewportSize({width:960,height:640});await page.locator('#play').click();
+  for(const quality of ['Medium','High','Low']){
+    await page.keyboard.press('Escape');await page.locator('#quality').selectOption(quality);await page.locator('#resume').click();
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const s=await status(page);expect(s.quality).toBe(quality);expect(s.spray.reflections).toBe(quality!=='Low');
+    expect(s.state).toBe('playing');await page.screenshot({path:`test-results/graphics-${quality}.png`});
+  }
+  expect(errors).toEqual([]);
 });
 test('jet ski bow rider, pause, camera, settings, persistence, guide, resize and focus',async({page})=>{
   await page.locator('#play').click();await page.keyboard.down('KeyW');await page.keyboard.down('ShiftLeft');

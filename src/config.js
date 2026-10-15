@@ -28,9 +28,9 @@ export function waveHeight(x, z, time) {
   return WAVES.reduce((h, w) => h + Math.sin(x * w.kx + z * w.kz + time * w.speed) * w.amplitude * chop, 0);
 }
 export const QUALITY = {
-  Low: { pixelRatio: 1, waterSegments: 100, particles: 160, shadows: false, trees: 0.5 },
-  Medium: { pixelRatio: 1.4, waterSegments: 160, particles: 340, shadows: false, trees: 0.75 },
-  High: { pixelRatio: 1.75, waterSegments: 220, particles: 650, shadows: true, trees: 1 },
+  Low: { pixelRatio: .75, waterSegments: 100, particles: 600, wakeSamples: 125, fanSegments: 8, reflectionSize: 0, shadows: false, trees: 0.5 },
+  Medium: { pixelRatio: 1.25, waterSegments: 160, particles: 1400, wakeSamples: 180, fanSegments: 12, reflectionSize: 256, shadows: false, trees: 0.75 },
+  High: { pixelRatio: 1.65, waterSegments: 220, particles: 2400, wakeSamples: 230, fanSegments: 16, reflectionSize: 512, shadows: true, trees: 1 },
 };
 export const RACE = [
   [-125, 10], [-125, -220], [-125, -470], [85, -470], [85, -275],
