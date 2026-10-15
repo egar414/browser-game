@@ -1,4 +1,4 @@
-import { PROPULSION, RIDE_MODES, waveHeight } from '../config.js';
+import { PROPULSION, RIDE_MODES, SKI_TRIM_POSITIONS, waveHeight } from '../config.js';
 const rad=degrees=>degrees*Math.PI/180;
 const clamp=(value,min=0,max=1)=>Math.max(min,Math.min(max,value));
 const damp=(value,target,rate,dt)=>value+(target-value)*(1-Math.exp(-rate*dt));
@@ -59,19 +59,24 @@ export function propellerSolution(power,area,inletSpeed) {
 
 export class Propulsion {
   constructor(type='ski'){this.type=type;this.config=PROPULSION[type];this.reset();}
-  reset(){this.rpmFraction=0;this.wetness=1;this.reverse=0;this.state=this.empty();}
+  reset(){this.rpmFraction=0;this.wetness=1;this.reverse=0;this.reverseReady=false;this.trimAngle=0;this.state=this.empty();}
   empty(){return {kind:this.config.kind,rpm:0,rpmFraction:0,wetness:0,ventilation:0,flow:0,massFlow:0,exitSpeed:0,thrust:0,reverse:0,neutral:true,trimAngle:0,steeringAngle:0,origin:{x:0,y:0,z:0},direction:{x:0,y:0,z:-1},force:{x:0,y:0,z:0}};}
   update(dt,v,input,time) {
     const c=this.config,mode=RIDE_MODES[v.rideMode]||RIDE_MODES.sport;
     const forward=v.vx*Math.sin(v.heading)+v.vz*Math.cos(v.heading);
     const reversing=v.throttle<-.025;
     const demand=clamp(Math.abs(v.throttle));
-    const reversePower=reversing?(forward>1?.72:.48):1;
-    const targetRpm=c.idleFraction+(1-c.idleFraction)*Math.sqrt(demand)*Math.cbrt(mode.power*reversePower);
+    const braking=reversing&&forward>2.78;
+    if(!reversing)this.reverseReady=false;else if(forward<=2.2)this.reverseReady=true;
+    const shifting=this.type==='cat'&&reversing&&!this.reverseReady;
+    const reversePower=reversing?(braking?mode.brakePower:mode.reversePower):1;
+    const targetRpm=c.idleFraction+(1-c.idleFraction)*Math.sqrt(shifting?0:demand)*Math.cbrt(mode.power*reversePower);
     this.rpmFraction=damp(this.rpmFraction,targetRpm,dt>0?8:0,dt);
-    this.reverse=damp(this.reverse,reversing?1:0,12,dt);
-    const trimLimit=this.type==='cat'?8:mode.trimMax;
-    const trimAngle=rad(clamp((v.trimDegrees||0)+(input.freestyle&&this.type==='ski'?6:0),mode.trimMin,trimLimit));
+    this.reverse=damp(this.reverse,reversing&&!shifting?1:0,mode.gateResponse,dt);
+    const selectedTrim=rad(clamp(v.trimDegrees||0,this.type==='ski'?SKI_TRIM_POSITIONS[0]:-7,this.type==='ski'?SKI_TRIM_POSITIONS.at(-1):8));
+    // The selected VTS position may change at idle; the physical nozzle moves in forward thrust.
+    if(this.type==='cat'||(!reversing&&demand>.025))this.trimAngle=damp(this.trimAngle,selectedTrim,5,dt);
+    const trimAngle=this.trimAngle;
     const steeringAngle=v.steer*c.steeringAngle;
     const {origin,intake,direction}=propulsionPose(v,trimAngle,steeringAngle);
     const depth=waveHeight(intake.x,intake.z,time)-intake.y;
@@ -83,18 +88,46 @@ export class Propulsion {
     const powerFraction=this.rpmFraction**3;
     let exitSpeed,flow,massFlow,thrust;
     if(this.type==='ski'){
-      const solution=waterjetSolution(c.hydraulicPower*powerFraction,c.nozzleArea,Math.abs(forward));
-      exitSpeed=solution.exitSpeed;flow=solution.volumeFlow*wet;massFlow=solution.massFlow*wet;thrust=solution.thrust*wet;
+      const solution=waterjetSolution(c.hydraulicPower*powerFraction,c.nozzleArea,Math.hypot(v.vx,v.vz,v.vy||0));
+      exitSpeed=solution.exitSpeed;
+      // Approximate inlet admission losses at low pump RPM. Without this term,
+      // an idling ideal duct falsely retains nearly full-speed steering power.
+      const admission=.06+.94*clamp((this.rpmFraction-c.idleFraction)/(1-c.idleFraction));
+      flow=solution.volumeFlow*wet*admission;massFlow=solution.massFlow*wet*admission;thrust=solution.thrust*wet*admission;
     }else{
       const efficiency=.34+.24*clamp(Math.abs(forward)/12);
       const solution=propellerSolution(c.shaftPower*efficiency*powerFraction,c.propellerArea,Math.abs(forward));
       exitSpeed=solution.slipstreamSpeed;flow=c.propellerArea*(Math.abs(forward)+solution.inducedSpeed)*wet;
       massFlow=flow*WATER_DENSITY;thrust=solution.thrust*wet;
     }
-    const neutral=demand<.025&&Math.abs(forward)<.4;
-    const directionFactor=neutral?0:1-this.reverse*(1+c.reverseEfficiency);
-    const force={x:-direction.x*thrust*directionFactor,y:-direction.y*thrust*directionFactor,z:-direction.z*thrust*directionFactor};
-    this.state={kind:c.kind,rpm:this.rpmFraction*c.maximumRpm,rpmFraction:this.rpmFraction,wetness:wet,ventilation:1-wet,flow,massFlow,exitSpeed,thrust:thrust*Math.abs(directionFactor),reverse:this.reverse,neutral,trimAngle,steeringAngle,origin,direction,force};
+    const neutral=shifting||(this.type==='cat'&&reversing&&this.reverse<.55)||(demand<.025&&Math.abs(forward)<.4);
+    // Smooth bucket routing in the body frame. Unlike a reversing propeller,
+    // the impeller keeps rotating the same way while the bucket redirects water.
+    // The bucket bends the fore/aft stream; it retains its lateral component.
+    // This gives the guide-described opposite stern direction when backing.
+    const local=nozzleVector(trimAngle,steeringAngle),reverse=this.reverse;
+    const routed=this.type==='ski'
+      ? [local[0],local[1]*(1-reverse)-.38*reverse,local[2]*(1-2*reverse)]
+      : local.map(n=>n*(1-2*reverse));
+    const norm=Math.hypot(...routed)||1,dischargeLocal=routed.map(n=>n/norm),dischargeDirection=bodyVector(v,dischargeLocal);
+    const dischargeScale=1-reverse*(1-c.reverseEfficiency);
+    const force={x:0,y:0,z:0};
+    if(!neutral){
+      if(this.type==='ski'){
+        // F = mdot (v_in - v_out), including inlet momentum in ALL axes.
+        force.x=-massFlow*(dischargeDirection.x*exitSpeed*dischargeScale+v.vx);
+        force.y=-massFlow*(dischargeDirection.y*exitSpeed*dischargeScale+(v.vy||0));
+        force.z=-massFlow*(dischargeDirection.z*exitSpeed*dischargeScale+v.vz);
+      }else{
+        force.x=-dischargeDirection.x*thrust*dischargeScale;
+        force.y=-dischargeDirection.y*thrust*dischargeScale;
+        force.z=-dischargeDirection.z*thrust*dischargeScale;
+      }
+    }
+    const localSide=force.x*Math.cos(v.heading)-force.z*Math.sin(v.heading);
+    const mount=c.nozzleMount||c.motorMount;
+    const yawMoment=mount[2]*localSide;
+    this.state={kind:c.kind,rpm:this.rpmFraction*c.maximumRpm,rpmFraction:this.rpmFraction,wetness:wet,ventilation:1-wet,flow,massFlow,exitSpeed:exitSpeed*dischargeScale,thrust:Math.hypot(force.x,force.y,force.z),reverse,neutral,braking,shifting,trimAngle,selectedTrim,steeringAngle,origin,direction,dischargeLocal,dischargeDirection,yawMoment,force};
     return this.state;
   }
 }

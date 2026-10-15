@@ -6,16 +6,16 @@ export const VEHICLES = {
   ski: {
     name: 'Sparkplug', subtitle: 'Freestyle jet ski', description: 'Light, lively and made for mischief. Lift the bow, carve a rooster tail, and spin off the ramps.',
     length: 3.0, width: 1.18, maxSpeed: 25.5,
-    reverseMax: 4, lateralGrip: 3.7, steer: 1.08,
+    reverseMax: 4, lateralGrip: 3.7,
     slideGrip: 1.05, spring: 42, damping: 11, rideHeight: 0.14, airSteer: 4.9,
     wheelieAngle: 0.92, wipeoutAngle: 1.22, colours: ['#ff613d', '#86df9c', '#f5bd39'],
   },
   cat: {
     name: 'Tunnel Rat 50', subtitle: 'Inflatable racing catamaran', description: 'Twin pontoons. One lively outboard. Settle onto the plane and carry a wide, heavy spray through the bends.',
     length: 4.1, width: 2.05, maxSpeed: 27,
-    reverseMax: 3.3, lateralGrip: 2.6, steer: 0.69,
+    reverseMax: 3.3, lateralGrip: 2.6,
     slideGrip: 0.92, spring: 34, damping: 10, rideHeight: 0.16, airSteer: 0.83,
-    wheelieAngle: 0.25, wipeoutAngle: 1.08, colours: ['#f5bd39', '#ef745b', '#83d4ca'],
+    wheelieAngle: 0.67, wipeoutAngle: 1.08, colours: ['#f5bd39', '#ef745b', '#83d4ca'],
   },
 };
 export const WAVES = [
@@ -40,15 +40,21 @@ export const STUNT = { x: 165, z: 245, radius: 125 };
 
 // Effective simulation values, not measured manufacturer specifications.
 export const RIDE_MODES = {
-  cruise: { name:'Cruise', power:.64, throttleResponse:2.25, trimMin:-7, trimMax:8, description:'Smooth throttle and relaxed cruising.' },
-  sport: { name:'Sport', power:1, throttleResponse:3.6, trimMin:-9, trimMax:12, description:'Full power with the familiar responsive handling.' },
-  freestyle: { name:'Freestyle', power:1, throttleResponse:3.6, trimMin:-10, trimMax:19, description:'Extended jet-nozzle trim. Use Shift to shift weight aft.' },
+  cruise: { name:'Cruise', power:.64, throttleResponse:2.25, brakePower:.52, reversePower:.38, gateResponse:7, description:'Smooth throttle and relaxed cruising.' },
+  sport: { name:'Sport', power:1, throttleResponse:3.6, brakePower:.72, reversePower:.48, gateResponse:9, description:'Full power with the familiar responsive handling.' },
+  freestyle: { name:'Freestyle', power:1, throttleResponse:5.2, brakePower:.82, reversePower:.58, gateResponse:14, description:'Sharper throttle, brake and reverse response. Shift moves your weight aft.' },
+};
+// Nine VTS selections are documented by BRP; these angles are original game tuning.
+export const SKI_TRIM_POSITIONS = [-10,-7.5,-5,-2.5,0,4,8,13,19];
+export const HYDRODYNAMICS = {
+  ski:{coastDrag:1,planingStart:4,planingEnd:13,minimumWetted:.56,pitchSpring:17,pitchDamping:6.8,rollSpring:24,rollDamping:8.2,yawInertia:450,yawDamping:3.6,yawSpeedDamping:.47},
+  cat:{coastDrag:3.5,planingStart:5,planingEnd:15,minimumWetted:.62,pitchSpring:12,pitchDamping:5.4,rollSpring:19,rollDamping:7,yawInertia:930,yawDamping:2.7,yawSpeedDamping:.27},
 };
 export const PROPULSION = {
   ski:{
     kind:'waterjet',effectiveMass:330,maximumRpm:8000,idleFraction:.13,
     hydraulicPower:55000,nozzleArea:.0048,nozzleRadius:.039,steeringAngle:.43,
-    nozzleMount:[0,-.04,-1.5],nozzleLength:.16,intake:[0,-.27,-.54],fullImmersion:.11,
+    nozzleMount:[0,-.04,-1.5],nozzleLength:.16,intake:[0,-.27,-.95],fullImmersion:.11,
     linearResistance:20,quadraticResistance:2.17,reverseEfficiency:.46,trimRate:9,
   },
   cat:{

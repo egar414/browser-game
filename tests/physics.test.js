@@ -11,7 +11,7 @@ function advance(v,seconds,input=idle,obstacles=[]){for(let i=0;i<seconds/FIXED_
 function openBoat(type='ski',events=[]){const v=new VehiclePhysics(type,()=>null,e=>events.push(e));v.x=-100;v.z=100;v.heading=0;v.safe={x:-100,z:100,heading:0};return v;}
 test('both craft accelerate, brake and reverse with distinct handling',()=>{
   const speeds=[];
-  for(const type of ['ski','cat']){const v=openBoat(type);advance(v,2,{throttle:1});assert(v.speed>7);speeds.push(v.speed);const max=v.speed;advance(v,1,{throttle:-1});assert(v.speed<max);advance(v,5,{throttle:-1});assert(v.vz<0);assert(v.speed<VEHICLES[type].reverseMax+1);}
+  for(const type of ['ski','cat']){const v=openBoat(type);advance(v,2,{throttle:1});assert(v.speed>7);speeds.push(v.speed);const max=v.speed;advance(v,1,{throttle:-1});assert(v.speed<max);advance(v,12,{throttle:-1});assert(v.vz<0);assert(v.speed<VEHICLES[type].reverseMax+1);}
   assert(speeds[0]>speeds[1]*1.2);
 });
 test('steering has momentum and less authority when coasting',()=>{
@@ -30,8 +30,8 @@ test('ramps launch both craft, landing banks air score only once',()=>{
   for(const type of ['ski','cat']){const events=[],v=openBoat(type,events);v.x=ramps[0].x;v.z=205;v.vz=20;let airborne=false;for(let i=0;i<360;i++){v.update(FIXED_STEP,{...idle,throttle:i<90?1:0},i*FIXED_STEP,ramps);if(v.airborne)airborne=true;}assert(airborne,`${type} should launch`);assert(events.some(e=>e.type==='splash'),`${type} should land`);assert(events.some(e=>e.type==='score'&&e.label==='Clean air'),`${type} should score clean air`);}
 });
 test('land, docks and bridge approaches are respected; water routes are clear',()=>{
-  assert(collision(-220,0));assert(collision(-12,-300));
-  for(const [x,z] of [[-125,-235],[85,-145],[-125,110],[430,150],[425,-70],[0,200]])assert.equal(collision(x,z,2),null,`passage ${x},${z}`);
+  assert(collision(-220,0));assert(collision(-12,-365));
+  for(const [x,z] of [[-125,-235],[-12,-300],[85,-145],[-125,110],[430,150],[425,-70],[0,200]])assert.equal(collision(x,z,2),null,`passage ${x},${z}`);
   const v=new VehiclePhysics('ski',collision);v.x=-175;v.z=-30;v.heading=-Math.PI/2;advance(v,4,{throttle:1});assert(v.x>-185);
 });
 test('a completed aerial spin is scored after landing and rough landings wipe out',()=>{

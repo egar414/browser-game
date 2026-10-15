@@ -16,3 +16,8 @@ Dependencies retain their own licenses:
 - Playwright: Apache-2.0; development and testing only.
 
 Dependency versions and package integrity hashes are locked in package-lock.json.
+
+Operating principles were researched from official BRP and Yamaha documents;
+see RESEARCH.md for links. No manufacturer manual text, diagrams, model meshes
+or photos are included. Mooloolaba-area names identify the inspiration for an
+original, compressed environment, rather than an imported or surveyed map.

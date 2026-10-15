@@ -7,7 +7,8 @@ export const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 export function chineContact(v,side,time=0) {
   let best=null;
   for(let i=0;i<=16;i++){
-    const z=v.config.length*(-.43+i/16*.74);
+    const forwardEdge=.31-(v.planing||0)*.33;
+    const z=v.config.length*(-.43+i/16*(forwardEdge+.43));
     const p=bodyPoint(v,[side*v.config.width*.46,-.12,z]);
     const error=Math.abs(p.y-waveHeight(p.x,p.z,time));
     if(!best||error<best.error)best={...p,error};
@@ -35,8 +36,7 @@ export function pumpDischarge(v,time=0) {
   const d=v.drive;
   if(!d||d.neutral||d.flow<=.0001||v.airborne||v.wipeout)return null;
   const pose=propulsionPose(v,d.trimAngle,d.steeringAngle),origin={...pose.origin};
-  let direction={...pose.direction};
-  if(d.reverse>.5)direction={x:-direction.x,y:-Math.abs(direction.y)-.25,z:-direction.z};
+  let direction=d.dischargeLocal?bodyVector(v,d.dischargeLocal):{...pose.direction};
   const norm=Math.hypot(direction.x,direction.y,direction.z);for(const k of ['x','y','z'])direction[k]/=norm;
   const velocity={x:(v.vx||0)+direction.x*d.exitSpeed,y:(v.vy||0)+direction.y*d.exitSpeed,z:(v.vz||0)+direction.z*d.exitSpeed};
   let aerial=origin.y>=waveHeight(origin.x,origin.z,time)-.01;

@@ -2,16 +2,18 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { box, tube, makeVehicle } from '../vehicles/models.js';
 export const lands = [
-  { name: 'Pelican waterfront', points: [[-640,-610],[-185,-610],[-185,135],[-245,155],[-360,95],[-640,185]], city: true },
-  { name: 'Canal gardens', points: [[-65,-420],[40,-420],[40,-80],[-65,-80]] },
-  { name: 'North shore', points: [[-65,-610],[250,-610],[250,-530],[-65,-530]] },
-  { name: 'Hibiscus island', points: [[145,-420],[250,-420],[250,-330],[145,-330]] },
-  { name: 'Banksia island', points: [[145,-220],[250,-220],[250,-80],[145,-80]] },
+  { name: 'Mooloolaba waterfront', points: [[-640,-610],[-185,-610],[-185,135],[-245,155],[-360,95],[-640,185]], city: true },
+  { name:'Minyama north canal island',points:[[-57,-420],[32,-420],[40,-410],[40,-330],[30,-320],[-55,-320],[-65,-330],[-65,-410]] },
+  { name:'Minyama south canal island',points:[[-55,-275],[30,-275],[40,-265],[40,-90],[30,-80],[-55,-80],[-65,-90],[-65,-265]] },
+  { name: 'Minyama canal bank', points: [[-65,-610],[250,-610],[250,-530],[-65,-530]] },
+  { name: 'Kawana canal island', points: [[145,-420],[250,-420],[250,-330],[145,-330]] },
+  { name: 'Kawana residential island', points: [[145,-220],[250,-220],[250,-80],[145,-80]] },
   { name: 'Mangrove point', points: [[360,-610],[640,-610],[640,-430],[490,-430],[455,-330],[365,-330],[365,-170],[330,-95],[365,-10],[320,55],[355,115],[305,95],[295,15],[290,-100],[320,-190],[320,-330]] },
   { name: 'Mangrove east', points: [[550,-350],[640,-400],[640,100],[490,110],[440,45],[475,-40],[435,-125],[480,-220],[470,-290]] },
   { name: 'Sandbar island', points: [[-25,305],[20,285],[105,305],[130,345],[95,395],[15,400],[-35,355]], sand: true },
-  { name: 'South beach', points: [[-640,400],[-400,380],[-280,460],[-210,610],[-250,740],[-640,740]], sand: true },
-  { name: 'Ocean headland', points: [[470,295],[640,220],[640,740],[535,740],[510,510],[425,405]], sand: true },
+  { name:'Mooloolaba Spit',points:[[-245,125],[-185,135],[-180,205],[-215,300],[-250,430],[-345,420],[-355,385],[-285,275]],sand:true },
+  { name: 'Mooloolaba beach', points: [[-640,400],[-400,380],[-280,460],[-210,610],[-250,740],[-640,740]], sand: true },
+  { name: 'Point Cartwright headland', points: [[470,295],[640,220],[640,740],[535,740],[510,510],[425,405]], sand: true },
 ];
 export const ramps = [{ x: 165, z: 240, width: 13, length: 17, height: 3.4 }, { x: 245, z: 300, width: 12, length: 20, height: 4.6 }];
 export const solids = [];
@@ -57,7 +59,7 @@ export function buildEnvironment(scene, quality) {
   for (let i = 0; i < 1250 * quality.trees; i++) {
     const x = -610 + random() * 1220, z = -590 + random() * 1180;
     const land = lands.find(l => pointInPoly(x, z, l.points));
-    if (!land || land.city || land.name === 'North shore' || (land.name.includes('island') && !land.sand)) continue;
+    if (!land || land.city || land.name === 'Minyama canal bank' || (land.name.includes('island') && !land.sand)) continue;
     if (Math.abs(x) < 40 && z > 300) continue;
     const scale = 0.7 + random() * 0.9;
     trunkPositions.push([x, 3 * scale, z, scale]);
@@ -120,7 +122,7 @@ export function buildEnvironment(scene, quality) {
     palm(-198,z+16,1.2);
   }
   // Houses and small private jetties on the canal islands.
-  for (const [x,z,i] of [[-12,-365,0],[-12,-285,1],[-12,-165,2],[192,-375,3],[192,-165,4],[50,-565,5],[180,-565,6]]) home(x,z,24,30,5.5,i);
+  for (const [x,z,i] of [[-12,-365,0],[-12,-255,1],[-12,-165,2],[192,-375,3],[192,-165,4],[50,-565,5],[180,-565,6]]) home(x,z,24,30,5.5,i);
   function solidBox(w,h,d,x,y,z,mat,name='Jetty') { box(root,w,h,d,x,y,z,mat); solids.push({x,z,w,d,height:y+h/2,name}); }
   for (const z of [-355,-270,-155]) { solidBox(23,0.45,3,-75,1,z,timber); for (const x of [-85,-67]) solidBox(0.4,2.6,0.4,x,0.7,z,timber); }
   // Marina berths only along the western bank, leaving the main passage clear.
@@ -130,6 +132,19 @@ export function buildEnvironment(scene, quality) {
     const boat = makeVehicle('cat',['#e7ce8d','#91bfc1','#d39379'][Math.floor(z/25)%3]); boat.position.set(-160,0.2,z+7); boat.rotation.y = Math.PI/2; root.add(boat);
     solids.push({x:-160,z:z+7,w:5,d:3,height:3,name:'Moored boat'});
   }
+  // A compact interpretation of The Wharf and Mooloolaba Spit, with the
+  // marina opening onto the broad river. This is not a surveyed street map.
+  for(let i=0;i<4;i++){
+    home(-226,158+i*22,18,17,4.2,i);
+    box(root,7,.4,21,-207,1,158+i*22,timber);
+  }
+  function placeSign(text,x,y,z,width){
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;
+    const c=canvas.getContext('2d');c.fillStyle='#214b51';c.fillRect(0,0,512,96);c.fillStyle='#f3e9ce';c.font='bold 42px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,256,48);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(width,width*96/512),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));m.position.set(x,y,z);m.rotation.y=Math.PI/2;root.add(m);
+  }
+  placeSign('MOOLOOLABA WHARF',-205,5.7,171,25);
   // Boat ramp and launch hut.
   const ramp = box(root,18,0.4,17,-188,0.35,112,concrete); ramp.rotation.z = -0.05;
   home(-220,127,17,13,4,0);
@@ -155,10 +170,12 @@ export function buildEnvironment(scene, quality) {
   for (const [x,z] of [[-97,160],[320,160],[-90,245],[380,245],[165,205],[245,260],[220,470],[370,470]]) {
     const buoy = new THREE.Mesh(new THREE.ConeGeometry(0.9,1.5,8),material(x>200?'#d26a4b':'#a5c7a0'));buoy.position.set(x,0.75,z);root.add(buoy);
   }
-  // Lighthouse gives the ocean entrance a recognisable silhouette.
-  const lighthouse = new THREE.Mesh(new THREE.CylinderGeometry(2.5,3.4,24,14), material('#f2e6cb')); lighthouse.position.set(505,12,350);root.add(lighthouse);
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(4,3,14),material('#cd6d4b'));cap.position.set(505,26,350);root.add(cap);
-  box(root,5,3,5,505,23,350,material('#496c70'));
+  // Modern concrete lighthouse silhouette inspired by Point Cartwright.
+  const lighthouse=new THREE.Mesh(new THREE.CylinderGeometry(2.8,3.6,26,5),material('#e1e5d9'));lighthouse.position.set(505,13.4,350);root.add(lighthouse);
+  for(const [y,r,h,colour] of [[5,3.7,3,'#4e8984'],[9,3.5,2,'#6d9a9a'],[25,3.7,.5,'#455e61'],[26.5,2.6,2.5,'#345d62'],[28,3.2,.5,'#e3e8dc']]){
+    const part=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),material(colour));part.position.set(505,y,350);root.add(part);
+  }
+  placeSign('POINT CARTWRIGHT',480,3.6,325,22);
   // Static scenery is batched by material; hundreds of windows and tree roots
   // should not become hundreds of draw calls on an ordinary laptop.
   root.updateMatrixWorld(true);

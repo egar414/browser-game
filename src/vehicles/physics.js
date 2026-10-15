@@ -1,4 +1,4 @@
-import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, waveHeight } from '../config.js';
+import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, waveHeight } from '../config.js';
 import { Propulsion, hullImmersion } from './propulsion.js';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
@@ -22,14 +22,27 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      pitch: 0, roll: 0, yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      pitch: 0, roll: 0, pitchRate:0,rollRate:0,planing:0,wettedFraction:1,surgeAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;
   }
   snapshot() { return { x: this.x, y: this.y, z: this.z, heading: this.heading, pitch: this.pitch, roll: this.roll }; }
   setMode(mode){if(!RIDE_MODES[mode])return;this.rideMode=mode;this.setTrim(this.trimDegrees);}
-  setTrim(degrees){const mode=RIDE_MODES[this.rideMode];this.trimDegrees=clamp(Number.isFinite(degrees)?degrees:0,mode.trimMin,this.type==='cat'?Math.min(8,mode.trimMax):mode.trimMax);}
+  setTrim(degrees){
+    const value=Number.isFinite(degrees)?degrees:0;
+    this.trimDegrees=this.type==='ski'?SKI_TRIM_POSITIONS.reduce((best,n)=>Math.abs(n-value)<Math.abs(best-value)?n:best):clamp(value,-7,8);
+  }
+  get trimIndex(){return this.type==='ski'?SKI_TRIM_POSITIONS.indexOf(this.trimDegrees):null;}
+  updateTrim(dt,direction){
+    if(this.type==='cat'){this.setTrim(this.trimDegrees+direction*PROPULSION.cat.trimRate*dt);return;}
+    if(!direction){this.trimHeld=0;this.trimRepeat=0;return;}
+    this.trimRepeat+=dt;
+    if(direction!==this.trimHeld||this.trimRepeat>=.2){
+      this.trimDegrees=SKI_TRIM_POSITIONS[clamp(this.trimIndex+direction,0,8)];this.trimRepeat=0;
+    }
+    this.trimHeld=direction;
+  }
   setType(type) { this.type = type; this.config = VEHICLES[type];this.propulsion=new Propulsion(type);this.setTrim(this.trimDegrees); this.recover(); }
   wipe(reason) {
     if (this.wipeout) return;
@@ -39,32 +52,40 @@ export class VehiclePhysics {
     this.previous = this.snapshot();
     if (this.wipeout > 0) { this.wipeout -= dt; if (this.wipeout <= 0) this.recover(true); return; }
     const c = this.config;
-    const mode=RIDE_MODES[this.rideMode],driveConfig=PROPULSION[this.type];
+    const mode=RIDE_MODES[this.rideMode],driveConfig=PROPULSION[this.type],hydro=HYDRODYNAMICS[this.type];
     this.trickCooldown = Math.max(0, this.trickCooldown - dt);
     this.throttle = damp(this.throttle, input.throttle, mode.throttleResponse, dt);
     this.steer = damp(this.steer, input.steer, 6, dt);
-    if(!this.airborne)this.setTrim(this.trimDegrees+(input.trim||0)*driveConfig.trimRate*dt);
+    if(!this.airborne)this.updateTrim(dt,input.trim||0);
+    this.riderAft=damp(this.riderAft,input.freestyle?1:0,5,dt);
     let fx = Math.sin(this.heading), fz = Math.cos(this.heading);
     let forward = this.vx * fx + this.vz * fz;
     this.speed = Math.hypot(this.vx, this.vz);
     this.slip = this.vx * fz - this.vz * fx;
+    const onPlane=clamp((Math.abs(forward)-hydro.planingStart)/(hydro.planingEnd-hydro.planingStart),0,1);
+    this.planing=damp(this.planing,onPlane*onPlane*(3-2*onPlane),2.5,dt);
+    this.wettedFraction=1-this.planing*(1-hydro.minimumWetted);
     this.drive=this.propulsion.update(dt,this,input,time);
     if (!this.airborne) {
       let forceX=this.drive.force.x,forceZ=this.drive.force.z;
       const forwardForce=forceX*fx+forceZ*fz;
       if((forward>c.maxSpeed&&forwardForce>0)||(forward<-c.reverseMax&&forwardForce<0)){forceX-=fx*forwardForce;forceZ-=fz*forwardForce;}
       this.vx+=forceX/driveConfig.effectiveMass*dt;this.vz+=forceZ/driveConfig.effectiveMass*dt;
-      const grip = input.freestyle ? c.slideGrip : c.lateralGrip;
+      const grip = (input.freestyle ? c.slideGrip : c.lateralGrip)*(1-.18*this.planing);
       const lateral = (this.vx * fz - this.vz * fx) * (1 - Math.exp(-grip * dt));
       this.vx -= fz * lateral; this.vz += fx * lateral;
       const immersed=hullImmersion(this,time);
-      const resistance=immersed*(driveConfig.linearResistance+this.speed*driveConfig.quadraticResistance)/driveConfig.effectiveMass+(1-immersed)*this.speed*.0015;
+      const trimDrag=1+Math.max(0,-this.pitch)*.7+Math.max(0,this.pitch-.3)*.25;
+      const planeDrag=1+.26*(1-this.planing)*clamp(this.speed/6,0,1);
+      const coastDrag=this.type==='cat'&&(this.drive.shifting||Math.abs(this.throttle)<.05)?hydro.coastDrag:1;
+      const resistance=immersed*coastDrag*trimDrag*planeDrag*(driveConfig.linearResistance+this.speed*driveConfig.quadraticResistance)/driveConfig.effectiveMass+(1-immersed)*this.speed*.0015;
       const drag = Math.exp(-resistance*dt);
       this.vx *= drag; this.vz *= drag;
-      const powered=clamp(this.drive.thrust/(this.type==='ski'?3200:2450),0,1)*this.drive.wetness;
-      const authority = (0.18+0.82*powered) * Math.min(1, Math.abs(forward) / 5);
-      const yawTarget = this.steer * c.steer * authority * Math.sign(forward || 1) * (input.freestyle ? 1.48 : 1);
-      this.yawRate = damp(this.yawRate, yawTarget, this.type === 'ski' ? 4.5 : 2.8, dt);
+      const yawDamping=hydro.yawDamping+Math.abs(forward)*hydro.yawSpeedDamping;
+      const sliding=input.freestyle?.72:1;
+      const decay=Math.exp(-yawDamping*sliding*dt);
+      const torque=this.drive.yawMoment||0;
+      this.yawRate=clamp(this.yawRate*decay+(torque/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-1.6,1.6);
     } else {
       this.yawRate = damp(this.yawRate, this.steer * c.airSteer, 2.5, dt);
       this.spin += this.yawRate * dt; this.airTime += dt;
@@ -94,13 +115,22 @@ export class VehiclePhysics {
     const surfaceRoll = Math.atan2((samples[1][0] + samples[1][1] - samples[0][0] - samples[0][1]) / 2, width * 2);
     if (!this.airborne) {
       const balanceMoment=1+Math.max(0,this.drive.trimAngle*180/Math.PI-6)*.018;
-      const lift = this.type === 'ski' && input.freestyle && forward > 5 ? c.wheelieAngle * balanceMoment*clamp(this.throttle, 0, 1) * clamp(1 - Math.abs(this.steer) * 0.85, 0, 1) : 0;
-      const plane = this.type === 'cat' ? Math.max(0, this.throttle) * 0.2 * Math.exp(-Math.pow((this.speed - 7) / 8, 2)) : 0.035 * this.throttle;
+      const bowWindow=this.type==='ski'?(forward>5?1:0):clamp((forward-3)/4,0,1)*clamp((19-forward)/7,0,1);
+      const lift=input.freestyle?c.wheelieAngle*balanceMoment*this.riderAft*bowWindow*clamp(this.throttle,0,1)*clamp(1-Math.abs(this.steer)*.85,0,1):0;
+      const plane = this.type === 'cat' ? Math.max(0, this.throttle) * .24 * Math.sin(this.planing*Math.PI) : 0.035 * this.throttle;
       const trim = this.drive.trimAngle*(this.type==='ski'?.45:.65);
-      this.pitch = damp(this.pitch, surfacePitch + lift + plane + trim, 3, dt);
-      this.roll = damp(this.roll, surfaceRoll - this.steer * clamp(this.speed / 25, 0, 1) * (this.type === 'ski' ? 0.43 : 0.18), 4, dt);
+      // Angular inertia and damping retain a landing/chop response instead of
+      // instantly following a prescribed orientation.
+      const pitchTarget=surfacePitch+lift+plane+trim;
+      this.pitchRate+=((pitchTarget-this.pitch)*hydro.pitchSpring-this.pitchRate*hydro.pitchDamping)*dt;
+      this.pitch+=this.pitchRate*dt;
+      const rollTarget=surfaceRoll-this.yawRate*clamp(this.speed/20,0,1)*(this.type==='ski'?.48:.24);
+      this.rollRate+=((rollTarget-this.roll)*hydro.rollSpring-this.rollRate*hydro.rollDamping)*dt;this.roll+=this.rollRate*dt;
       const verticalReaction=clamp(this.drive.force.y/driveConfig.effectiveMass,-3,3);
-      this.vy += ((water - this.y) * c.spring - this.vy * c.damping+verticalReaction) * dt;
+      // As the bow rises, support moves toward the stern. Raise the body origin
+      // around that support instead of submerging the transom a metre deep.
+      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*c.length*.29*clamp((this.pitch-.18)/.4,0,1);
+      this.vy += ((water+sternSupportLift - this.y) * c.spring - this.vy * c.damping+verticalReaction) * dt;
       this.y += this.vy * dt;
       if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe('Over the balance point');
       let onRamp=false;
@@ -131,7 +161,7 @@ export class VehiclePhysics {
       this.y += this.vy * dt;
       if (this.y <= water && this.vy < 0) {
         const impact = -this.vy, lateralImpact = Math.abs(this.slip);
-        this.y = water; this.airborne = false;
+        this.y = water; this.airborne = false;this.pitchRate=-this.pitch*impact*.15;this.rollRate=-this.roll*impact*.12;
         this.onEvent({ type: 'splash', impact });
         if (Math.abs(this.pitch) > 0.85 || lateralImpact > 21 || impact > 13) this.wipe('Rough landing');
         else {
@@ -144,6 +174,8 @@ export class VehiclePhysics {
         this.airTime = 0; this.spin = 0;
       }
     }
+    const nextForward=this.vx*fx+this.vz*fz;
+    this.surgeAcceleration=damp(this.surgeAcceleration,clamp((nextForward-forward)/dt,-12,12),7,dt);
     if (!this.airborne && !hit && this.speed < 12 && Math.abs(this.pitch) < 0.4 && !this.boundary && this.z > 0) this.safe = { x: this.x, z: this.z, heading: this.heading };
     if (![this.x, this.y, this.z, this.heading, this.vx, this.vz].every(Number.isFinite) || this.y < -3) this.recover();
   }

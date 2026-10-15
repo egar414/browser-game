@@ -4,7 +4,7 @@
 
 A playable single-player 3D coastal boating playground. Free roam is the default:
 pick a compact freestyle jet ski or a twin-pontoon racing inflatable and launch
-into a fictional Australian estuary. No account, API key, or external asset
+into a compressed Mooloolaba-inspired estuary. No account, API key, or external asset
 service is required to play.
 
 The graphics upgrade adds a moving cloud sky, reflected scenery on Medium/High,
@@ -12,7 +12,7 @@ layered water ripples and sun highlights, shallow-water colour and shoreline
 foam, sky-lit glossy hulls, and a wider chase view across the water. Spray now
 comes from the chines and jet/propeller, with stronger outside-turn fans,
 ballistic droplets, mist, persistent V wakes, and expanding landing foam.
-The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
+The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
 ## Run locally
 
@@ -40,8 +40,8 @@ Asset URLs are relative, including for subdirectory hosting.
 | W / Up | Progressive throttle |
 | S / Down | Brake, then reverse |
 | A, D / Left, Right | Steer; rotate while airborne |
-| Shift | Jet ski bow lift; powered sliding turns on both craft |
-| Q / E | Increase / decrease persistent trim; limited aerial pitch |
+| Shift | Shift weight aft for jet-ski/Thundercat bow rides; powered sliding turns |
+| Q / E | Select jet-ski trim positions (tap/hold), outboard trim; aerial pitch |
 | T | Cycle Cruise / Sport / Freestyle riding modes |
 | C | Close or wide chase camera |
 | Mouse drag | Orbit camera; automatically recentres |
@@ -52,6 +52,10 @@ Asset URLs are relative, including for subdirectory hosting.
 | M | Mute |
 | Escape | Pause and settings |
 
+**Thundercat bow ride:** W + Shift at medium speed; trim up with Q, use E or
+release Shift to settle the bow. It rises during acceleration and settles as
+speed increases.
+
 **Bow rider:** select Freestyle with T, accelerate on the jet ski and hold Shift without steering. E
 settles the bow; adding too much Q tips it. **Rooster tail:** carry speed into a
 W + Shift + A/D turn. **Air and spins:** approach the gold floating ramps from
@@ -60,7 +64,8 @@ The taller eastern ramp gives the best 360 opportunity. There is no jump key.
 Aerial points are banked only on a successful landing. Wipeouts break combos.
 Repeated actions have diminishing rewards and cooldowns; idling scores nothing.
 
-The canals, marina, two bridges, mangrove creek, island, beaches, river mouth,
+The Mooloolaba-inspired canals, wharf/marina, spit, two bridges, mangrove creek,
+island, beaches, Point Cartwright-inspired lighthouse and river mouth,
 and stunt area are connected through navigable water. Gold squares on the
 minimap mark the ramps. Gates appear only during races. Vehicle choice, colour,
 riding mode, trim for each craft, quality, audio, camera, best race time and best trick session are saved locally.
@@ -73,6 +78,7 @@ Storage failures fall back to playable defaults.
 | `src/config.js` | Vehicle tuning, quality profiles, shared wave equations, race route |
 | `src/vehicles/physics.js` | Fixed-step movement, four-point buoyancy, planing, slides, air control, scoring events |
 | `src/vehicles/propulsion.js` | Pump/propeller momentum, intake immersion, nozzle poses and reaction force |
+| `src/vehicles/rider.js` | Articulated rider with fixed hand/foot contacts and posture response |
 | `src/vehicles/models.js` | Original procedural craft, rider, outboard and tiller |
 | `src/systems/water.js` | Adaptive water mesh, ripples, shallow colour, sun highlights and planar reflections |
 | `src/systems/atmosphere.js` | Sky/cloud lighting, shared sun direction and filtered material reflections |
@@ -112,7 +118,7 @@ Low retains the water shading and spray systems at reduced render resolution
 without the extra reflection pass. Medium uses 256-pixel reflections; High uses
 512-pixel reflections and shadows. `QUALITY` in `src/config.js` controls render
 resolution, water density, particle/wake budgets, fan density and reflections.
-`RIDE_MODES` and `PROPULSION` in `src/config.js` control modes, trim and pump/propeller tuning.
+`RIDE_MODES` and `PROPULSION` in `src/config.js` control modes, trim and pump/propeller tuning. `HYDRODYNAMICS` controls planing and angular response.
 `SPRAY_TUNING` in `src/systems/spray-model.js` controls wake lifetime/spread. The water shader's colours and optical detail are in
 `src/systems/water.js`. These visual parameters do not alter boat physics.
 
@@ -147,7 +153,9 @@ runtime errors or failed requests.
 
 - Original stylised procedural models/scenery rather than licensed photoreal assets.
 - Desktop keyboard play; mobile/touch controls and multiplayer are not included.
-- Approximate arcade buoyancy and land collisions; no fluid simulation or hull damage.
+- Reduced-order buoyancy/planing and land collisions; no full fluid simulation or hull damage.
+- Compressed Mooloolaba-inspired geography; not a verified reconstruction or navigation map.
+- Physical coefficients and trim angles remain original tuning; see manufacturer research and limits in RESEARCH.md.
 - Visible foam wakes persist, but their trails do not add separate buoyancy forces.
 - Camera avoids shores and major low objects; it has no general mesh raycast solver.
 - Procedural audio; no recorded real engine samples or external music.

@@ -62,7 +62,7 @@ function applyQuality(force){
 }
 function pause(){if(state!=='playing')return;persistTrim();state='paused';input.clear();ui.show('pause',true);}
 function resume(){if(!ready)return;state='playing';input.clear();audio.start();ui.show('pause',false);ui.show('controls',false);last=performance.now();}
-function play(){if(!ready)return;home(false);state='playing';vehicle.recover();spray?.clear();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);ui.toast('Welcome to Pelican Estuary','WASD to drive · T riding mode · Q/E trim · H for moves');}
+function play(){if(!ready)return;home(false);state='playing';vehicle.recover();spray?.clear();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);ui.toast('Welcome to Mooloolaba','WASD to drive · T riding mode · Q/E trim · H for moves');}
 function home(show=true){if(!show)return;state='home';activities.cancel();input.clear();vehicle.recover();spray?.clear();chase.reset();ui.show('home',true);ui.show('hud',false);ui.show('pause',false);}
 function recover(){vehicle.recover(true);spray?.clear();input.clear();chase.reset();activities.combo=0;activities.comboTime=0;ui.toast('Back in safe water','Fresh start. Send it again.');if(state==='paused')resume();}
 function showControls(){if(state==='controls')return;controlsFrom=state;state='controls';input.clear();ui.show('controls',true);}
@@ -89,11 +89,13 @@ try {
       while(accumulator>=FIXED_STEP){simulationTime+=FIXED_STEP;vehicle.update(FIXED_STEP,input.sample(),simulationTime,ramps);activities.update(FIXED_STEP,vehicle);accumulator-=FIXED_STEP;}
     }else if(state==='home'){simulationTime+=dt;vehicle.y=.14;vehicle.pitch=Math.sin(simulationTime*.7)*.015;vehicle.roll=Math.sin(simulationTime*.6)*.018;}
     const alpha=state==='playing'?accumulator/FIXED_STEP:1,p=vehicle.previous;
-    const render={...vehicle,x:THREE.MathUtils.lerp(p.x,vehicle.x,alpha),y:THREE.MathUtils.lerp(p.y,vehicle.y,alpha),z:THREE.MathUtils.lerp(p.z,vehicle.z,alpha),heading:THREE.MathUtils.lerp(p.heading,vehicle.heading,alpha)};
-    model.position.set(render.x,render.y,render.z);model.rotation.set(-vehicle.pitch,render.heading,vehicle.roll,'YXZ');
-    const rider=model.userData.rider;rider.rotation.z=vehicle.steer*.08;rider.rotation.x=-Math.max(0,vehicle.throttle)*.045;
+    const render={...vehicle,x:THREE.MathUtils.lerp(p.x,vehicle.x,alpha),y:THREE.MathUtils.lerp(p.y,vehicle.y,alpha),z:THREE.MathUtils.lerp(p.z,vehicle.z,alpha),heading:THREE.MathUtils.lerp(p.heading,vehicle.heading,alpha),pitch:THREE.MathUtils.lerp(p.pitch,vehicle.pitch,alpha),roll:THREE.MathUtils.lerp(p.roll,vehicle.roll,alpha)};
+    model.position.set(render.x,render.y,render.z);model.rotation.set(-render.pitch,render.heading,render.roll,'YXZ');
+    if(model.userData.handlebars)model.userData.handlebars.rotation.y=-vehicle.steer*.43;
     for(const part of [model.userData.motor,model.userData.nozzle])if(part)part.rotation.set(vehicle.drive.trimAngle,-vehicle.drive.steeringAngle,0,'YXZ');
+    if(model.userData.bucket)model.userData.bucket.rotation.x=vehicle.drive.reverse*1.3;
     if(model.userData.propeller)model.userData.propeller.rotation.z+=vehicle.drive.rpm/60*Math.PI*2*dt;
+    model.userData.rider.userData.update(vehicle,dt,model.userData);
     if(state==='playing'&&input.sample().trim===0)persistTrim();
     atmosphere.update(simulationTime);water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing',input.sample());
     chase.update(dt,render,input,settings.camera,state==='home');
@@ -104,5 +106,5 @@ try {
   }
   requestAnimationFrame(frame);
   // Read-only diagnostics for browser acceptance tests. No scoring or teleport cheats in the shipped game.
-  window.__ESTUARY__={get status(){return {ready,state,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,drive:{...vehicle.drive},airborne:vehicle.airborne,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
+  window.__ESTUARY__={get status(){return {ready,state,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
 } catch(error){console.error(error);ui.error(`WebGL could not start: ${error.message}. Use a current Chrome, Edge, Firefox or Safari with hardware acceleration enabled.`);}

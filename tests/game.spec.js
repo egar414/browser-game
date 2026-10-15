@@ -69,11 +69,24 @@ test('riding modes, extended trim and trim preference persist without held keys'
   expect((await status(page)).rideMode).toBe('freestyle');
   await page.keyboard.down('KeyQ');await expect.poll(async()=>(await status(page)).trim,{timeout:20000}).toBeGreaterThan(12);await page.keyboard.up('KeyQ');
   const trim=(await status(page)).trim;await page.waitForTimeout(400);expect((await status(page)).trim).toBe(trim);
-  await expect(page.locator('#trim-label')).toContainText('TRIM +');
+  await expect(page.locator('#trim-label')).toContainText('TRIM ');
   await page.keyboard.press('Escape');expect(await page.locator('#ride-mode').inputValue()).toBe('freestyle');
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('estuary-rats-v1')));expect(saved.trimSki).toBe(trim);
   const reload=await page.context().newPage();await reload.goto('/');await reload.waitForFunction(()=>window.__ESTUARY__?.status.ready);
   expect((await status(reload)).rideMode).toBe('freestyle');expect((await status(reload)).trim).toBe(trim);await reload.close();
-  await page.locator('#ride-mode').selectOption('cruise');expect((await status(page)).trim).toBe(8);
-  await page.locator('#resume').click();await page.keyboard.down('KeyE');await expect.poll(async()=>(await status(page)).trim).toBeLessThan(7);await page.keyboard.up('KeyE');
+  await page.locator('#ride-mode').selectOption('cruise');expect((await status(page)).trim).toBe(trim);
+  await page.locator('#resume').click();await page.keyboard.down('KeyE');await expect.poll(async()=>(await status(page)).trim).toBeLessThan(trim);await page.keyboard.up('KeyE');
+});
+test('Mooloolaba setting and Thundercat bow ride work with the normal keys',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await expect(page.locator('.location')).toContainText('MOOLOOLABA');
+  await page.locator('[data-vehicle="cat"]').click();await page.locator('#play').click();
+  await page.keyboard.down('KeyQ');await expect.poll(async()=>(await status(page)).trim).toBeGreaterThan(5);await page.keyboard.up('KeyQ');
+  await page.keyboard.down('KeyW');await page.keyboard.down('ShiftLeft');
+  await expect.poll(async()=>(await status(page)).pitch,{timeout:30000}).toBeGreaterThan(.65);
+  expect((await status(page)).airborne).toBe(false);
+  await page.screenshot({path:'test-results/thundercat-bow-ride.png'});
+  await expect.poll(async()=>(await status(page)).score,{timeout:30000}).toBeGreaterThan(0);
+  await page.keyboard.up('ShiftLeft');await page.keyboard.up('KeyW');
+  await expect.poll(async()=>(await status(page)).pitch,{timeout:15000}).toBeLessThan(.35);expect(errors).toEqual([]);
 });

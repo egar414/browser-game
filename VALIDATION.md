@@ -1,87 +1,98 @@
 # Validation record
 
-Current pump, trim and spray update: 15 October 2026.
+Mooloolaba-inspired setting and manufacturer-researched handling update,
+15 October 2026.
 
 Environment: Node.js 24.19.0, npm 11.9.0 and Chromium 154 on Linux, with an
 AMD EPYC virtual CPU (5 reported CPUs). WebGL uses SwiftShader software
 rendering, not a hardware GPU. These checks do not establish laptop frame rates
 or a human judgement of handling realism.
 
-## Current executed checks
+## Current checks
 
-- **25 Node simulation/spray tests passed.** Coverage includes distinct craft
-  acceleration, braking/reverse, powered steering, four-point shared-wave
-  buoyancy, wheelie scoring and over-trim wipeout, ramps for both craft, landed
-  360 scoring, rough landings, collisions, clear bridge/race routes, recovery,
+- **32 Node simulation/spray tests passed.** Existing coverage includes distinct
+  craft acceleration, braking/reverse, powered/coasting steering, shared-wave
+  buoyancy, wheelies, over-trim wipeout, both craft launching from ramps, landed
+  360 scoring, rough landings, collisions, bridge/race clearance, recovery,
   boundaries, activities, exploit prevention and corrupt storage.
-- Added energy/momentum checks for jet thrust and propeller power; trim versus
-  hull attitude; stationary pumping under power; immediate loss of liquid
-  thrust with exposed intake; gradual re-immersion; reversed discharge;
-  submerged wash; mode power differences; latched trim/clamping; dry chine
-  suppression; gravity/drag; frame-rate emission stability; pool bounds and
-  effect cleanup. Shift alone no longer multiplies a physically identical
-  spray state.
-- **6 Playwright browser flows passed against the frozen production build.**
-  Actual keyboard input drove both craft, including powered sliding turns,
-  outside spray/wakes, braking, reverse and recovery. Other checks covered
-  Low/Medium/High rendering and reflections, wheelie scoring, pause/camera,
-  mute, controls, focus loss, resizing, preferences, race start/restart,
-  trick sessions and return to free roam. The new flow checks T mode cycling,
-  extended trim above 12 game degrees, releasing Q without losing trim,
-  reloading its saved value, mode-dependent limits and decreasing trim.
-- Production build succeeded. No runtime CDN, accounts or API keys are needed;
-  all dependencies and procedural assets are bundled.
-- High-quality water/reflection, new HUD, full-race finish and powered-turn
-  screenshots for both craft were visually inspected. A local production
-  smoke check also verified mode cycling, latched trim and powered spray for
-  both craft, without page runtime errors or failed requests.
+- New checks verify nine selectable/latched trim positions, the physical trim
+  actuator waiting for forward thrust, inlet momentum in all three axes,
+  Freestyle brake-gate response, neutral-to-reverse behaviour without threshold
+  oscillation, a powered Thundercat bow ride and release, and its transom deck
+  remaining above the sampled water while bow riding. A final source-driven
+  correction preserves lateral jet deflection through the reverse bucket while
+  a reversing propeller reverses its lateral component; that distinction also
+  has an explicit passing simulation test. Earlier pump energy,
+  momentum, propeller power, intake ventilation, underwater wash, droplet drag,
+  finite geometry and effect cleanup checks also pass.
+- **Seven browser flows passed.** Actual keyboard input
+  drove both craft through spray turns, braking, reverse and recovery. Other
+  checks covered Low/Medium/High rendering and reflections, jet-ski wheelie
+  scoring, pause/camera, mute, controls, focus loss, resizing, saved preferences,
+  nine-position trim, modes and activities. The new Thundercat flow raised trim,
+  accelerated into a bow ride without a jump key, banked its score and settled
+  the bow by releasing the weight-shift input. The home screen identifies
+  Mooloolaba. The rerun after the stern-support correction passed all seven flows. Both
+  affected craft-driving flows were repeated and passed after the final
+  reverse-bucket steering correction.
+- The final keyboard-only acceptance driver completed all 12 race gates and
+  restarted successfully in **142.82 simulated seconds**, with no page runtime
+  errors, against the frozen production build. It used an 800×500 Low viewport.
+  Logged software-rendered FPS samples were approximately 7–15, with 8.3 FPS
+  at the finish. These are CPU-rendering observations, not a laptop benchmark.
+- Production build succeeded. Dependencies and original procedural assets are
+  bundled; there are no runtime CDN, account or API key requirements.
+- Water/reflections, HUD, revised rider, initial Thundercat bow ride and map were
+  visually inspected. The bow-ride inspection exposed excessive stern sinking;
+  this was fixed with a stern-support height adjustment and an explicit waterline
+  test. The corrected bow-ride image was visually inspected after the final browser
+  run: the boat rises around the stern and its driver remains attached to the
+  tiller/foot positions.
 
-The separate keyboard-only acceptance driver completed all 12 race gates in
-**125.58 simulated seconds**, with no page runtime errors, and successfully
-restarted the race. It ran against the frozen production build at 800×500 Low.
-Logged software-rendered FPS samples ranged approximately from 8 to 16; the
-finish sample was 8.6 FPS. These are workload observations, not a GPU benchmark.
-Public deployment succeeded in Actions run **38681097961**, application commit
-`bd9327b19354a463c14258f1aa6e34acf0bac1c6`. The public HTTPS page with
-`?v=bd9327b` returned 200. Chromium drove both craft through broad powered turns,
-cycled into Freestyle and adjusted/latched trim. Both produced pump flow,
-particles and stronger outside spray. No page runtime errors or failed network
-requests occurred. Hosted screenshots of both turns were visually inspected.
-The 960×640 Low software-rendered samples were 6.7 FPS (ski) and 7.9 FPS (cat).
-Certificate verification stayed enabled; broader filesystem access let Chromium
-read its existing trusted certificate database.
+Public deployment and hosted verification of this update: pending.
 
-## Physical realism and research limits
+## Research and realism limits
 
-See [RESEARCH.md](RESEARCH.md) for inspected OpenStax sources, implemented
-relations, tuning and approximations. This is not a calibrated production
-watercraft simulation. Manufacturer pages were blocked by the proxy; factory
-trim angles, measured pump curves and hull resistance were not obtained.
-Ventilation is approximated; vapor cavitation and full fluid dynamics are not
-simulated. Buoyancy, powered wheelie assistance, yaw, ramps and aerial control
-retain game approximations. A reverse bucket is approximated in force/wash
-without animated bucket geometry.
+The official **2026 Spark Series guide** and **Yamaha trim guidance** were read,
+including nine-position VTS, nozzle steering under power, brake/reverse,
+Trixx-mode differences, planing, wetted hull and spray location. See
+[RESEARCH.md](RESEARCH.md) for direct source links, printed page references,
+equations, implementation decisions and approximations. The default Sea-Doo
+product page now describes a different 2027 model; it was not confused with the
+2026 90 hp reference.
 
-A human has not driven a complete test lap. Ramps/spins/landings and long trick
-session expiry have simulation coverage, rather than a human browser
-play-through. Chromium was tested; Firefox, Safari, mobile/touch and hardware
-GPU performance were not tested. Software-browser screenshots can verify
-appearance and operation, not subjective real-world handling accuracy.
+There are no measured pump curves, hull resistance curves, inertia tensors or
+factory nozzle angle calibrations. Low-RPM inlet admission, buoyancy, angular
+spring/damping, planing, stern support, wheelie assistance, sliding and aerial
+control remain reduced-order game approximations. Thundercat bow riding has
+explicit gameplay assistance. Vapor cavitation, full fluid dynamics, complete
+six-degree rigid-body torques and wake buoyancy are not simulated.
 
-## Earlier graphics deployment
+The setting is **Mooloolaba-inspired**, with a wharf/spit interpretation, connected
+Minyama/Kawana canal areas and a modern Point Cartwright-inspired lighthouse.
+Routes, distances and orientation are compressed/rearranged. OpenStreetMap and
+Sunshine Coast Council pages were blocked by the proxy; their domains were
+added to the pending network draft. It is not a verified recreation or a
+navigation map. No third-party geographic tiles or copyrighted manufacturer
+assets are shipped.
 
-The prior graphics update was published as commit
-`18acdc1a3b5ff30f9b0b4eeaf00142967d4a32ff`, Actions run `38675522389`.
-Its public HTTPS page and both craft were tested with certificate verification
-enabled. The initial version's complete keyboard race took 121.83 simulated
-seconds. Those earlier results are historical and do not substitute for the
-current changed-propulsion acceptance drive.
+A human has not driven a complete acceptance lap. Browser automation uses the
+normal keyboard controls; visual inspection does not establish subjective
+real-world handling accuracy. Ramp/spin/landing edge cases have simulation
+coverage rather than a human browser play-through. Chromium was tested;
+Firefox, Safari, mobile/touch and hardware GPU performance were not tested.
+Sound is synthesized, with different engine firing cadence/harmonics and noise
+splash envelopes; it has not been compared by ear with recordings of real craft.
 
-Previous graphics performance at 800×500 Low was a 9.3 FPS mean across six
-software-rendered cruise/turn samples. That workload is not a benchmark of an
-ordinary laptop, and the current update does not promise universal 60 FPS.
-Auto quality reduces rendering detail after sustained low frame rates.
+## Performance and earlier releases
+
+The prior trim release was published as application commit
+`bd9327b19354a463c14258f1aa6e34acf0bac1c6`, Actions run `38681097961`, and verified
+on the public HTTPS site with both craft. Its 960×640 Low software-rendered
+samples were 6.7 and 7.9 FPS. The initial game race took 121.83 simulated seconds;
+the prior trim release race took 125.58. These are historical workloads and do
+not substitute for the current changed-handling checks or imply a performance
+comparison. Auto quality reduces detail after sustained low frame rates.
 
 The supplied SumbaSurf reference at https://wavedash.com/games/sumbasurf remains
-blocked by the cloud proxy. It has not been visually inspected; no visual-parity
-claim is made.
+blocked. It has not been visually inspected; no visual-parity claim is made.

@@ -167,7 +167,7 @@ export class Spray {
     this.fans=[new SprayFan(scene,this.texture,-1,quality.fanSegments),new SprayFan(scene,this.texture,1,quality.fanSegments)];
     this.state={left:0,right:0,rate:0};this.time=0;
   }
-  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.wake.clear();this.accumulator=0;this.jetAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.mesh.visible=false;}}
+  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.mesh.visible=false;}}
   emit(p,kind=0){const target=this.particles[this.next++%this.count],life=kind===0?.55+Math.random()*.5:.9;Object.assign(target,{diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===0?.055+Math.random()*.10:.25+Math.random()*.3,kind});}
   splash(v,impact) {
     const count=Math.min(this.count*.4,40+impact*13);
@@ -196,6 +196,13 @@ export class Spray {
         const t=Math.random()*.11,x=origin.x+velocity.x*t,z=origin.z+velocity.z*t;
         this.emit({x:x+(Math.random()-.5)*.35,y:waveHeight(x,z,time)+.025,z,vx:velocity.x*.12,vy:.25+Math.random()*.7,vz:velocity.z*.12,diameter:.004});
       }
+    }
+    if(active&&v.drive?.braking&&v.type==='ski'&&v.drive.wetness>.2){
+      // The official guide describes a transient plume behind an applied brake gate.
+      this.brakeAccumulator=(this.brakeAccumulator||0)+dt*clamp(v.speed/18)*65*v.drive.reverse;
+      const n=Math.min(15,Math.floor(this.brakeAccumulator));this.brakeAccumulator-=n;
+      const p=v.drive.origin,fx=Math.sin(v.heading),fz=Math.cos(v.heading);
+      for(let i=0;i<n;i++)this.emit({x:p.x,y:waveHeight(p.x,p.z,time)+.08,z:p.z,vx:v.vx*.25-fx*2+(Math.random()-.5)*2,vy:1.5+Math.random()*clamp(v.speed*.22,0,4),vz:v.vz*.25-fz*2+(Math.random()-.5)*2});
     }
     for(let i=0;i<this.count;i++){
       const p=this.particles[i];p.life-=dt;
