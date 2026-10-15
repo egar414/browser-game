@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { JetPlume } from './jet-plume.js';
 import { waveHeight } from '../config.js';
-import { clamp, sprayState, launchSpray, pumpDischarge, stepDroplet, SPRAY_TUNING, jetPlumeSource } from './spray-model.js';
+import { clamp, sprayState, launchSpray, pumpDischarge, stepDroplet, SPRAY_TUNING, SIDE_SPRAY, jetPlumeSource } from './spray-model.js';
 
 function foamTexture() {
   const size=128,data=new Uint8Array(size*size*4);
@@ -91,10 +91,10 @@ class FoamWake {
 
 class SprayFan {
   constructor(scene,texture,side,segments) {
-    this.side=side;this.strength=0;this.history=[];this.rows=segments;this.columns=6;
-    const count=(segments+1)*7,positions=new Float32Array(count*3),uvs=new Float32Array(count*2),indices=[];
-    for(let i=0;i<=segments;i++)for(let j=0;j<=6;j++)uvs.set([j/6,i/segments],(i*7+j)*2);
-    for(let i=0;i<segments;i++)for(let j=0;j<6;j++){const a=i*7+j;indices.push(a,a+1,a+7,a+1,a+8,a+7);}
+    this.side=side;this.strength=0;this.history=[];this.rows=Math.max(16,segments*2);this.columns=8;
+    const stride=this.columns+1,count=(this.rows+1)*stride,positions=new Float32Array(count*3),uvs=new Float32Array(count*2),indices=[];
+    for(let i=0;i<=this.rows;i++)for(let j=0;j<=this.columns;j++)uvs.set([j/this.columns,i/this.rows],(i*stride+j)*2);
+    for(let i=0;i<this.rows;i++)for(let j=0;j<this.columns;j++){const a=i*stride+j;indices.push(a,a+1,a+stride,a+1,a+stride+1,a+stride);}
     this.geometry=new THREE.BufferGeometry();this.geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));this.geometry.setAttribute('uv',new THREE.BufferAttribute(uvs,2));this.geometry.setAttribute('aWet',new THREE.BufferAttribute(new Float32Array(count),1));this.geometry.setIndex(indices);
     this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,
       uniforms:{uNoise:{value:texture},uTime:{value:0},uStrength:{value:0}},
@@ -102,9 +102,11 @@ class SprayFan {
       fragmentShader:`varying float vWet;varying vec2 vUv;uniform sampler2D uNoise;uniform float uTime;uniform float uStrength;
         void main(){float noise=texture2D(uNoise,vUv*vec2(.9,1.4)+vec2(0.,-uTime*.5)).r;
         float detail=texture2D(uNoise,vUv*vec2(4.,3.)-uTime*.25).r;
-        float edges=pow(max(sin(vUv.x*3.14159),0.),.45)*(1.-smoothstep(.55,1.,vUv.y));
-        float broken=smoothstep(.13,.73,noise*.7+detail*.3);
-        float alpha=edges*(.25+broken*.7)*min(uStrength,1.3)*vWet;
+        float grain=texture2D(uNoise,vUv*vec2(23.,17.)+vec2(uTime*.13,0.)).r;
+        float edges=pow(max(sin(vUv.x*3.14159),0.),.45)*(1.-smoothstep(.85,1.,vUv.y));
+        edges*=smoothstep(.01,.08,min(vUv.x,1.-vUv.x)+(detail-.5)*.08);
+        float broken=smoothstep(.18,.78,noise*.5+detail*.22+grain*.28);
+        float alpha=edges*(.2+broken*.8)*(.55+grain*.45)*min(uStrength,1.3)*vWet;
         if(alpha<.006)discard;
         gl_FragColor=vec4(mix(vec3(.68,.82,.8),vec3(.98,.99,.95),broken),alpha);
         #include <tonemapping_fragment>
@@ -114,31 +116,33 @@ class SprayFan {
   }
   update(dt,v,time,strength,state) {
     this.strength=THREE.MathUtils.lerp(this.strength,strength,1-Math.exp(-dt*9));
-    if(dt>0){
+    if(dt>0&&(!this.history.length||time-this.history[0].time>=1/SIDE_SPRAY.historyHz-1e-6)){
       const drops=Array.from({length:this.columns+1},(_,j)=>launchSpray(v,state,this.side,()=>j/this.columns));
       this.history.unshift({time,strength,drops});
     }
-    while(this.history.length&&(time-this.history.at(-1).time>SPRAY_TUNING.fanLife+.15||this.history.length>64))this.history.pop();
-    const peak=this.history.reduce((max,f)=>Math.max(max,f.strength*clamp(1-(time-f.time)/SPRAY_TUNING.fanLife)),0);
+    while(this.history.length&&(time-this.history.at(-1).time>SIDE_SPRAY.sheetLife+.15||this.history.length>Math.ceil(SIDE_SPRAY.sheetLife*SIDE_SPRAY.historyHz)+4))this.history.pop();
+    const peak=this.history.reduce((max,f)=>Math.max(max,f.strength*clamp(1-(time-f.time)/SIDE_SPRAY.sheetLife)),0);
     this.mesh.visible=peak>.06;
     if(!this.mesh.visible)return;
     const p=this.geometry.attributes.position,wet=this.geometry.attributes.aWet;
     for(let i=0;i<=this.rows;i++){
-      const wanted=time-i/this.rows*SPRAY_TUNING.fanLife;
-      let frame=this.history[0];
-      for(const f of this.history){if(f.time>=wanted)frame=f;else break;}
-      const age=time-frame.time;
+      const wanted=time-i/this.rows*SIDE_SPRAY.sheetLife;
+      let newer=this.history[0],older=newer;
+      for(const f of this.history){older=f;if(f.time>=wanted)newer=f;else break;}
+      const fraction=clamp((wanted-older.time)/(newer.time-older.time||1));
+      const birth=THREE.MathUtils.lerp(older.time,newer.time,fraction),age=time-birth;
+      const frameStrength=THREE.MathUtils.lerp(older.strength,newer.strength,fraction);
       for(let j=0;j<=this.columns;j++){
-        const drop=frame.drops[j];
+        const a=older.drops[j],b=newer.drops[j],mix=(x,y)=>x+(y-x)*fraction;
         // Retain the actual past contact position and motion through the turn.
         // Broad sheets curve behind the craft instead of swivelling as one jet.
-        const px=drop.x+drop.vx*age,pz=drop.z+drop.vz*age;
-        const py=drop.y+drop.vy*age-4.905*age*age,water=waveHeight(px,pz,time);
-        p.setXYZ(i*7+j,px,Math.max(water+.025,py),pz);
-        wet.setX(i*7+j,clamp((py-water)*7)*clamp(frame.strength/.8));
+        const px=mix(a.x,b.x)+mix(a.vx,b.vx)*age,pz=mix(a.z,b.z)+mix(a.vz,b.vz)*age;
+        const py=mix(a.y,b.y)+mix(a.vy,b.vy)*age-4.905*age*age,water=waveHeight(px,pz,time);
+        p.setXYZ(i*(this.columns+1)+j,px,Math.max(water+.025,py),pz);
+        wet.setX(i*(this.columns+1)+j,clamp((py-water)*7)*clamp(frameStrength/(v.type==='cat'?.65:.8)));
       }
     }
-    p.needsUpdate=true;wet.needsUpdate=true;this.material.uniforms.uTime.value=time;this.material.uniforms.uStrength.value=clamp(peak/1.3,.1,1.2);
+    p.needsUpdate=true;wet.needsUpdate=true;this.material.uniforms.uTime.value=time;this.material.uniforms.uStrength.value=clamp(v.type==='cat'?Math.sqrt(peak/1.3):peak/1.3,.1,1.2);
   }
 
   dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
@@ -190,7 +194,7 @@ export class Spray {
     this.state={left:0,right:0,rate:0};this.time=0;
   }
   clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.mesh.visible=false;}}
-  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=kind===2?1.5:kind===0?.55+Math.random()*.5:1.25;Object.assign(target,{birthStep:null,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
+  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
   splash(v,impact) {
     const count=Math.min(this.count*.4,40+impact*13);
     for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:v.x,y:waveHeight(v.x,v.z,this.time)+.1,z:v.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},i%8===0?1:0);}
@@ -199,7 +203,8 @@ export class Spray {
   update(dt,v,time,active=true,controls={}) {
     this.time=time;this.state=sprayState(v,false,time);
     if(!active)this.state={...this.state,rate:0,left:0,right:0,jet:0};
-    this.accumulator+=dt*this.state.rate;
+    // Reserve room for falling heavy drops and pump froth on smaller pools.
+    this.accumulator+=dt*Math.min(this.state.rate,this.count*.75/(SIDE_SPRAY.dropletLife+.2));
     const count=Math.min(Math.floor(this.accumulator),80);this.accumulator-=count;
     for(let i=0;i<count;i++){
       const side=Math.random()*(this.state.left+this.state.right)<this.state.left?-1:1;

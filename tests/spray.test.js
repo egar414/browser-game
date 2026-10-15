@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { VEHICLES, QUALITY, waveHeight } from '../src/config.js';
-import { sprayState, launchSpray } from '../src/systems/spray-model.js';
+import { sprayState, launchSpray, bowSprayLoad, SIDE_SPRAY } from '../src/systems/spray-model.js';
+import { makeRider } from '../src/vehicles/rider.js';
 import { Spray } from '../src/systems/spray.js';
 const boat=(type='ski')=>({type,config:VEHICLES[type],x:0,y:.14,z:0,heading:0,vx:0,vz:18,speed:18,throttle:1,steer:0,slip:0,yawRate:0,pitch:0,airborne:false,wipeout:0});
 
@@ -63,4 +64,41 @@ test('dense central core remains bounded and keeps descending water on Low quali
  assert(max>500);assert(max<s.plume.packets.length);assert(s.plume.falling>100);assert(returns>1000);
  for(const name of ['aCenter','aSize','aAlpha','aVelocity'])assert([...s.plume.geometry.attributes[name].array].every(Number.isFinite),name);
  for(let i=0;i<60;i++)s.plume.update(.1,null,10+i*.1);assert.equal(s.plume.mesh.visible,false);s.dispose();
+});
+
+test('powered bow attitude carries wet side spray outward and up instead of aiming it underwater',()=>{
+  for(const type of ['ski','cat']){
+    const v=boat(type),state=sprayState(v),flat=launchSpray(v,state,-1,()=>.5);
+    const bow={...v,pitch:.85,riderAft:1},drop=launchSpray(bow,state,-1,()=>.5);
+    assert(drop.vy>flat.vy);assert(Math.abs(drop.vx)>Math.abs(flat.vx));
+    assert(drop.lifetime>flat.lifetime);assert(drop.lifetime<=SIDE_SPRAY.dropletLife);
+    assert.equal(drop.x,state.contacts[0].x);assert.equal(drop.z,state.contacts[0].z);
+    for(const change of [{airborne:true},{wipeout:1},{throttle:0},{riderAft:0}])assert.equal(bowSprayLoad({...bow,...change}),0);
+  }
+  const v=boat('cat'),state=sprayState(v),cat=launchSpray(v,state,-1,()=>.5),ski=launchSpray({...v,type:'ski'},state,-1,()=>.5);
+  assert(Math.abs(cat.vx)>Math.abs(ski.vx));
+});
+
+test('side sheets retain older water at fast frame rates and expire after emission stops',()=>{
+  const s=new Spray(new THREE.Scene(),QUALITY.Low),v={...boat('cat'),slip:-6,yawRate:.8},state=sprayState(v),fan=s.fans[0];
+  for(let i=0;i<180;i++)fan.update(1/120,v,i/120,state.left,state);
+  assert(fan.history.at(-1).time<.1);assert(fan.history.length<110);
+  assert([...fan.geometry.attributes.position.array].every(Number.isFinite));
+  const off={...state,left:0,right:0};
+  for(let i=0;i<480;i++)fan.update(1/120,v,1.5+i/120,0,off);
+  assert(!fan.mesh.visible);assert(fan.history.length<110);s.dispose();
+});
+
+test('rider shifts weight smoothly through a bow-ride countersteer and keeps the tiller hand attached',()=>{
+  const parent=new THREE.Group(),motor=new THREE.Group();motor.position.set(.18,.4,-1.65);
+  const rider=makeRider(parent,'cat'),parts={motor};
+  const run=(v,n=90)=>{for(let i=0;i<n;i++)rider.userData.update(v,1/60,parts);return rider.userData.balance;};
+  const idle={steer:0,riderAft:0,pitch:0},rest=run(idle),bow={...idle,steer:1,lateralAcceleration:-8,riderAft:1,pitch:.8},left=run(bow);
+  assert(left.hip[2]<rest.hip[2]-.2);assert(left.hip[0]<rest.hip[0]-.1);
+  const next=run({...bow,steer:-1,lateralAcceleration:8},1);assert(Math.abs(next.lean-left.lean)<.1);
+  const right=run({...bow,steer:-1,lateralAcceleration:8});assert(right.hip[0]>rest.hip[0]+.1);
+  const grip=new THREE.Vector3(-.25,.45,.65).applyEuler(motor.rotation).add(motor.position);
+  assert(rider.getObjectByName('right-hand').position.distanceTo(grip)<1e-6);
+  rider.traverse(o=>{assert([...o.position,...o.scale,...o.quaternion].every(Number.isFinite));});
+  assert(Math.abs(run(idle).lean)<.01);
 });

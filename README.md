@@ -275,3 +275,14 @@ The latest spray refinement adds a substantially denser white rear core, grain,
 velocity-aligned water streaks and heavier falling breakup based on the supplied
 references. Low quality keeps the thick core. The pool retains water through its
 full falling arc; pump force and vehicle handling are unchanged.
+
+
+### Thundercat spray and rider weight
+
+The pontoon fans are broader and denser. Powered bow riding carries side spray
+farther and extends the jet-ski rear plume; falling side water is retained
+independently of frame rate. Riders shift aft and across the hull while
+keeping their hands on the controls. Use W + Shift, Q/E trim and A/D to carve;
+the existing mobile throttle, LIFT, BOW +/− and steering controls do the same.
+Tune `SIDE_SPRAY` / `JET_PLUME` in `src/systems/spray-model.js` and `RIDER_WEIGHT`
+in `src/vehicles/rider.js`. These visual changes preserve vehicle handling.
