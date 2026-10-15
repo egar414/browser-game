@@ -1,0 +1,72 @@
+import { VEHICLES, RACE, WORLD } from '../config.js';
+import { lands, ramps } from './environment.js';
+import { formatTime } from './activities.js';
+export class UI {
+  constructor(settings, actions) {
+    this.settings=settings;this.actions=actions;this.toastTimer=0;
+    document.querySelector('#app').innerHTML=`
+      <header class="masthead"><a class="brand" href="#" aria-label="Estuary Rats home"><span class="brand-mark">ER<span>↗</span></span><span>ESTUARY<br>RATS<span class="edition">SUNSHINE COAST · VOL. 01</span></span></a><div class="top-tag"><i></i> A LITTLE SALT. A LOT OF FREEDOM.</div><button id="menu-button" class="icon-button" aria-label="Pause and settings">☰</button></header>
+      <main id="home" class="home">
+        <div class="hero"><p class="eyebrow">YOUR AFTERNOON IS OFFICIALLY GONE.</p><h1>Estuary<br><em>Rats.</em></h1><p class="intro">Find your line. Throw some spray.<br>A coastal playground with no wrong turns.</p><div class="location"><span>↗</span> PELICAN ESTUARY, AUSTRALIA <small>26° S · ALWAYS GOLDEN HOUR</small></div></div>
+        <section class="launch-card" aria-label="Choose your watercraft"><div class="card-top"><span class="eyebrow">CHOOSE YOUR TROUBLE</span><span id="vehicle-number">01 / 02</span></div><div class="vehicle-tabs"><button data-vehicle="ski">JET SKI</button><button data-vehicle="cat">THUNDERCAT</button></div><h2 id="vehicle-name"></h2><p id="vehicle-description"></p><div id="vehicle-stats" class="vehicle-stats"></div><div class="colour-row"><span>COLOUR</span><div id="swatches"></div></div><button id="play" class="play-button">LET’S GET WET <span>↗</span></button><p id="loading" class="loading">Building the estuary…</p><div class="card-note">FREE ROAM FIRST. RACE WHEN YOU FEEL LIKE IT.</div></section>
+        <div class="home-footer"><span>ORIGINAL WATERCRAFT. UNREASONABLE AMOUNTS OF SPRAY.</span><button id="home-controls" class="text-button">KEYS TO A GOOD TIME ↗</button></div>
+      </main>
+      <section id="hud" class="hud hidden" aria-label="Driving information"><div class="mode-badge"><i></i><span id="mode">FREE ROAM</span><small id="area">PELICAN ESTUARY</small></div><div id="activity" class="activity hidden"></div><div id="boundary" class="boundary hidden">Shallow charts ahead — turn back toward the estuary.</div><div class="left-hud"><div class="map-wrap"><canvas id="minimap" width="260" height="260" aria-label="Map of the estuary"></canvas><span class="map-north">N ↑</span><span class="map-label">PELICAN ESTUARY</span></div><div class="map-legend"><span>● YOU</span><span class="gold">● RAMPS</span><span>F · RACE</span></div></div><div class="right-hud"><div class="speed"><strong id="speed">0</strong><span>KM/H<small>ARCADE SPEED</small></span></div><div class="throttle-track"><div id="throttle"></div></div><div class="vehicle-status"><span id="craft-label"></span><span id="state-label">IDLE</span></div><div class="score-line"><span id="score">0</span> SESSION POINTS <strong id="combo"></strong></div></div><div class="key-strip"><span><kbd>WASD</kbd> DRIVE</span><span><kbd>SHIFT</kbd> LIFT / SPRAY</span><span><kbd>Q E</kbd> TRIM</span><span><kbd>R</kbd> RECOVER</span><button id="hud-controls"><kbd>H</kbd> ALL KEYS</button></div><div class="activity-shortcuts"><button id="race">F <span>CANAL RACE</span></button><button id="challenge">G <span>TRICK SESSION</span></button></div></section>
+      <div id="toast" class="toast hidden" role="status"><strong></strong><span></span></div>
+      <section id="pause" class="overlay hidden" aria-label="Pause and settings"><div class="dialog"><p class="eyebrow">TAKE A BREATHER</p><h2>At anchor.</h2><p class="subtle">Your afternoon can wait.</p><div class="dialog-actions"><button id="resume" class="play-button">BACK TO THE WATER ↗</button><button id="garage" class="secondary">CHANGE WATERCRAFT</button></div><div class="settings-grid"><label>VISUAL QUALITY<select id="quality"><option>Auto</option><option>Low</option><option>Medium</option><option>High</option></select></label><label>MASTER VOLUME<input id="master" type="range" min="0" max="1" step="0.05"></label><label>ENGINE<input id="engine" type="range" min="0" max="1" step="0.05"></label><label>WATER & AMBIENCE<input id="water" type="range" min="0" max="1" step="0.05"></label></div><div class="settings-footer"><button id="mute" class="secondary">MUTE AUDIO</button><button id="recover" class="secondary">RECOVER CRAFT</button><button id="pause-controls" class="secondary">CONTROLS</button><button id="free-roam" class="secondary">FREE ROAM</button></div><p id="performance" class="fine-print"></p><p id="records" class="fine-print"></p></div></section>
+      <section id="controls" class="overlay hidden" aria-label="Controls"><div class="dialog controls-dialog"><p class="eyebrow">KEYS TO A GOOD TIME</p><h2>Less reading.<br>More riding.</h2><div class="controls-list"><span><kbd>W / ↑</kbd> Accelerate</span><span><kbd>S / ↓</kbd> Brake, then reverse</span><span><kbd>A D / ← →</kbd> Steer · spin in the air</span><span><kbd>SHIFT</kbd> Bow lift / powered spray turn</span><span><kbd>Q / E</kbd> Bow up / down · aerial pitch</span><span><kbd>C</kbd> Close / wide camera</span><span><kbd>DRAG</kbd> Look around · auto recentres</span><span><kbd>R</kbd> Recover in safe water</span><span><kbd>F / G</kbd> Race / 90-second trick session</span><span><kbd>M</kbd> Mute audio</span><span><kbd>ESC</kbd> Pause & settings</span><span><kbd>H</kbd> Show this guide</span></div><div class="move-guide"><strong>THREE WAYS TO MAKE A MESS</strong><p><b>Bow rider</b> · Jet ski + W + Shift. Use E to settle the bow. Too much Q can tip you.</p><p><b>Rooster tail</b> · Get moving, then hold W + Shift + A or D for a sliding donut.</p><p><b>Air & spins</b> · Approach gold ramps from the north with speed. A/D spins; Q/E levels the landing. Tricks count when you land.</p></div><button id="close-controls" class="play-button">GOT IT ↗</button></div></section>
+      <section id="error" class="overlay hidden" role="alert"><div class="dialog"><h2>Can’t launch yet.</h2><p id="error-message"></p><button onclick="location.reload()" class="play-button">TRY AGAIN</button></div></section>`;
+    const bind=(id,fn)=>document.getElementById(id).addEventListener('click',fn);
+    document.querySelector('.brand').addEventListener('click',e=>{e.preventDefault();actions.pause();});
+    document.querySelectorAll('[data-vehicle]').forEach(b=>b.addEventListener('click',()=>actions.vehicle(b.dataset.vehicle)));
+    bind('free-roam',()=>actions.freeRoam());bind('play',()=>actions.play());bind('resume',()=>actions.resume());bind('garage',()=>actions.home());bind('menu-button',()=>actions.pause());
+    for(const id of ['home-controls','hud-controls','pause-controls'])bind(id,()=>actions.controls());
+    bind('close-controls',()=>actions.closeControls());bind('recover',()=>actions.recover());bind('race',()=>actions.race());bind('challenge',()=>actions.challenge());bind('mute',()=>actions.mute());
+    document.getElementById('quality').value=settings.quality;
+    document.getElementById('quality').addEventListener('change',e=>actions.setting('quality',e.target.value));
+    for(const id of ['master','engine','water']){const el=document.getElementById(id);el.value=settings[id];el.addEventListener('input',()=>actions.setting(id,+el.value));}
+    this.map=document.getElementById('minimap').getContext('2d');this.selectVehicle();
+  }
+  selectVehicle() {
+    const c=VEHICLES[this.settings.vehicle];
+    document.querySelectorAll('[data-vehicle]').forEach(b=>b.classList.toggle('selected',b.dataset.vehicle===this.settings.vehicle));
+    document.getElementById('vehicle-number').textContent=this.settings.vehicle==='ski'?'01 / 02':'02 / 02';
+    document.getElementById('vehicle-name').textContent=c.name;document.getElementById('vehicle-description').textContent=c.description;
+    document.getElementById('vehicle-stats').innerHTML=this.settings.vehicle==='ski'?'<span>AGILITY <b>●●●●●</b></span><span>FREESTYLE <b>●●●●●</b></span>':'<span>MOMENTUM <b>●●●●●</b></span><span>CHARACTER <b>●●●●●</b></span>';
+    const swatches=document.getElementById('swatches');swatches.innerHTML='';
+    c.colours.forEach((colour,i)=>{const b=document.createElement('button');b.style.background=colour;b.className=i===this.settings.colour?'selected':'';b.setAttribute('aria-label',`Colour ${i+1}`);b.addEventListener('click',()=>this.actions.colour(i));swatches.appendChild(b);});
+    document.getElementById('craft-label').textContent=c.name.toUpperCase();
+  }
+  show(id,visible) {document.getElementById(id).classList.toggle('hidden',!visible);}
+  toast(title,subtitle='') { const el=document.getElementById('toast');el.querySelector('strong').textContent=title;el.querySelector('span').textContent=subtitle;this.show('toast',true);this.toastTimer=4.8; }
+  ready() {document.getElementById('loading').textContent='READY TO ROAM · NO ACCOUNTS. NO RULEBOOK.';}
+  error(message) {document.getElementById('error-message').textContent=message;this.show('error',true);}
+  update(dt,v,a,fps,quality) {
+    this.toastTimer-=dt;if(this.toastTimer<=0)this.show('toast',false);
+    document.getElementById('speed').textContent=Math.round(v.speed*3.6);
+    document.getElementById('throttle').style.width=`${Math.abs(v.throttle)*100}%`;
+    document.getElementById('state-label').textContent=v.wipeout?'WIPEOUT':v.airborne?'AIRBORNE':v.pitch>.65?'BOW RIDER':Math.abs(v.slip)>4?'SLIDING':v.throttle<-.1?'BRAKE / REVERSE':v.speed>12?'ON THE PLANE':v.speed>1?'CRUISING':'IDLE';
+    document.getElementById('score').textContent=a.score.toLocaleString();document.getElementById('combo').textContent=a.combo?`${a.combo.toFixed(2)}×`:'';
+    this.show('boundary',v.boundary);
+    const mode=a.race?'CANAL RUN':a.challenge?'SPRAY SESSION':'FREE ROAM';document.getElementById('mode').textContent=mode;
+    document.getElementById('area').textContent=v.z<-80?(v.x>290?'MANGROVE CREEK':'CANAL DISTRICT'):v.z>440?'RIVER MOUTH':Math.hypot(v.x-165,v.z-245)<120?'THE SEND ZONE':'PELICAN ESTUARY';
+    const activity=document.getElementById('activity');this.show('activity',!!(a.race||a.challenge));
+    activity.textContent=a.race?`${a.race.started?formatTime(a.race.time):'REACH START'}  ·  GATE ${a.race.index+1} / ${RACE.length}`:a.challenge?`${Math.ceil(a.challenge.remaining)}s  ·  ${a.challenge.score} POINTS`:'';
+    document.getElementById('performance').textContent=`${quality} rendering · ${Math.round(fps)} FPS measured here · desktop keyboard recommended`;
+    document.getElementById('records').textContent=`Canal best: ${this.settings.bestRace?formatTime(this.settings.bestRace):'—'} · Trick best: ${this.settings.bestTricks} · Gameplay speeds and 50 hp performance are approximate.`;
+    document.getElementById('mute').textContent=this.settings.muted?'UNMUTE AUDIO':'MUTE AUDIO';
+    this.drawMap(v,a);
+  }
+  drawMap(v,a) {
+    const c=this.map,s=250/1400,ox=130,oz=118;
+    const X=x=>ox+x*s,Z=z=>oz+z*s;
+    c.fillStyle='#17484a';c.fillRect(0,0,260,260);
+    c.strokeStyle='#285658';c.lineWidth=.5;
+    for(let i=0;i<260;i+=26){c.beginPath();c.moveTo(i,0);c.lineTo(i,260);c.moveTo(0,i);c.lineTo(260,i);c.stroke();}
+    for(const land of lands){c.fillStyle=land.sand?'#a6a587':'#758b72';c.beginPath();land.points.forEach((p,i)=>c[i?'lineTo':'moveTo'](X(p[0]),Z(p[1])));c.closePath();c.fill();}
+    c.strokeStyle='#d4c8a2';c.lineWidth=2;for(const [x1,x2,z] of [[-215,-40,-235],[25,160,-145]]){c.beginPath();c.moveTo(X(x1),Z(z));c.lineTo(X(x2),Z(z));c.stroke();}
+    c.fillStyle='#edbd57';for(const r of ramps)c.fillRect(X(r.x)-2,Z(r.z)-2,4,4);
+    if(a.race){c.strokeStyle='#edbd5780';c.setLineDash([3,4]);c.beginPath();RACE.forEach((p,i)=>c[i?'lineTo':'moveTo'](X(p[0]),Z(p[1])));c.stroke();c.setLineDash([]);const p=RACE[a.race.index];c.beginPath();c.arc(X(p[0]),Z(p[1]),5,0,Math.PI*2);c.fill();}
+    c.save();c.translate(X(v.x),Z(v.z));c.rotate(-v.heading+Math.PI);c.fillStyle='#f8f3df';c.strokeStyle='#153b3d';c.lineWidth=2;c.beginPath();c.moveTo(0,-7);c.lineTo(4,5);c.lineTo(0,3);c.lineTo(-4,5);c.closePath();c.fill();c.stroke();c.restore();
+  }
+}

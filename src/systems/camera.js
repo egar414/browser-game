@@ -1,0 +1,19 @@
+import * as THREE from 'three';
+import { collision } from './environment.js';
+export class ChaseCamera {
+  constructor(camera) { this.camera=camera;this.look=new THREE.Vector3();this.initialized=false; }
+  reset() { this.initialized=false; }
+  update(dt,v,input,mode=0,menu=false) {
+    if(!input.dragging)input.orbit*=Math.exp(-dt*.9);
+    const heading=v.heading+input.orbit+(menu?.48:0);
+    const distance=menu?8.5:mode?6.2:10.5+Math.min(3,v.speed*.09);
+    const height=menu?4:mode?2.9:4.7+v.speed*.025;
+    const look=new THREE.Vector3(v.x+Math.sin(v.heading)*v.speed*.14,v.y+0.85,v.z+Math.cos(v.heading)*v.speed*.14);
+    const target=new THREE.Vector3(v.x-Math.sin(heading)*distance,v.y+height,v.z-Math.cos(heading)*distance);
+    // Raise over shorelines and docks along the camera ray, avoiding terrain clipping.
+    for(let t=.2;t<=1;t+=.2) if(collision(v.x+(target.x-v.x)*t,v.z+(target.z-v.z)*t,.5,target.y)) {target.y=Math.max(target.y,12);break;}
+    if(!this.initialized){this.camera.position.copy(target);this.look.copy(look);this.initialized=true;}
+    this.camera.position.lerp(target,1-Math.exp(-dt*4.5));this.look.lerp(look,1-Math.exp(-dt*6));this.camera.lookAt(this.look);
+    this.camera.fov=menu?48:58+Math.min(8,v.speed*.24);this.camera.updateProjectionMatrix();
+  }
+}

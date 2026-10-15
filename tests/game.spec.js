@@ -1,0 +1,50 @@
+import { test, expect } from '@playwright/test';
+const status=page=>page.evaluate(()=>window.__ESTUARY__.status);
+test.beforeEach(async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true})));
+  await page.goto('/');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
+});
+for(const type of ['ski','cat'])test(`${type}: choose, drive, spray, steer, brake, reverse and recover`,async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.locator(`[data-vehicle="${type}"]`).click();await page.locator('#play').click();
+  expect((await status(page)).vehicle).toBe(type);
+  await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).speed,{timeout:25000}).toBeGreaterThan(11);
+  expect((await status(page)).liveParticles).toBeGreaterThan(0);
+  const initial=(await status(page)).heading;
+  await page.keyboard.down('KeyA');await page.keyboard.down('ShiftLeft');
+  await expect.poll(async()=>Math.abs((await status(page)).heading-initial),{timeout:20000}).toBeGreaterThan(.65);
+  expect(Math.abs((await status(page)).slip)).toBeGreaterThan(1);
+  await page.keyboard.up('KeyA');await page.keyboard.up('ShiftLeft');await page.keyboard.up('KeyW');
+  await page.keyboard.down('KeyS');await expect.poll(async()=>(await status(page)).forwardSpeed,{timeout:35000}).toBeLessThan(-1);await page.keyboard.up('KeyS');
+  await page.keyboard.press('KeyR');await expect.poll(async()=>(await status(page)).speed).toBeLessThan(.5);
+  expect((await status(page)).position.y).toBeGreaterThan(-.6);expect(errors).toEqual([]);
+  await page.screenshot({path:`test-results/${type}-driving.png`});
+});
+test('jet ski bow rider, pause, camera, settings, persistence, guide, resize and focus',async({page})=>{
+  await page.locator('#play').click();await page.keyboard.down('KeyW');await page.keyboard.down('ShiftLeft');
+  await expect.poll(async()=>(await status(page)).score,{timeout:30000}).toBeGreaterThan(0);
+  await page.keyboard.up('KeyW');await page.keyboard.up('ShiftLeft');
+  await page.keyboard.press('KeyC');expect((await status(page)).settings.camera).toBe(1);
+  await page.keyboard.press('Escape');expect((await status(page)).state).toBe('paused');
+  const pos=(await status(page)).position;await page.waitForTimeout(400);expect((await status(page)).position).toEqual(pos);
+  await page.locator('#quality').selectOption('Medium');expect((await status(page)).quality).toBe('Medium');
+  await page.locator('#mute').click();expect((await status(page)).settings.muted).toBe(false);
+  await page.locator('#garage').click();await page.locator('[data-vehicle="cat"]').click();await page.locator('#swatches button').nth(2).click();
+  // The init script supplies first-launch defaults; remove it through a fresh page
+  // in the same context to test the actual persisted record on reload.
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('estuary-rats-v1')));expect(saved.vehicle).toBe('cat');expect(saved.colour).toBe(2);
+  const reload=await page.context().newPage();await reload.goto('/');await reload.waitForFunction(()=>window.__ESTUARY__?.status.ready);
+  expect((await status(reload)).settings.vehicle).toBe('cat');expect((await status(reload)).settings.colour).toBe(2);
+  await reload.locator('#play').click();await reload.keyboard.press('KeyH');await expect(reload.locator('#controls')).toBeVisible();await reload.locator('#close-controls').click();
+  await reload.setViewportSize({width:900,height:600});await reload.keyboard.down('KeyW');await reload.evaluate(()=>window.dispatchEvent(new Event('blur')));
+  expect((await status(reload)).state).toBe('paused');await reload.locator('#resume').click();await expect.poll(async()=>(await status(reload)).throttle).toBeLessThan(.01);
+});
+test('optional activities start, restart and remain separate from free roam',async({page})=>{
+  await page.locator('#play').click();expect((await status(page)).race).toBeNull();
+  await page.keyboard.press('KeyF');expect((await status(page)).race.index).toBe(0);
+  await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).race.index,{timeout:45000}).toBe(1);await page.keyboard.up('KeyW');
+  await page.keyboard.press('KeyF');expect((await status(page)).race.started).toBe(false);
+  await page.keyboard.press('KeyG');expect((await status(page)).race).toBeNull();expect((await status(page)).challenge.remaining).toBeGreaterThan(88);
+  await page.keyboard.press('KeyR');const before=(await status(page)).score;await page.waitForTimeout(1500);expect((await status(page)).score).toBe(before);
+  await page.keyboard.press('Escape');await page.locator('#free-roam').click();expect((await status(page)).challenge).toBeNull();expect((await status(page)).state).toBe('playing');
+});
