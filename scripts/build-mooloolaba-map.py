@@ -55,7 +55,7 @@ n=math.ceil(d/82);race=[course.interpolate((start+sign*(i+1)*d/n)%d) for i in ra
 # Segment straight lines remain entirely in navigable water.
 for a,b in zip([p0,*race[:-1]],race):
  if not water.buffer(-2).covers(LineString([a,b])):raise RuntimeError('Race chord crosses shore; increase sampling density')
-p1=race[0];spawn={'x':round(p0.x,1),'z':round(p0.y,1),'heading':math.atan2(p1.x-p0.x,p1.y-p0.y)}
+p1=race[0];spawn={'x':-220,'z':-1080,'heading':math.atan2(p1.x+220,p1.y+1080)} # clear water beside The Wharf
 features={'buildings':[],'roads':[],'piers':[],'bridges':[],'channels':[],'parks':[],'beaches':[],'pois':[],'residential':[],'breakwaters':[]}
 for ident,w in ways.items():
  t=tags(w);points=coords(w)

@@ -58,3 +58,10 @@ road segments, 166 piers and nine road bridges. No satellite imagery or Google
 Earth geometry was used. Additional waterfront houses, facade/roof details,
 rock dressing and moored boats remain artistic additions; the physical
 headland heights are estimated.
+
+The Wharf launch now uses clear water beside the mapped retail footprint rather
+than the former island launch. `canal-playground.json` contains original game
+spray-target and advisory-sign placements derived from named channel centrelines.
+They are not a surveyed list of actual signs. Estimated entrance sandbanks are
+separate authored constants in `src/ocean.js`; no bathymetry was present in the
+retained extracts. Neither source is suitable for navigation.

@@ -66,7 +66,7 @@ export function stepDroplet(p,dt) {
 
 // Larger visible breakup around the central pump wash, independently tunable
 // from the unchanged chine spray and hydraulic reaction-force calculation.
-export const JET_PLUME = { lifetime:1.3, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:7.5, spread:.78, drag:.32 };
+export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:7.5, spread:.78, drag:.32 };
 export function jetPlumeSource(v,discharge,time=0,state=null){
   if(v.type!=='ski'||!discharge||v.airborne||v.wipeout||discharge.reverse>.08||discharge.flow<JET_PLUME.minimumFlow||v.throttle<.08)return null;
   const power=clamp(discharge.flow/.16)*clamp(v.throttle),trim=clamp((v.drive?.trimAngle||0)/.33);

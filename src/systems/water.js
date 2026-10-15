@@ -51,13 +51,13 @@ export class Water {
       },
       vertexShader:`
         uniform float uSea;uniform float uTime;uniform vec4 uMapBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
-        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;
+        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;
         ${WAVE_GLSL}
         void main(){
           vec3 p=position;p.xz+=uCenter;
           vec2 uv=(clamp((p.xz-uMapBounds.xy)/uMapBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;
           float chop=texture2D(uWaveField,uv).r;vOcean=smoothstep(.48,.94,chop);
-          vec3 w=oceanWave(p.xz,uTime,uSea,chop);p.y=w.x;
+          vec3 w=oceanWave(p.xz,uTime,uSea,chop);vBank=entranceShoal(p.xz);p.y=w.x;
           vWorld=p;vNormal=normalize(vec3(-w.y,1.,-w.z));
           vReflection=uReflectionMatrix*vec4(p.x,-p.z,0.,1.);
           gl_Position=projectionMatrix*viewMatrix*vec4(p,1.);
@@ -65,7 +65,7 @@ export class Water {
       fragmentShader:`
         uniform float uTime;uniform vec4 uMapBounds;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
         uniform sampler2D uReflection;uniform float uReflect;uniform vec4 uHull;uniform float uHeading;uniform float uContact;
-        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;
+        varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;
         void main(){
           vec2 p=vWorld.xz;float distanceToEye=length(cameraPosition-vWorld);
           vec3 view=normalize(cameraPosition-vWorld);
@@ -78,6 +78,7 @@ export class Water {
           float shore=texture2D(uShore,vec2((p.x-uMapBounds.x)/uMapBounds.z,1.-(p.y-uMapBounds.y)/uMapBounds.w)).r;
           float bed=.82+.18*sin(p.x*.13+sin(p.y*.16))*sin(p.y*.18);
           vec3 deep=mix(vec3(.008,.105,.125),vec3(.045,.35,.265)*bed,smoothstep(.01,.78,shore));
+          float bank=vBank;deep=mix(deep,vec3(.13,.37,.27)*bed,bank*.63);
           vec3 reflected=reflect(-view,n);
           vec3 sky=mix(vec3(.50,.70,.75),vec3(.055,.245,.44),pow(max(reflected.y,0.),.42));
           vec3 reflection=sky;
@@ -100,7 +101,7 @@ export class Water {
           colour=mix(colour,vec3(.66,.83,.77),foam*.32);
           // Broken whitecaps cluster on the steep upper faces of exposed swell.
           float face=smoothstep(.0025,.022,1.-vNormal.y);
-          float breaking=vOcean*smoothstep(.35,1.05,vWorld.y)*(.2+face*.8);
+          float breaking=vOcean*smoothstep(.35-bank*.2,1.05-bank*.3,vWorld.y)*(.2+face*.8)*(1.+bank*.65);
           float bubbles=smoothstep(.44,.7,r1.b*.72+r2.b*.28);
           colour=mix(colour,vec3(.86,.93,.89),breaking*bubbles*.75);
           float trough=1.-smoothstep(-.7,.05,vWorld.y)*vOcean;

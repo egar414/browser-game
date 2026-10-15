@@ -20,8 +20,8 @@ function foamTexture() {
 
 class FoamWake {
   constructor(scene,texture,samples=140) {
-    this.scene=scene;this.history=[];this.splashes=[];this.samples=samples;this.distance=0;this.last=null;
-    const count=(samples*3+3*49)*2;
+    this.scene=scene;this.history=[];this.splashes=[];this.returns=[];this.samples=samples;this.distance=0;this.last=null;
+    const count=(samples*3+3*49+24*17)*2;
     this.positions=new Float32Array(count*3);this.uvs=new Float32Array(count*2);this.alphas=new Float32Array(count);
     this.geometry=new THREE.BufferGeometry();this.geometry.setAttribute('position',new THREE.BufferAttribute(this.positions,3));this.geometry.setAttribute('uv',new THREE.BufferAttribute(this.uvs,2));this.geometry.setAttribute('aAlpha',new THREE.BufferAttribute(this.alphas,1));
     this.geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(count*3),1));
@@ -40,7 +40,7 @@ class FoamWake {
       }`});
     this.mesh=new THREE.Mesh(this.geometry,this.material);this.mesh.frustumCulled=false;this.mesh.renderOrder=2;scene.add(this.mesh);
   }
-  clear(){this.history.length=0;this.splashes.length=0;this.last=null;this.geometry.setDrawRange(0,0);}
+  clear(){this.history.length=0;this.splashes.length=0;this.returns.length=0;this.last=null;this.geometry.setDrawRange(0,0);}
   splash(v,impact,time){this.splashes.push({x:v.x,z:v.z,time,strength:clamp(impact/10,.2,1.5)});if(this.splashes.length>3)this.splashes.shift();}
   update(dt,v,time,state) {
     const fX=Math.sin(v.heading),fZ=Math.cos(v.heading);
@@ -67,6 +67,12 @@ class FoamWake {
         for(const edge of [-1,1]){const px=cx+p.fz*width*edge,pz=cz-p.fx*width*edge;add(px,pz,waveHeight(px,pz,time)+.035,edge===-1?0:1,p.distance/3,alpha);}
       }
       connect(base,this.history.length);
+    }
+    this.returns=this.returns.filter(p=>time-p.time<1.2).slice(-24);
+    for(const p of this.returns){
+      const base=vertex,age=time-p.time,radius=.12+age*.65,width=.04+age*.08;
+      for(let i=0;i<=16;i++)for(const edge of [-1,1]){const a=i/16*Math.PI*2,r=radius+edge*width,x=p.x+Math.sin(a)*r,z=p.z+Math.cos(a)*r;add(x,z,waveHeight(x,z,time)+.045,edge===-1?0:1,i/4,(1-age/1.2)*p.strength);}
+      connect(base,17);
     }
     for(const p of this.splashes){
       const base=vertex,age=time-p.time,radius=.8+age*(3+p.strength*3.2),width=.12+age*.35;
@@ -178,7 +184,7 @@ export class Spray {
         #include <colorspace_fragment>
       }`});
     this.points=new THREE.Points(g,this.material);this.points.frustumCulled=false;this.points.renderOrder=4;scene.add(this.points);
-    this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture);
+    this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,Math.min(1400,quality.particles+200));
     this.wake=new FoamWake(scene,this.texture,quality.wakeSamples);
     this.fans=[new SprayFan(scene,this.texture,-1,quality.fanSegments),new SprayFan(scene,this.texture,1,quality.fanSegments)];
     this.state={left:0,right:0,rate:0};this.time=0;
@@ -206,8 +212,8 @@ export class Spray {
     for(let i=0;i<jetCount&&discharge;i++){
       const {origin,velocity,aerial}=discharge;
       if(plume){
-        const spread=.35+Math.random()*.6,age=(i+.5)/Math.max(1,jetCount)*dt;
-        this.emit({birthStep:age,x:plume.origin.x-(v.vx||0)*age+(Math.random()-.5)*.13,y:plume.origin.y,z:plume.origin.z-(v.vz||0)*age,vx:plume.velocity.x+(Math.random()-.5)*spread,vy:plume.velocity.y+(Math.random()-.5)*1.5,vz:plume.velocity.z+(Math.random()-.5)*spread,diameter:.0035+Math.random()*.003},i%5===0?1:2);
+        // Dedicated packets retain their own pool through the full fall.
+        continue;
       }else if(aerial){
         const spread=.28+discharge.reverse*.6;
         this.emit({x:origin.x,y:origin.y,z:origin.z,vx:velocity.x+(Math.random()-.5)*spread,vy:velocity.y+(Math.random()-.5)*spread,vz:velocity.z+(Math.random()-.5)*spread,diameter:.003+Math.random()*.002});
@@ -232,6 +238,7 @@ export class Spray {
       }else{this.alphas[i]=0;this.sizes[i]=0;}
     }
     for(const attr of Object.values(this.points.geometry.attributes))attr.needsUpdate=true;
+    if(this.plume.impacts.length)this.wake.returns.push(...this.plume.impacts.filter((_,i)=>i%3===0));
     const visibleState=dt>0?this.state:{...this.state,rate:0};this.wake.update(dt,v,time,visibleState);
     this.fans[0].update(dt,v,time,this.state.left,this.state);this.fans[1].update(dt,v,time,this.state.right,this.state);
   }

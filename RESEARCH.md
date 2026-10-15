@@ -254,3 +254,43 @@ not solved. An official BOM wave-reference URL was attempted with the required
 retry but returned proxy 403; it was not inspected. Additional open building
 search via ArcGIS was likewise blocked. Existing OSM extract tags were inspected
 and reused; no additional imagery or building survey was obtained.
+
+## Wharf, entrance banks and spray fallout (16 October 2026)
+
+The retained OSM extracts locate The Wharf Mooloolaba at approximately
+(-194, -1143) in the game projection. The launch is now in clear water at
+(-220, -1080), within 70 m of that footprint centre, with at least 12 m
+collision clearance. These are approximate in-game coordinates.
+
+The extracts contain no surveyed sandbar depths or shoal polygons. Three
+estimated underwater sandbank lobes on the Point Cartwright side of the
+entrance follow the user's description. Their authored ellipses are in
+`ENTRANCE_SHOALS` in `src/ocean.js`. They increase swell amplitude and its
+second harmonic locally, with matching CPU/GPU equations, shallow water
+colour and crest foam. They do not obstruct the navigation channel. This is
+an artistic near-breaking wave model, not measured bathymetry, a tide model,
+physical breaking curls or a navigation chart. No new imagery was obtained.
+
+Rear spray no longer uses a connected tube. A bounded independent pool of
+soft, noisy camera-facing packets approximates clumps of water and fine mist.
+Each packet inherits the nozzle trajectory, spreads and follows gravity with
+effective linear drag. Larger packets persist through the descending arc until
+they meet the shared moving water, leaving small foam rings. Fine chine
+particles retain their separate quadratic drag. These representations are
+visual approximations; the plume is still amplified and not calibrated to
+manufacturer discharge measurements. The existing hydraulic force calculation
+is separate and unchanged. The supplied video informed the rising/falling
+shape; no frames or branding are shipped.
+
+Eight canal bullseyes use the same side/rear spray exposure rule as battles,
+require speed and actual spray overlap, and bank one hit per pass. A target
+needs both a 25-second cooldown and departure beyond 40 m to recharge.
+Target and speed-sign positions are original game placements beside OSM
+canals. The 6 KNOTS / NO WASH signs are game advisory markers, not a verified
+inventory of local legal speed limits. They do not impose a speed limiter.
+
+Hangman, No-hander and Superman are stylised rider poses with IK hands/feet.
+A deliberate 0.35-second aerial hold qualifies each pose once per jump; points
+are banked only by the existing successful-landing checks. Ground input does
+not jump or score. These moves are a game animation, not instruction in real
+watercraft stunts.

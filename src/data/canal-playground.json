@@ -1,0 +1,109 @@
+{
+  "provenance": "Original game target/sign placements beside mapped canals; signs are game advisory markers, not surveyed regulatory locations.",
+  "targets": [
+    {
+      "name": "Myambla Canal",
+      "x": -39.3,
+      "z": -87.1,
+      "heading": 1.4494867872661015
+    },
+    {
+      "name": "Myuna Canal",
+      "x": 696.3,
+      "z": 322.7,
+      "heading": -1.6796993257815098
+    },
+    {
+      "name": "Mayes Canal",
+      "x": -826.7,
+      "z": -991.2,
+      "heading": -0.0819820361170875
+    },
+    {
+      "name": "Emerald Waters Canal",
+      "x": -1040.2,
+      "z": -1315.9,
+      "heading": -2.616286044941135
+    },
+    {
+      "name": "Bombala Canal",
+      "x": 277.7,
+      "z": -76,
+      "heading": 1.4905095115118814
+    },
+    {
+      "name": "Paringa Canal",
+      "x": 586.3,
+      "z": -542.2,
+      "heading": -3.1084986062227578
+    },
+    {
+      "name": "Yangala Anchorage",
+      "x": 148.8,
+      "z": -573.7,
+      "heading": 0.05242185362716935
+    },
+    {
+      "name": "Mundoora Broadwater",
+      "x": -626.5,
+      "z": -221.7,
+      "heading": -1.0680974420431941
+    }
+  ],
+  "signs": [
+    {
+      "x": -220,
+      "z": -1100,
+      "heading": 0,
+      "name": "The Wharf"
+    },
+    {
+      "x": -58.9,
+      "z": -91,
+      "heading": 1.374446785945534,
+      "name": "Myambla Canal"
+    },
+    {
+      "x": 712.9,
+      "z": 333.8,
+      "heading": -2.159844949342984,
+      "name": "Myuna Canal"
+    },
+    {
+      "x": -812.8,
+      "z": -1012,
+      "heading": -0.5890486225480872,
+      "name": "Mayes Canal"
+    },
+    {
+      "x": -1040.2,
+      "z": -1295.9,
+      "heading": 3.141592653589793,
+      "name": "Emerald Waters Canal"
+    },
+    {
+      "x": 252.7,
+      "z": -76,
+      "heading": 1.5707963267948966,
+      "name": "Bombala Canal"
+    },
+    {
+      "x": 586.3,
+      "z": -522.2,
+      "heading": 3.141592653589793,
+      "name": "Paringa Canal"
+    },
+    {
+      "x": 160.3,
+      "z": -601.4,
+      "heading": -0.3926990816987237,
+      "name": "Yangala Anchorage"
+    },
+    {
+      "x": -571.1,
+      "z": -198.7,
+      "heading": -1.9634954084936211,
+      "name": "Mundoora Broadwater"
+    }
+  ]
+}

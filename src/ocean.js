@@ -2,6 +2,11 @@ import mapData from './data/mooloolaba.json' with {type:'json'};
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a));return t*t*(3-2*t);};
 export const WAVE_FIELD=mapData.waveField;
+// Estimated entrance shoals on the Point Cartwright side, not surveyed depths.
+export const ENTRANCE_SHOALS=[{x:1110,z:-1740,rx:110,rz:42},{x:1270,z:-1745,rx:105,rz:39},{x:1395,z:-1725,rx:75,rz:33}];
+export function shoalInfluence(x,z){return Math.min(1,ENTRANCE_SHOALS.reduce((sum,b)=>sum+Math.exp(-2*(((x-b.x)/b.rx)**2+((z-b.z)/b.rz)**2)),0));}
+export const SHOAL_GLSL=`float entranceShoal(vec2 p){return min(1.,${ENTRANCE_SHOALS.map(b=>`exp(-2.*dot((p-vec2(${b.x}.,${b.z}.))/vec2(${b.rx}.,${b.rz}.),(p-vec2(${b.x}.,${b.z}.))/vec2(${b.rx}.,${b.rz}.)))`).join('+')});}`;
+
 const WORLD=mapData.world;
 export const WAVES=[
   {amplitude:.19,kx:.12,kz:.055,speed:1.45},
@@ -42,20 +47,23 @@ export function waveHeight(x,z,time){
  for(const w of WAVES)height+=Math.sin(x*w.kx+z*w.kz+time*w.speed)*w.amplitude*wind;
  if(ocean>.00001){
   const group=.66+.34*(.5+.5*Math.sin(x*.008+z*.004+time*.055));
-  const swell=(.4+amplitude*.5)*.536*ocean*group;
-  for(const w of OCEAN_SWELL){const p=x*w.kx+z*w.kz+time*w.speed;height+=(Math.sin(p)-.16*Math.cos(p*2))*w.weight*swell;}
+  const bank=shoalInfluence(x,z),sharp=.16+bank*.22;
+  const swell=(.4+amplitude*.5)*.536*ocean*group*(1+bank*.8);
+  for(const w of OCEAN_SWELL){const p=x*w.kx+z*w.kz+time*w.speed;height+=(Math.sin(p)-sharp*Math.cos(p*2))*w.weight*swell;}
  }
  return height;
 }
 const f=n=>Number(n).toFixed(9);
 // Generated from the same coefficients/equations as CPU buoyancy. Return height
-// and analytic X/Z slopes (ignoring only the slowly varying shore-mask gradient).
+// and analytic X/Z slopes (ignoring the slowly varying shore-mask and shoal-envelope gradients).
 export const WAVE_GLSL=`
+${SHOAL_GLSL}
 vec3 oceanWave(vec2 p,float time,float amplitude,float chop){
  float ocean=smoothstep(.48,.94,chop),wind=chop*(1.+(amplitude-1.)*ocean*.72);vec3 w=vec3(0.);
  ${WAVES.map(v=>`{float phase=dot(p,vec2(${f(v.kx)},${f(v.kz)}))+time*${f(v.speed)};float a=${f(v.amplitude)}*wind;w+=vec3(sin(phase),cos(phase)*${f(v.kx)},cos(phase)*${f(v.kz)})*a;}`).join('\n')}
  float gp=dot(p,vec2(.008,.004))+time*.055;
- float group=.66+.34*(.5+.5*sin(gp)),swell=(.4+amplitude*.5)*.536*ocean;
- ${OCEAN_SWELL.map(v=>`{float phase=dot(p,vec2(${f(v.kx)},${f(v.kz)}))+time*${f(v.speed)};float h=sin(phase)-.16*cos(2.*phase),slope=cos(phase)+.32*sin(2.*phase),a=${f(v.weight)}*swell;w+=vec3(h*group,slope*${f(v.kx)}*group+h*.17*cos(gp)*.008,slope*${f(v.kz)}*group+h*.17*cos(gp)*.004)*a;}`).join('\n')}
+ float bank=entranceShoal(p),sharp=.16+bank*.22;
+ float group=.66+.34*(.5+.5*sin(gp)),swell=(.4+amplitude*.5)*.536*ocean*(1.+bank*.8);
+ ${OCEAN_SWELL.map(v=>`{float phase=dot(p,vec2(${f(v.kx)},${f(v.kz)}))+time*${f(v.speed)};float h=sin(phase)-sharp*cos(2.*phase),slope=cos(phase)+2.*sharp*sin(2.*phase),a=${f(v.weight)}*swell;w+=vec3(h*group,slope*${f(v.kx)}*group+h*.17*cos(gp)*.008,slope*${f(v.kz)}*group+h*.17*cos(gp)*.004)*a;}`).join('\n')}
  return w;
 }`;

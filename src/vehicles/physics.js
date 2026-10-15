@@ -1,4 +1,5 @@
 import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, waveHeight, waveChop } from '../config.js';
+import { AirTricks } from './air-tricks.js';
 import { TUNING } from '../systems/progression.js';
 import { Propulsion, hullImmersion } from './propulsion.js';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -7,7 +8,7 @@ export class VehiclePhysics {
   constructor(type = 'ski', collision = () => null, onEvent = () => {}) {
     this.type = type; this.config = VEHICLES[type]; this.collision = collision; this.onEvent = onEvent;
     this.tuning='stock';this.rideMode='sport';this.trimDegrees=0;this.propulsion=new Propulsion(type);
-    this.safe = { ...SPAWN }; this.recover();
+    this.airTricks=new AirTricks();this.safe = { ...SPAWN }; this.recover();
   }
   recover(nearest = false) {
     if(nearest&&Number.isFinite(this.x)&&Number.isFinite(this.z)){
@@ -25,7 +26,7 @@ export class VehiclePhysics {
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
       pitch: 0, roll: 0, pitchRate:0,rollRate:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
-    this.previous = this.snapshot();
+    this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;
   }
   snapshot() { return { x: this.x, y: this.y, z: this.z, heading: this.heading, pitch: this.pitch, roll: this.roll }; }
@@ -47,7 +48,7 @@ export class VehiclePhysics {
   setType(type) { this.type = type; this.config = VEHICLES[type];this.propulsion=new Propulsion(type);this.setTrim(this.trimDegrees); this.recover(); }
   wipe(reason) {
     if (this.wipeout) return;
-    this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
+    this.airTricks.reset();this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
   }
   update(dt, input, time, ramps = []) {
     this.previous = this.snapshot();
@@ -115,6 +116,7 @@ export class VehiclePhysics {
       if (this.speed > 14) this.wipe('Hard collision');
       else if (this.trickCooldown === 0) { this.onEvent({ type: 'bump', label: 'Mind the shoreline' }); this.trickCooldown = 1; }
     }
+    if(this.wipeout>0)return; // A collision cannot also bank a landing in this step.
     this.boundary = this.x < WORLD.minX + 35 || this.x > WORLD.maxX - 35 || this.z < WORLD.minZ + 35 || this.z > WORLD.maxZ - 35;
     if (this.x < WORLD.minX || this.x > WORLD.maxX || this.z < WORLD.minZ || this.z > WORLD.maxZ) { this.onEvent({ type: 'boundary', label: 'Back to safe water' }); this.recover(); return; }
     fx = Math.sin(this.heading); fz = Math.cos(this.heading);
@@ -126,6 +128,7 @@ export class VehiclePhysics {
     const water = samples.flat().reduce((a, b) => a + b) / 4 + c.rideHeight;
     const surfacePitch = Math.atan2((samples[0][1] + samples[1][1] - samples[0][0] - samples[1][0]) / 2, half * 2);
     const surfaceRoll = Math.atan2((samples[1][0] + samples[1][1] - samples[0][0] - samples[0][1]) / 2, width * 2);
+    this.airTricks.update(dt,input.pose,this.airborne,this.y-water);
     if (!this.airborne) {
       const balanceMoment=1+Math.max(0,this.drive.trimAngle*180/Math.PI-6)*.018;
       const bowWindow=this.type==='ski'?(forward>5?1:0):clamp((forward-3)/4,0,1);
@@ -179,9 +182,11 @@ export class VehiclePhysics {
         this.onEvent({ type: 'splash', impact });
         if (Math.abs(this.pitch) > 0.85 || lateralImpact > 21 || impact > 13) this.wipe('Rough landing');
         else {
+          const landedPoses=this.airTricks.land(true);
           const spins = Math.floor((Math.abs(this.spin) + 0.35) / (2 * Math.PI));
           const halfspin = Math.abs(this.spin) > Math.PI - 0.3;
           if (this.airTime > 0.45) this.onEvent({ type: 'score', label: spins ? `${spins * 360}° spin · landed` : halfspin ? '180° · landed' : this.waveLaunch?'Wave hop · landed':'Clean air', points: Math.round(this.airTime * 80) + (spins ? spins * 400 : halfspin ? 180 : 0) });
+          for(const event of landedPoses)this.onEvent(event);
           const loss = clamp(1 - impact * 0.025 - lateralImpact * 0.012, 0.4, 0.95);
           this.vx *= loss; this.vz *= loss; this.vy = -impact * 0.08;
         }
@@ -193,5 +198,5 @@ export class VehiclePhysics {
     if (!this.airborne && !hit && this.speed < 12 && Math.abs(this.pitch) < 0.4 && !this.boundary) this.safe = { x: this.x, z: this.z, heading: this.heading };
     if (![this.x, this.y, this.z, this.heading, this.vx, this.vz].every(Number.isFinite) || this.y < -3) this.recover();
   }
-  launch(velocity, pitch, wave=false) { if (this.airborne) return; this.airborne = true;this.waveLaunch=wave; this.vy = velocity; this.pitch = pitch; this.airTime = 0; this.spin = 0; }
+  launch(velocity, pitch, wave=false) { if (this.airborne) return; this.airTricks.reset();this.airborne = true;this.waveLaunch=wave; this.vy = velocity; this.pitch = pitch; this.airTime = 0; this.spin = 0; }
 }

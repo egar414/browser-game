@@ -7,7 +7,7 @@ try{
  const context=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:1,isMobile:true,hasTouch:true});await context.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({muted:true})));
  const p=await context.newPage(),errors=[],failed=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text())});p.on('requestfailed',r=>failed.push(r.url()));
  const response=await p.goto(endpoint,{waitUntil:'networkidle'});if(response.status()!==200)throw Error(`HTTP ${response.status()}`);await p.waitForFunction(()=>window.__ESTUARY__?.status.ready);
- let s=await p.evaluate(()=>window.__ESTUARY__.status);if(s.features!=='hourly-swell-coastal-detail'||!s.detailedCraft||s.scenery.mooredTinnies!==19)throw Error('Coastal assets not served');
+ let s=await p.evaluate(()=>window.__ESTUARY__.status);if(s.features!=='wharf-shoal-spray-tricks'||!s.detailedCraft||s.scenery.mooredTinnies<9)throw Error('Coastal assets not served');
  await p.locator('#play').tap();await p.locator('#touch-fullscreen').tap();await p.waitForTimeout(250);
  const fullScreen=await p.evaluate(()=>!!document.fullscreenElement);if(fullScreen)await p.evaluate(()=>document.exitFullscreen());
  if(await p.evaluate(()=>window.__ESTUARY__.status.state)==='paused')await p.locator('#resume').tap();

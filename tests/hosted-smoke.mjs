@@ -11,7 +11,7 @@ try{
     const page=await context.newPage(),errors=[],failures=[];page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>failures.push(r.url()));
     const response=await page.goto(endpoint,{waitUntil:'networkidle'});if(response.status()!==200)throw new Error(`HTTP ${response.status()}`);
     await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
-    if(await page.evaluate(()=>window.__ESTUARY__.status.features)!=='hourly-swell-coastal-detail')throw new Error('Coastal update not served');
+    if(await page.evaluate(()=>window.__ESTUARY__.status.features)!=='wharf-shoal-spray-tricks')throw new Error('Coastal update not served');
     if(type==='ski'&&!await page.evaluate(()=>window.__ESTUARY__.status.detailedCraft))throw new Error('Detailed jet ski did not load');
     if(await page.evaluate(()=>window.__ESTUARY__.status.settings.raceCourse)!=='minyama-island-2026-10')throw new Error('Updated estuary build not served');
     if(!(await page.locator('.location').textContent()).includes('MOOLOOLABA'))throw new Error('Mooloolaba update not served');

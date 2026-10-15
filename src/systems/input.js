@@ -28,6 +28,7 @@ export class Input {
       throttle: +this.held('KeyW', 'ArrowUp') - +this.held('KeyS', 'ArrowDown'),
       steer: +this.held('KeyA', 'ArrowLeft') - +this.held('KeyD', 'ArrowRight'),
       trim: +this.held('KeyQ') - +this.held('KeyE'),
+      pose:this.held('KeyZ')?'hangman':this.held('KeyX')?'nohander':this.held('KeyV')?'superman':'',
       freestyle: this.held('ShiftLeft', 'ShiftRight'),
     };
   }

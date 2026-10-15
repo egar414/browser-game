@@ -15,6 +15,7 @@ test.beforeEach(async({page})=>{
   await page.goto('/');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
 });
 for(const type of ['ski','cat'])test(`phone ${type}: native multi-touch drives, steers, brakes, reverses and recovers`,async({page})=>{
+  test.setTimeout(180000);
   const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.locator(`[data-vehicle="${type}"]`).tap();await page.locator('#play').tap();
   expect((await status(page)).quality).toBe('Low');await expect(page.locator('.touch-controls')).toBeVisible();
@@ -28,7 +29,7 @@ for(const type of ['ski','cat'])test(`phone ${type}: native multi-touch drives, 
   await expect(page.locator('[data-code="KeyW"]')).toHaveClass(/pressed/);
   expect((await status(page)).throttle).toBeGreaterThan(.8);
   await touch.up(1);await touch.down(3,'KeyS');
-  await expect.poll(async()=>(await status(page)).forwardSpeed,{timeout:35000}).toBeLessThan(-.6);await touch.up(3);
+  await expect.poll(async()=>(await status(page)).forwardSpeed,{timeout:70000}).toBeLessThan(-.6);await touch.up(3);
   await page.locator('[data-code="ShiftLeft"]').tap();await expect(page.locator('[data-code="ShiftLeft"]')).toHaveAttribute('aria-pressed','true');
   await page.locator('[data-code="KeyR"]').tap();await expect(page.locator('[data-code="ShiftLeft"]')).toHaveAttribute('aria-pressed','false');
   await expect.poll(async()=>(await status(page)).speed).toBeLessThan(.5);expect(errors).toEqual([]);

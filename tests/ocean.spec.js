@@ -2,7 +2,7 @@ import {test,expect}from'@playwright/test';
 import{WAVE_GLSL,waveHeight,seaAmplitude,waveChop,setSeaState,setWeatherClock}from'../src/ocean.js';
 test('GPU water and CPU buoyancy agree offshore, through the mouth and inside a canal',async({page})=>{
  setWeatherClock(1800);setSeaState('swell',0,true);
- const samples=[[1650,-1650,40],[1120,-1320,80],[-236.6,-888.8,20],[1550,-1000,300],[0,300,35]].map(([x,z,t])=>({x,z,t,chop:waveChop(x,z),amplitude:seaAmplitude(t),expected:waveHeight(x,z,t)}));
+ const samples=[[1110,-1740,12],[1270,-1745,50],[1395,-1725,80],[1650,-1650,40],[1120,-1320,80],[-236.6,-888.8,20],[1550,-1000,300],[0,300,35]].map(([x,z,t])=>({x,z,t,chop:waveChop(x,z),amplitude:seaAmplitude(t),expected:waveHeight(x,z,t)}));
  setSeaState('calm',0,true);
  await page.goto('about:blank');
  const result=await page.evaluate(({code,samples})=>{

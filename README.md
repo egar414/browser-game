@@ -247,3 +247,26 @@ This separate scene viewer is not a gameplay test or part of the production buil
 `node tests/hosted-phone.mjs` checks the public preview with Chromium touch
 emulation, full-screen request, driving, craft selection and rotation fallback.
 This does not establish Android/iOS hardware compatibility.
+
+### Wharf / spray / sandbar update
+
+Launch beside The Wharf Mooloolaba. Carve past orange canal bullseyes to soak
+them for garage XP. They recharge after 25 seconds once you leave the area.
+White canal signs advise 6 knots / no wash (~11 gameplay km/h).
+
+Get air from a wave or ramp, then **hold Z: Hangman, X: No-hander, V: Superman**.
+Release to tuck in before landing. Hold for at least 0.35 seconds; a clean
+landing banks the pose once per jump. On phones use HANG / NO HANDS / SUPER.
+There is no jump button. Mobile still prefers landscape and supports portrait.
+
+The rear plume now separates into soft water packets which fall back into the
+water and leave foam. The estimated Point Cartwright entrance shoals steepen
+waves locally and show shallow colour/crest foam. Their depths and locations
+are approximate, not a surveyed reconstruction or navigational information.
+
+Tune rear packets in `src/systems/jet-plume.js` and `JET_PLUME` in
+`src/systems/spray-model.js`; shoals and swell in `src/ocean.js`; pose awards in
+`src/vehicles/air-tricks.js`; target/sign sites in `src/data/canal-playground.json`.
+`node scripts/place-canal-targets.mjs` rebuilds the authored site selection from
+the retained map geometry. Existing vehicle handling tuning remains in
+`src/config.js`. See `RESEARCH.md` for geographic and physics limitations.

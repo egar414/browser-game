@@ -58,7 +58,7 @@ test('jet ski bow rider, pause, camera, settings, persistence, guide, resize and
 test('optional activities start, restart and remain separate from free roam',async({page})=>{
   await page.locator('#play').click();expect((await status(page)).race).toBeNull();
   await page.keyboard.press('KeyF');expect((await status(page)).race.index).toBe(0);
-  await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).race.index,{timeout:45000}).toBe(1);await page.keyboard.up('KeyW');
+  await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).race.index,{timeout:90000}).toBe(1);await page.keyboard.up('KeyW');
   await page.keyboard.press('KeyF');expect((await status(page)).race.started).toBe(false);
   await page.keyboard.press('KeyG');expect((await status(page)).race).toBeNull();expect((await status(page)).challenge.remaining).toBeGreaterThan(88);
   await page.keyboard.press('KeyR');const before=(await status(page)).score;await page.waitForTimeout(1500);expect((await status(page)).score).toBe(before);

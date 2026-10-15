@@ -30,7 +30,12 @@ export function makeRider(parent,type){
     const blend=1-Math.exp(-dt*7);aft+=((v.riderAft||0)-aft)*blend;lean+=(-v.steer*.13-lean)*blend;
     const cat=type==='cat',load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6);
     const hip=new THREE.Vector3(cat?-.42:lean,cat?.74:.75+aft*.15,(cat?-.77:-.38)-aft*(cat?.22:.24));
+    const pose=v.airTricks?.pose,b=v.airTricks?.blend||0;
+    if(pose==='hangman'){hip.x-=b*.24;hip.y+=b*.08;}
+    if(pose==='superman'){hip.y+=b*.42;hip.z-=b*.38;}
     torso.position.copy(hip);torso.rotation.set((cat?.35:.35)+aft*.42+load*.012,0,lean*.4);
+    if(pose==='hangman')torso.rotation.z-=b*.42;
+    if(pose==='superman')torso.rotation.x+=b*.9;
     torso.updateMatrix();
     for(const l of limbs){
       const {side}=l;
@@ -41,10 +46,13 @@ export function makeRider(parent,type){
       }else{
         hand=new THREE.Vector3(side*.3,0,-.12).applyAxisAngle(Y,-v.steer*.43).add(parts.handlebars.position);
       }
+      if(pose==='nohander')hand.lerp(new THREE.Vector3(hip.x+side*.7,hip.y+.55,hip.z+.12),b);
       const elbow=joint(shoulder,hand,.36,.39,new THREE.Vector3(side,.1,-.2));
       placeSegment(l.arm[0],shoulder,elbow);placeSegment(l.arm[1],elbow,hand);l.hand.position.copy(hand);
       const legHip=hip.clone().add(new THREE.Vector3(side*.14,0,0));
       const foot=new THREE.Vector3(cat?-.42+side*.23:side*.44,cat?.4:.32,(cat?-.75:-.37)-aft*(cat?.12:.48));
+      if(pose==='hangman')foot.lerp(new THREE.Vector3(hip.x-.55,hip.y-.25,hip.z-.35+side*.15),b);
+      if(pose==='superman')foot.lerp(new THREE.Vector3(hip.x+side*.18,hip.y+.12,hip.z-.82),b);
       const knee=joint(legHip,foot,.46,.47,new THREE.Vector3(side*.6,.05,1));
       placeSegment(l.leg[0],legHip,knee);placeSegment(l.leg[1],knee,foot);l.foot.position.copy(foot);
     }

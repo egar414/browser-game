@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Watercraft development inspection</title><link rel="icon" href="data:,"><style>body{margin:0}canvas{display:block}#label{position:fixed;top:15px;left:18px;color:white;font:14px sans-serif;background:#163c3dcc;padding:12px}</style></head><body><canvas id="game"></canvas><div id="label">WASD · Q/E trim · Z/X/V aerial poses</div><script type="module">
+import * as THREE from 'three';
+import {createAtmosphere,SUN_DIRECTION}from'/src/systems/atmosphere.js';
+import {Water,Spray}from'/src/systems/water.js';
+import {Input}from'/src/systems/input.js';
+import {VehiclePhysics}from'/src/vehicles/physics.js';
+import {makeVehicle,loadCraftAssets}from'/src/vehicles/models.js';
+import {QUALITY,VEHICLES,waveHeight,setSeaState}from'/src/config.js';
+import {CanalPlayground,CANAL_SITES}from'/src/systems/canal-targets.js';
+const params=new URLSearchParams(location.search),view=params.get('view')||'spray',type=params.get('craft')||'ski';
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,2200),renderer=new THREE.WebGLRenderer({canvas:document.querySelector('canvas'),antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(1);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;
+const sky=createAtmosphere(scene,renderer);scene.add(new THREE.HemisphereLight('#bddde8','#526254',.8));const sun=new THREE.DirectionalLight('#ffe4bb',2.5);sun.position.copy(SUN_DIRECTION).multiplyScalar(400);scene.add(sun);
+const q=QUALITY.Low,water=new Water(scene,q),spray=new Spray(scene,q),events=[],v=new VehiclePhysics(type,()=>null,e=>{events.push(e);if(e.type==='splash')spray.splash(v,e.impact);}),input=new Input(()=>{});
+const ramps=view==='ramp'?[{x:0,z:0,width:12,length:12,height:4}]:[];
+const site=CANAL_SITES.targets[2];v.safe=view==='shoal'?{x:1270,z:-1745,heading:-Math.PI/2}:view==='target'?{x:site.x+5,z:site.z-45,heading:0}:{x:0,z:-35,heading:0};v.recover();v.y=waveHeight(v.x,v.z,0)+v.config.rideHeight;
+setSeaState(view==='shoal'?'swell':'calm',0,true);if(ramps.length){const shape=new THREE.Shape();shape.moveTo(-6,0);shape.lineTo(6,0);shape.lineTo(6,4);shape.closePath();const g=new THREE.BoxGeometry(12,.25,12),m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:'#e6b64e'}));m.position.set(0,2,0);m.rotation.x=-Math.atan2(4,12);scene.add(m);}
+const playground=view==='target'?new CanalPlayground(scene,[],e=>events.push(e)):null;
+await loadCraftAssets();const model=makeVehicle(type,VEHICLES[type].colours[0]);scene.add(model);
+let t=0,last=performance.now(),acc=0;function frame(now){requestAnimationFrame(frame);const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;while(acc>=1/60){t+=1/60;v.update(1/60,input.sample(true),t,ramps);playground?.update(1/60,v,t,true);acc-=1/60;}
+model.position.set(v.x,v.y,v.z);model.rotation.set(-v.pitch,v.heading,v.roll,'YXZ');model.userData.rider.userData.update(v,dt,model.userData);if(model.userData.handlebars)model.userData.handlebars.rotation.y=-v.steer*.43;for(const part of [model.userData.motor,model.userData.nozzle])if(part)part.rotation.set(v.drive.trimAngle,-v.drive.steeringAngle,0,'YXZ');
+water.update(t,v.x,v.z,v);spray.update(dt,v,t,true);spray.resize(innerHeight,camera.fov,1);playground?.render(t);
+const offset=view==='shoal'?[22,3,6]:view==='ramp'?[7,4,-11]:[8,3,-11];camera.position.set(v.x+offset[0],v.y+offset[1],v.z+offset[2]);camera.lookAt(v.x,v.y+1,v.z-2);sky.update(t,camera.position);renderer.render(scene,camera);
+window.inspection={ready:true,t,position:{x:v.x,y:v.y,z:v.z},speed:v.speed,airborne:v.airborne,pose:v.airTricks.pose,poseBlend:v.airTricks.blend,falling:spray.plume.falling,packets:spray.plume.geometry.instanceCount,events,targets:playground?.status};}requestAnimationFrame(frame);
+</script></body></html>

@@ -4,7 +4,7 @@ test('hourly sea controls, mapped detail, garage loadout and optional spray batt
  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true,careerPoints:500})));
  await page.goto('/');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
- let s=await status(page);expect(s.features).toBe('hourly-swell-coastal-detail');expect(s.scenery.mappedBuildings).toBe(422);expect(s.scenery.mooredTinnies).toBeGreaterThan(8);expect(s.seaState).toBe('changing');expect(s.sea.simulated).toBe(true);
+ let s=await status(page);expect(s.features).toBe('wharf-shoal-spray-tricks');expect(s.scenery.mappedBuildings).toBe(422);expect(s.scenery.mooredTinnies).toBeGreaterThan(8);expect(s.seaState).toBe('changing');expect(s.sea.simulated).toBe(true);
  await page.locator('#design').selectOption('race');await page.locator('#tuning').selectOption('agile');
  expect((await status(page)).settings.design).toBe('race');expect((await status(page)).settings.tuning).toBe('agile');
  await page.locator('#play').click();await page.keyboard.press('Escape');await page.locator('#sea-state').selectOption('swell');await page.locator('#resume').click();await page.keyboard.press('KeyB');

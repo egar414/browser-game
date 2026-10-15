@@ -1,61 +1,58 @@
 import * as THREE from 'three';
 import { waveHeight } from '../config.js';
 import { JET_PLUME, clamp } from './spray-model.js';
+// A packet remains in world space after leaving the nozzle. Its water follows
+// a ballistic trajectory with drag, including the falling half of the plume.
+export function plumeTrajectory(p,age){
+  const drag=p.drag,decay=Math.exp(-drag*age),travel=(1-decay)/drag;
+  return {x:p.x+p.vx*travel,y:p.y+(p.vy+9.81/drag)*travel-9.81*age/drag,z:p.z+p.vz*travel,vy:(p.vy+9.81/drag)*decay-9.81/drag};
+}
 export class JetPlume {
-  constructor(scene,texture){
-    this.history=[];this.rows=24;this.sides=10;
-    const count=(this.rows+1)*(this.sides+1),p=new Float32Array(count*3),uv=new Float32Array(count*2),alpha=new Float32Array(count),indices=[];
-    for(let i=0;i<=this.rows;i++)for(let j=0;j<=this.sides;j++){
-      uv.set([j/this.sides,i/this.rows],(i*(this.sides+1)+j)*2);
-      if(i<this.rows&&j<this.sides){const a=i*(this.sides+1)+j,b=a+this.sides+1;indices.push(a,b,a+1,a+1,b,b+1);}
-    }
-    this.geometry=new THREE.BufferGeometry();this.geometry.setAttribute('position',new THREE.BufferAttribute(p,3));this.geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));this.geometry.setAttribute('aAlpha',new THREE.BufferAttribute(alpha,1));this.geometry.setIndex(indices);
-    this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,
-      uniforms:{uNoise:{value:texture},uTime:{value:0}},
-      vertexShader:`attribute float aAlpha;varying float vAlpha;varying vec2 vUv;varying vec3 vWorld;void main(){vAlpha=aAlpha;vUv=uv;vWorld=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-      fragmentShader:`uniform sampler2D uNoise;uniform float uTime;varying float vAlpha;varying vec2 vUv;varying vec3 vWorld;
-        void main(){float n=texture2D(uNoise,vUv*vec2(2.,3.)+vec2(uTime*.06,-uTime*.3)).r;
-        float detail=texture2D(uNoise,vUv*vec2(5.,9.)-uTime*.1).r;
-        float breakup=smoothstep(.25,.75,n*.65+detail*.35);
-        vec3 normal=normalize(cross(dFdx(vWorld),dFdy(vWorld)));
-        float facing=pow(abs(dot(normal,normalize(cameraPosition-vWorld))),.5);
-        float alpha=vAlpha*(.14+breakup*.75)*facing;
-        if(alpha<.008)discard;gl_FragColor=vec4(mix(vec3(.66,.81,.83),vec3(.98,.99,.96),n*.6+detail*.4),alpha);
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
+  constructor(scene,texture,capacity=900){
+    this.history=[];this.packets=Array.from({length:capacity},()=>({active:false}));this.next=0;this.accumulator=0;this.impacts=[];this.falling=0;
+    const plane=new THREE.PlaneGeometry(1,1),g=new THREE.InstancedBufferGeometry();g.index=plane.index;g.attributes.position=plane.attributes.position;g.attributes.uv=plane.attributes.uv;
+    for(const [name,size]of [['aCenter',3],['aSize',2],['aAlpha',1],['aSeed',1]])g.setAttribute(name,new THREE.InstancedBufferAttribute(new Float32Array(capacity*size),size).setUsage(THREE.DynamicDrawUsage));
+    g.instanceCount=0;this.geometry=g;
+    this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uNoise:{value:texture}},
+      vertexShader:`attribute vec3 aCenter;attribute vec2 aSize;attribute float aAlpha;attribute float aSeed;varying float vAlpha;varying float vSeed;varying vec2 vUv;
+      void main(){vAlpha=aAlpha;vSeed=aSeed;vUv=uv;vec4 p=modelViewMatrix*vec4(aCenter,1.);float a=aSeed>.68?0.:aSeed*6.28318;mat2 r=mat2(cos(a),-sin(a),sin(a),cos(a));p.xy+=r*(position.xy*aSize);gl_Position=projectionMatrix*p;}`,
+      fragmentShader:`uniform sampler2D uNoise;varying float vAlpha;varying float vSeed;varying vec2 vUv;
+      void main(){vec2 q=(vUv-.5)*2.;float n=texture2D(uNoise,vUv*1.7+vSeed*8.).r;float detail=texture2D(uNoise,vUv*4.3-vSeed*3.).r;
+      float radial=length(q);float edge=1.-smoothstep(.32+n*.22,.88,radial);float alpha=vAlpha*edge*(.26+n*.5+detail*.24);
+      if(alpha<.004)discard;gl_FragColor=vec4(mix(vec3(.67,.82,.83),vec3(.98,.99,.96),n*.6+detail*.4),alpha);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
       }`});
-    this.mesh=new THREE.Mesh(this.geometry,this.material);this.mesh.frustumCulled=false;this.mesh.renderOrder=3;scene.add(this.mesh);this.mesh.visible=false;
+    this.mesh=new THREE.Mesh(g,this.material);this.mesh.frustumCulled=false;this.mesh.renderOrder=3;scene.add(this.mesh);this.mesh.visible=false;
   }
-  clear(){this.history.length=0;this.mesh.visible=false;}
+  clear(){this.history.length=0;this.packets.forEach(p=>p.active=false);this.impacts.length=0;this.accumulator=0;this.falling=0;this.mesh.visible=false;this.geometry.instanceCount=0;}
   update(dt,source,time){
-    if(dt>0)this.history.unshift({time,source});
-    while(this.history.length&&(time-this.history.at(-1).time>JET_PLUME.lifetime+.15||this.history.length>100))this.history.pop();
-    this.mesh.visible=this.history.some(f=>f.source&&time-f.time<JET_PLUME.lifetime);
-    if(!this.mesh.visible)return;
-    const p=this.geometry.attributes.position,alpha=this.geometry.attributes.aAlpha;
-    for(let i=0;i<=this.rows;i++){
-      const age=i/this.rows*JET_PLUME.lifetime,wanted=time-age,t=age/JET_PLUME.lifetime;
-      let newer=this.history[0],older=this.history.at(-1);
-      for(const frame of this.history){if(frame.time>=wanted)newer=frame;else{older=frame;break;}}
-      const ratio=clamp((wanted-older.time)/Math.max(.00001,newer.time-older.time));
-      const fallback=source||this.history.find(f=>f.source).source,a=older.source||fallback,b=newer.source||fallback;
-      const mix=(a,b)=>a+(b-a)*ratio;
-      const s={origin:{},velocity:{},power:mix(older.source?.power||0,newer.source?.power||0)};
-      for(const axis of ['x','y','z']){s.origin[axis]=mix(a.origin[axis],b.origin[axis]);s.velocity[axis]=mix(a.velocity[axis],b.velocity[axis]);}
-      const exists=wanted>=this.history.at(-1).time;
-      const drag=JET_PLUME.drag,decay=Math.exp(-drag*age),travel=(1-decay)/drag;
-      const x=s.origin.x+s.velocity.x*travel,z=s.origin.z+s.velocity.z*travel,y=s.origin.y+(s.velocity.y+9.81/drag)*travel-9.81*age/drag;
-      const tangent=new THREE.Vector3(s.velocity.x,s.velocity.y-9.81*age,s.velocity.z).normalize();
-      const side=new THREE.Vector3().crossVectors(tangent,new THREE.Vector3(0,1,0));if(side.lengthSq()<.001)side.set(1,0,0);side.normalize();
-      const up=new THREE.Vector3().crossVectors(side,tangent).normalize();
-      const radius=.07+(Math.sin(Math.min(1,t)*Math.PI*.7)*JET_PLUME.spread+.16*t)*s.power;
-      for(let j=0;j<=this.sides;j++){
-        const a=j/this.sides*Math.PI*2,r=radius*(1+.25*Math.sin(a*3+age*18-time*3)+.12*Math.sin(a*5-age*23+time*2)),c=Math.cos(a)*r,sn=Math.sin(a)*r,k=i*(this.sides+1)+j;
-        p.setXYZ(k,x+side.x*c+up.x*sn,y+side.y*c+up.y*sn,z+side.z*c+up.z*sn);
-        alpha.setX(k,(exists?s.power:0)*clamp((y-waveHeight(x,z,time))/.22)*Math.pow(clamp(1-t),.9)*.66);
+    this.impacts.length=0;this.falling=0;
+    const previous=this.history[0];
+    if(dt>0&&source){
+      this.accumulator+=dt*(100+source.power*100);const count=Math.min(30,Math.floor(this.accumulator));this.accumulator-=count;
+      for(let i=0;i<count;i++){
+        const fraction=(i+.5)/count,age=dt*(1-fraction),a=previous?.source||source;
+        const mix=(x,y)=>x+(y-x)*fraction,p=this.packets[this.next++%this.packets.length],seed=Math.random(),fine=seed<.2;
+        Object.assign(p,{active:true,birth:time-age,x:mix(a.origin.x,source.origin.x)+(Math.random()-.5)*.1,y:mix(a.origin.y,source.origin.y),z:mix(a.origin.z,source.origin.z)+(Math.random()-.5)*.1,
+          vx:mix(a.velocity.x,source.velocity.x)+(Math.random()-.5)*1.6,vy:mix(a.velocity.y,source.velocity.y)*(.82+Math.random()*.34),vz:mix(a.velocity.z,source.velocity.z)+(Math.random()-.5)*1.6,
+          drag:fine?.8:JET_PLUME.drag,seed,fine,power:source.power,size:.09+Math.random()*.1});
       }
     }
-    p.needsUpdate=true;alpha.needsUpdate=true;this.material.uniforms.uTime.value=time;
+    if(dt>0){this.history.unshift({time,source});if(this.history.length>2)this.history.pop();}
+    let n=0;const {aCenter,aSize,aAlpha,aSeed}=this.geometry.attributes;
+    for(const p of this.packets){
+      if(!p.active)continue;const age=time-p.birth,q=plumeTrajectory(p,age),water=waveHeight(q.x,q.z,time);
+      if(age>JET_PLUME.lifetime||(q.vy<0&&q.y<=water+.025)){
+        if(q.vy<0&&age>0.15&&!p.fine)this.impacts.push({x:q.x,z:q.z,time,strength:.1+p.power*.13});p.active=false;continue;
+      }
+      if(q.vy<0)this.falling++;
+      const size=p.size+age*(p.fine?.8:.37),fade=clamp(age/.055)*clamp((JET_PLUME.lifetime-age)/.3);
+      aCenter.setXYZ(n,q.x,q.y,q.z);aSize.setXY(n,p.seed>.68?.025+age*.018:size*(p.fine?2.4:1.65),p.seed>.68?.12+Math.abs(q.vy)*.025:size*2);
+      aAlpha.setX(n,fade*p.power*(p.seed>.68?.75:p.fine?.12:.48)*clamp((q.y-water+.09)/.2));aSeed.setX(n,p.seed);n++;
+    }
+    this.geometry.instanceCount=n;this.mesh.visible=n>0;
+    for(const name of ['aCenter','aSize','aAlpha','aSeed'])this.geometry.attributes[name].needsUpdate=true;
   }
   dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
 }
