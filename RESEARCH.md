@@ -538,3 +538,15 @@ has been imported or claimed as present. ArcGIS catalogue search is likewise
 blocked. Required domains were saved in the environment configuration draft,
 preserving the existing allowed destinations; saving does not apply the change.
 OSM and its ODbL licence remain the only geographic data actually shipped here.
+
+## Ambient AI boaters
+
+Free-roam traffic uses the existing mapped channel lines and race loop, local
+look-ahead steering, speed feedback and starboard lane offsets. Every cruiser
+uses the same vehicle buoyancy/propulsion simulation as its playable hull type.
+This is a small arcade traffic controller, not a navigation or COLREG simulator.
+Moving open-hull receivers rebuild their spatial hash before checking descending
+spray packets against the current deck plane. A nearby fan alone cannot flood a
+boat. Drivers duck with hands still constrained to the tiller. Ambient reactions
+award no score; the optional timed battle remains separate. The 55-litre capture
+threshold and 16-second relaunch are deliberate gameplay values.

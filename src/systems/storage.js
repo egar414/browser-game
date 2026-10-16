@@ -1,5 +1,5 @@
 const RACE_COURSE='minyama-island-2026-10';
-const defaults = { oceanVersion:1,seaState:'changing',careerPoints:0,design:'classic',tuning:'stock',raceCourse:RACE_COURSE, vehicle: 'ski', rideMode:'sport', trimSki:0, trimCat:0, trimTinny:0, colour: 0, quality: 'Auto', master: 0.55, engine: 0.65, water: 0.45, muted: false, bestRace: 0, bestTricks: 0, camera: 0 };
+const defaults = { locals:true,oceanVersion:1,seaState:'changing',careerPoints:0,design:'classic',tuning:'stock',raceCourse:RACE_COURSE, vehicle: 'ski', rideMode:'sport', trimSki:0, trimCat:0, trimTinny:0, colour: 0, quality: 'Auto', master: 0.55, engine: 0.65, water: 0.45, muted: false, bestRace: 0, bestTricks: 0, camera: 0 };
 export function loadSettings(storage) {
   try {
     storage ||= globalThis.localStorage;

@@ -35,16 +35,17 @@ export function makeRider(parent,type){
   let aft=0,lean=0,bow=0;
   root.userData.update=(v,dt,parts)=>{
     const target=riderWeightTargets(v),blend=1-Math.exp(-dt*RIDER_WEIGHT.response);aft+=(target.aft-aft)*blend;lean+=(target.lean-lean)*blend;bow+=(target.bow-bow)*blend;
-    const cat=type==='cat',tinny=type==='tinny',outboard=cat||tinny,load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6);
+    const cat=type==='cat',tinny=type==='tinny',outboard=cat||tinny,load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6),soaked=THREE.MathUtils.clamp(v.sprayReaction||0,0,1);
     const hip=new THREE.Vector3((tinny?-.25:cat?-.42:0)+lean*(outboard?.85:1),tinny?.53+aft*.05:cat?.74-bow*.035:.75+aft*.15,(tinny?-.57:cat?-.77:-.38)-aft*(tinny?.13:cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
+    hip.y-=soaked*.10;
     const pose=v.airTricks?.pose,b=v.airTricks?.blend||0;
     if(pose==='hangman'){hip.x-=b*.24;hip.y+=b*.08;}
     if(pose==='superman'){hip.y+=b*.42;hip.z-=b*.38;}
-    torso.position.copy(hip);torso.rotation.set(.35+aft*.42+load*.012+bow*.08,0,lean*.85);
+    torso.position.copy(hip);torso.rotation.set(.35+aft*.42+load*.012+bow*.08+soaked*.25,0,lean*.85);
     if(pose==='hangman')torso.rotation.z-=b*.42;
     if(pose==='superman')torso.rotation.x+=b*.9;
     torso.updateMatrix();
-    root.userData.balance={aft,lean,bow,hip:hip.toArray()};
+    root.userData.balance={aft,lean,bow,soaked,hip:hip.toArray()};
     for(const l of limbs){
       const {side}=l;
       const shoulder=new THREE.Vector3(side*.21,.48,0).applyMatrix4(torso.matrix);

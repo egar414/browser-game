@@ -5,6 +5,8 @@ export const WORLD = mapData.world;
 export const SPAWN = mapData.spawn;
 // Clear water on the mapped Wyuna Canal, in the added upstream reach.
 export const UPSTREAM_LAUNCH={x:112.9,z:2502.7,heading:Math.atan2(8.6,-49.8)};
+export const LOCAL_TRAFFIC={lookAhead:10,avoidDistance:14,stuckSeconds:9,
+  riverSpeed:4.4,canalSpeed:3.0,viewDistance:520,visible:{Low:3,Medium:5,High:6}};
 export const VEHICLES = {
   ski: {
     name: 'Sparkplug', subtitle: 'Freestyle jet ski', description: 'Light, lively and made for mischief. Lift the bow, carve a rooster tail, and spin off the ramps.',

@@ -13,6 +13,7 @@ import { GameAudio } from './systems/audio.js';
 import { UI } from './systems/ui.js';
 import { loadSettings, saveSettings } from './systems/storage.js';
 import { SprayBattle } from './systems/spray-battle.js';
+import {LocalBoaters} from './systems/local-boaters.js';
 import { DESIGNS,TUNING,validLoadout,hasUnlock } from './systems/progression.js';
 import { CanalPlayground } from './systems/canal-targets.js';
 import { Activities } from './systems/activities.js';
@@ -20,7 +21,7 @@ import {pontoonApproach} from './systems/residential-moorings.js';
 import { BarGuide, BAR_LAUNCH } from './systems/bar-guide.js';
 
 const settings=loadSettings();validLoadout(settings);setSeaState(settings.seaState,0,true);let state='home',controlsFrom='home',ready=false,renderer,model,water,spray,environment,qualityName='Medium';
-let playground,barGuide,garageReturn=null;
+let playground,barGuide,locals,garageReturn=null;
 let simulationTime=0,accumulator=0,last=performance.now(),fps=60,frameCount=0,fpsTime=0,uiTime=0,lowFrames=0;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#9bbdc7');scene.fog=new THREE.FogExp2('#a2b9bd',.00082);
 const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,2200);
@@ -56,15 +57,15 @@ const ui=new UI(settings,{
   colour(index){settings.colour=index;saveSettings(settings);replaceModel();ui.selectVehicle();},
   loadout(key,value){const options=key==='design'?DESIGNS:TUNING;if(!options[value]||!hasUnlock(settings,options[value]))return;settings[key]=value;vehicle.tuning=settings.tuning;saveSettings(settings);replaceModel();ui.selectVehicle();},
   setting(key,value){if(key==='seaState'){settings.seaState=value;setSeaState(value,simulationTime);saveSettings(settings);ui.toast(SEA_STATES[value].name,'Water conditions change smoothly. Faster crests can launch wave hops.');return;}if(key==='rideMode'){setRideMode(value);return;}settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
-  race(){if(state==='playing'){battle.cancel();activities.startRace(vehicle);}},challenge(){if(state==='playing'){battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,
+  race(){if(state==='playing'){battle.cancel();activities.startRace(vehicle);}},challenge(){if(state==='playing'){battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,meetLocals,
 });
 new TouchControls(input);
 const activities=new Activities(scene,settings,(title,subtitle)=>ui.toast(title,subtitle));
 const battle=new SprayBattle(scene,event=>{
   if(event.type==='score')activities.event(event);
-  else{if(event.type==='battle-sink'){activities.combo=0;activities.comboTime=0;input.clear();}if(event.type==='battle-recover'){input.clear();spray?.clear();environment?.userData.moorings?.clearSpray();}ui.toast(event.label,event.detail);}
+  else{if(event.type==='battle-sink'){activities.combo=0;activities.comboTime=0;input.clear();}if(event.type==='battle-recover'){input.clear();spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();}ui.toast(event.label,event.detail);}
 });
-function updateHud(dt){ui.update(dt,vehicle,activities,fps,qualityName,battle.status,oceanReport(simulationTime),playground.status,barGuide.status(vehicle),environment.userData.moorings.status);}
+function updateHud(dt){ui.update(dt,vehicle,activities,fps,qualityName,battle.status,oceanReport(simulationTime),playground.status,barGuide.status(vehicle),environment.userData.moorings.status,locals?.status);}
 function startBattle(){
   if(state!=='playing')return;activities.cancel();battle.start(vehicle);
   // The first rival frame can compile shaders on slower devices. Show the
@@ -81,21 +82,28 @@ function toggleBar(){
 function visitBar(){
   if(!ready||!barGuide)return;
   battle.cancel();activities.cancel();activities.combo=0;activities.comboTime=0;vehicle.respawnAt(BAR_LAUNCH,simulationTime);
-  spray.clear();environment?.userData.moorings?.clearSpray();chase.reset();input.clear();barGuide.active=false;resume();toggleBar();ui.toast('At the bar wave zone','Orange buoys mark the bank. Carry speed across the crests. Pause → Rolling swell for larger sets.');
+  spray.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();chase.reset();input.clear();barGuide.active=false;resume();toggleBar();ui.toast('At the bar wave zone','Orange buoys mark the bank. Carry speed across the crests. Pause → Rolling swell for larger sets.');
 }
 function visitPontoons(){
   if(!ready)return;
   const boats=environment.userData.moorings.boats;
   const spawn=pontoonApproach(boats,vehicle.type,collision);
   if(!spawn){ui.toast('Find a waterfront pontoon','Moored alloy tenders are dotted along the residential canals.');return;}
-  battle.cancel();activities.cancel();vehicle.respawnAt(spawn,simulationTime);spray.clear();environment.userData.moorings.clearSpray();chase.reset();input.clear();resume();
+  battle.cancel();activities.cancel();vehicle.respawnAt(spawn,simulationTime);spray.clear();environment.userData.moorings.clearSpray();locals.flood.clearSpray();chase.reset();input.clear();resume();
   ui.toast('House pontoon run','Carve alongside and land spray inside the tender. Watch its water meter.');
 }
 function visitUpstream(){
   if(!ready)return;
   battle.cancel();activities.cancel();activities.combo=0;activities.comboTime=0;
-  vehicle.respawnAt(UPSTREAM_LAUNCH,simulationTime);spray.clear();environment.userData.moorings.clearSpray();chase.reset();input.clear();barGuide.active=false;resume();
+  vehicle.respawnAt(UPSTREAM_LAUNCH,simulationTime);spray.clear();environment.userData.moorings.clearSpray();locals.flood.clearSpray();chase.reset();input.clear();barGuide.active=false;resume();
   ui.toast('Upstream · Wyuna Canal','Explore the added canal reach and river bends. You can cruise back toward the Wharf.');
+}
+function meetLocals(){
+  if(!ready)return;settings.locals=true;saveSettings(settings);document.getElementById('locals').value='on';
+  battle.cancel();activities.cancel();locals.setEnabled(true);const spawn=locals.meetPosition(vehicle);
+  if(!spawn){ui.toast('Locals are cruising','Look for tinnies and Thundercats near the Wharf and in the canals.');return;}
+  vehicle.respawnAt(spawn,simulationTime);spray.clear();environment.userData.moorings.clearSpray();locals.flood.clearSpray();chase.reset();input.clear();barGuide.active=false;resume();
+  ui.toast('Cruise with the locals','Catch up, pull alongside and carve a spray. No clock — just free roam.');
 }
 function replaceModel(){
   if(model){scene.remove(model);model.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material?.map)o.material.map.dispose();});}
@@ -114,13 +122,13 @@ function resume(){if(!ready)return;state='playing';input.clear();audio.start();u
 function play(){
   if(!ready)return;
   const returning=!!garageReturn,spawn=garageReturn||SPAWN;garageReturn=null;
-  state='playing';vehicle.respawnAt(spawn,simulationTime);spray?.clear();environment?.userData.moorings?.clearSpray();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);
+  state='playing';vehicle.respawnAt(spawn,simulationTime);spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);
   ui.toast(returning?'Back in your spot':'Launched beside The Wharf',isTouchDevice()?'Hold GO to drive · arrows steer · tap LIFT for bow rides':'WASD to drive · T riding mode · Q/E trim · H for moves');
 }
 function home(show=true){
-  if(!show)return;if(state!=='home')garageReturn=vehicle.snapshot();ui.updateGarage();state='home';if(barGuide)barGuide.active=false;battle.cancel();activities.cancel();input.clear();spray?.clear();environment?.userData.moorings?.clearSpray();chase.reset();ui.show('home',true);ui.show('hud',false);ui.show('pause',false);
+  if(!show)return;if(state!=='home')garageReturn=vehicle.snapshot();ui.updateGarage();state='home';if(barGuide)barGuide.active=false;battle.cancel();activities.cancel();input.clear();spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();chase.reset();ui.show('home',true);ui.show('hud',false);ui.show('pause',false);
 }
-function recover(){battle.recover();vehicle.recover(true);spray?.clear();environment?.userData.moorings?.clearSpray();input.clear();chase.reset();activities.combo=0;activities.comboTime=0;ui.toast('Back in safe water','Fresh start. Send it again.');if(state==='paused')resume();}
+function recover(){battle.recover();vehicle.recover(true);spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();input.clear();chase.reset();activities.combo=0;activities.comboTime=0;ui.toast('Back in safe water','Fresh start. Send it again.');if(state==='paused')resume();}
 function showControls(){if(state==='controls')return;controlsFrom=state;state='controls';input.clear();ui.show('controls',true);}
 function closeControls(){ui.show('controls',false);state=controlsFrom;input.clear();last=performance.now();}
 function mute(){settings.muted=!settings.muted;saveSettings(settings);ui.toast(settings.muted?'Audio muted':'Audio on');}
@@ -133,7 +141,7 @@ try {
   const atmosphere=createAtmosphere(scene,renderer);
   scene.add(new THREE.HemisphereLight('#bddde8','#526254',.8));
   const sun=new THREE.DirectionalLight('#ffe4bb',2.5);sun.castShadow=true;sun.shadow.mapSize.set(1536,1536);sun.shadow.camera.left=-140;sun.shadow.camera.right=140;sun.shadow.camera.top=140;sun.shadow.camera.bottom=-140;sun.shadow.camera.far=700;sun.shadow.bias=-.0006;sun.shadow.normalBias=.035;scene.add(sun);scene.add(sun.target);
-  applyQuality();environment=buildEnvironment(scene,QUALITY[qualityName]);environment.userData.moorings.onEvent=e=>{if(e.points)activities.event({type:'score',label:e.label,points:e.points});ui.toast(e.label,e.detail);};playground=new CanalPlayground(scene,solids,e=>activities.event(e));barGuide=new BarGuide(scene,solids);water=new Water(scene,QUALITY[qualityName]);spray=new Spray(scene,QUALITY[qualityName]);replaceModel();
+  applyQuality();environment=buildEnvironment(scene,QUALITY[qualityName]);environment.userData.moorings.onEvent=e=>{if(e.points)activities.event({type:'score',label:e.label,points:e.points});ui.toast(e.label,e.detail);};playground=new CanalPlayground(scene,solids,e=>activities.event(e));barGuide=new BarGuide(scene,solids);water=new Water(scene,QUALITY[qualityName]);spray=new Spray(scene,QUALITY[qualityName]);locals=new LocalBoaters(scene,collision,e=>ui.toast(e.label,e.detail));solids.push(...locals.colliders);replaceModel();
   document.getElementById('loading').textContent='Preparing watercraft…';
   loadCraftAssets().then(()=>{replaceModel();ready=true;ui.ready();}).catch(error=>{console.warn('Detailed craft load failed',error);ready=true;ui.ready();ui.toast('Lightweight craft loaded','The detailed model could not load. Reload to try again.');});
   const canvas=document.querySelector('#game');canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();pause();ui.error('The graphics connection was lost. Reload to relaunch. Try Low quality if this repeats.');});
@@ -141,9 +149,10 @@ try {
     requestAnimationFrame(frame);if(document.hidden){last=now;return;}setWeatherClock(Date.now()/1000);
     const elapsed=Math.max(0,(now-last)/1000),dt=Math.min(.1,elapsed);last=now;fpsTime+=elapsed;frameCount++;
     if(fpsTime>=1){fps=frameCount/fpsTime;fpsTime=0;frameCount=0;if(state==='playing'&&settings.quality==='Auto'){lowFrames=fps<28?lowFrames+1:0;if(lowFrames>6&&qualityName!=='Low'){applyQuality(qualityName==='High'?'Medium':'Low');lowFrames=0;ui.toast('Keeping it smooth',`Auto quality adjusted to ${qualityName}.`);}}}
+    locals.setEnabled(settings.locals&&!battle.active&&!activities.race);
     if(state==='playing'){
       accumulator=Math.min(.12,accumulator+dt);
-      while(accumulator>=FIXED_STEP){simulationTime+=FIXED_STEP;if(!battle.sinking)vehicle.update(FIXED_STEP,input.sample(true),simulationTime,ramps);battle.update(FIXED_STEP,vehicle,simulationTime);environment.userData.moorings.update(FIXED_STEP,vehicle,simulationTime,!battle.sinking&&!vehicle.wipeout);activities.update(FIXED_STEP,vehicle);playground.update(FIXED_STEP,vehicle,simulationTime,!activities.race&&!battle.active);accumulator-=FIXED_STEP;}
+      while(accumulator>=FIXED_STEP){simulationTime+=FIXED_STEP;if(!battle.sinking)vehicle.update(FIXED_STEP,input.sample(true),simulationTime,ramps);battle.update(FIXED_STEP,vehicle,simulationTime);locals.update(FIXED_STEP,vehicle,simulationTime);environment.userData.moorings.update(FIXED_STEP,vehicle,simulationTime,!battle.sinking&&!vehicle.wipeout);activities.update(FIXED_STEP,vehicle);playground.update(FIXED_STEP,vehicle,simulationTime,!activities.race&&!battle.active);accumulator-=FIXED_STEP;}
     }else if(state==='home'){simulationTime+=dt;vehicle.y=waveHeight(vehicle.x,vehicle.z,simulationTime)+vehicle.config.rideHeight;vehicle.pitch=Math.sin(simulationTime*.7)*.015;vehicle.roll=Math.sin(simulationTime*.6)*.018;}
     const alpha=state==='playing'?accumulator/FIXED_STEP:1,p=vehicle.previous;
     const render={...vehicle,x:THREE.MathUtils.lerp(p.x,vehicle.x,alpha),y:THREE.MathUtils.lerp(p.y,vehicle.y,alpha),z:THREE.MathUtils.lerp(p.z,vehicle.z,alpha),heading:THREE.MathUtils.lerp(p.heading,vehicle.heading,alpha),pitch:THREE.MathUtils.lerp(p.pitch,vehicle.pitch,alpha),roll:THREE.MathUtils.lerp(p.roll,vehicle.roll,alpha)};
@@ -154,7 +163,7 @@ try {
     if(model.userData.propeller)model.userData.propeller.rotation.z+=vehicle.drive.rpm/60*Math.PI*2*dt;
     model.userData.rider.userData.update(vehicle,dt,model.userData);
     if(state==='playing'&&input.sample().trim===0)persistTrim();
-    environment.userData.update?.(simulationTime,render);playground.render(simulationTime);barGuide.update(vehicle);barGuide.render(simulationTime);water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing'&&!battle.sinking,input.sample());battle.render(dt,simulationTime,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing');
+    environment.userData.update?.(simulationTime,render);playground.render(simulationTime);barGuide.update(vehicle);barGuide.render(simulationTime);water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing'&&!battle.sinking,input.sample());battle.render(dt,simulationTime,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing');locals.render(dt,simulationTime,render,qualityName,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing',alpha);
     chase.update(dt,render,input,settings.camera,state==='home');atmosphere.update(simulationTime,camera.position);
     spray.resize(innerHeight,camera.fov,renderer.getPixelRatio());
     sun.position.set(vehicle.x+SUN_DIRECTION.x*400,SUN_DIRECTION.y*400,vehicle.z+SUN_DIRECTION.z*400);sun.target.position.set(vehicle.x,0,vehicle.z);
@@ -163,5 +172,5 @@ try {
   }
   requestAnimationFrame(frame);
   // Read-only diagnostics for browser acceptance tests. No scoring or teleport cheats in the shipped game.
-  window.__ESTUARY__={get status(){return {ready,state,simulationTime,features:'wharf-shoal-spray-tricks',moorings:environment.userData.moorings.status,bar:barGuide.status(vehicle),targets:playground.status,airTrick:{pose:vehicle.airTricks.pose,completed:[...vehicle.airTricks.completed]},battle:battle.status,seaState:settings.seaState,sea:oceanReport(simulationTime),scenery:environment.userData.stats,detailedCraft:!!model?.userData.blenderShell,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,waveLaunch:!!vehicle.waveLaunch,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{rearPlume:spray.plume.mesh.visible,fallingPackets:spray.plume.falling,plumePackets:spray.plume.geometry.instanceCount,left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
+  window.__ESTUARY__={get status(){return {ready,state,simulationTime,features:'wharf-shoal-spray-tricks',locals:{...locals.status,visible:locals.visibleCount},moorings:environment.userData.moorings.status,bar:barGuide.status(vehicle),targets:playground.status,airTrick:{pose:vehicle.airTricks.pose,completed:[...vehicle.airTricks.completed]},battle:battle.status,seaState:settings.seaState,sea:oceanReport(simulationTime),scenery:environment.userData.stats,detailedCraft:!!model?.userData.blenderShell,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,waveLaunch:!!vehicle.waveLaunch,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{rearPlume:spray.plume.mesh.visible,fallingPackets:spray.plume.falling,plumePackets:spray.plume.geometry.instanceCount,left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
 } catch(error){console.error(error);ui.error(`WebGL could not start: ${error.message}. Use a current Chrome, Edge, Firefox or Safari with hardware acceleration enabled.`);}

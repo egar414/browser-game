@@ -5,7 +5,7 @@ import {sprayState,launchSpray,stepDroplet,pumpDischarge,jetPlumeSource} from '.
 // aboard between passes. Receiving geometry and sinking/reset timing stay fixed.
 export const MOORING_FLOOD={capacityLitres:55,drainLitresPerSecond:.02,sinkSeconds:4,resetSeconds:16,emissionHz:24,maxPackets:1024,fanStrands:5,sideLitresPerLoad:480,rearLitresPerPower:150};
 export function insideTender(x,z,target){
-  const dx=x-target.x,dz=z-target.z,right=dx*Math.cos(target.heading)-dz*Math.sin(target.heading),forward=dx*Math.sin(target.heading)+dz*Math.cos(target.heading);
+  const dx=x-target.x,dz=z-target.z,right=(dx*Math.cos(target.heading)-dz*Math.sin(target.heading))/((target.width||1.22)/1.22),forward=(dx*Math.sin(target.heading)+dz*Math.cos(target.heading))/((target.length||2.25)/2.25);
   const width=forward>.25?.50-(forward-.25)*.5:.50;
   return forward>-.96&&forward<1.04&&Math.abs(right)<width;
 }
@@ -13,8 +13,9 @@ export class MooringFlood {
   constructor(sites,onEvent=()=>{}){
     this.boats=sites.map((p,i)=>({...p,id:p.id||`marina-${i}`,water:0,sinking:0,resetIn:0,sinks:0,scoreCooldown:0}));this.onEvent=onEvent;
     this.packets=Array.from({length:MOORING_FLOOD.maxPackets},()=>({life:0}));this.cursor=0;this.emission=0;this.serial=0;
-    this.cells=new Map();for(const b of this.boats){const key=this.key(b.x,b.z);if(!this.cells.has(key))this.cells.set(key,[]);this.cells.get(key).push(b);}
+    this.cells=new Map();this.reindex();
   }
+  reindex(){this.cells.clear();for(const b of this.boats){const key=this.key(b.x,b.z);if(!this.cells.has(key))this.cells.set(key,[]);this.cells.get(key).push(b);}}
   key(x,z){return `${Math.floor(x/8)}:${Math.floor(z/8)}`;}
   emit(p,litres){const packet=this.packets[this.cursor++%this.packets.length];Object.assign(packet,p,{life:p.lifetime||4.8,litres});}
   clearSpray(){for(const p of this.packets)p.life=0;this.emission=0;}
@@ -48,14 +49,14 @@ export class MooringFlood {
       const cx=Math.floor(p.x/8),cz=Math.floor(p.z/8);
       outer:for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)for(const b of this.cells.get(`${cx+dx}:${cz+dz}`)||[]){
         if(b.resetIn)continue;
-        const deck=waveHeight(b.x,b.z,time)+.46-b.water/MOORING_FLOOD.capacityLitres*.26;
+        const deck=(b.deckY??(waveHeight(b.x,b.z,time)+.46))-b.water/MOORING_FLOOD.capacityLitres*.26;
         if(p.vy<0&&before.y>=deck&&p.y<=deck){
           const crossing=(before.y-deck)/(before.y-p.y),x=before.x+(p.x-before.x)*crossing,z=before.z+(p.z-before.z)*crossing;
           if(!insideTender(x,z,b))continue;
           b.water=Math.min(MOORING_FLOOD.capacityLitres,b.water+p.litres);p.life=0;
           if(b.water>=MOORING_FLOOD.capacityLitres){
             b.resetIn=MOORING_FLOOD.resetSeconds;b.sinks++;
-            this.onEvent({type:'moored-sink',label:'Tender swamped',detail:'Pontoon tender is sinking. It resets shortly.',points:b.scoreCooldown?0:150});b.scoreCooldown=60;
+            this.onEvent({type:'moored-sink',boatId:b.id,label:'Tender swamped',detail:'Pontoon tender is sinking. It resets shortly.',points:b.scoreCooldown?0:150});b.scoreCooldown=60;
           }
           break outer;
         }

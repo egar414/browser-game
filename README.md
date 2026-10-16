@@ -18,6 +18,23 @@ spread mainly sideways from the pontoons; its propeller has a separate wash.
 Powered steering is now quicker on both craft, with less excessive yaw damping
 and separate effective inertias. The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
+## Free-roam local boaters
+
+Six AI drivers cruise the Wharf, Kawana canals and upstream water in original
+tinnies and Thundercats. They follow mapped routes, keep passing lanes in canals,
+yield to nearby boats and leave small wakes. They are ambient traffic: no battle
+clock, rivals or spray score. Normal powered turns can throw falling spray into
+their open boats; drivers duck, and a swamped craft relaunches after 16 seconds.
+Capture volumes and flooding are scaled for play, not real marine safety physics.
+
+Use **Pause → Find local boaters** to join the nearest cruiser, then accelerate,
+pull alongside and carve with **W + Shift + A/D**. On phones use **GO**, **LIFT**
+and a steering arrow. Pause → Local boaters offers quiet water and saves that
+choice locally. Race and Spray Battle temporarily hide traffic, then free roam
+restores it. Low quality draws at most three nearby boats, Medium five, High six.
+Tune routes/controller budgets in `src/systems/local-traffic.js` and
+`LOCAL_TRAFFIC` in `src/config.js`; visuals live in `local-boaters.js`.
+
 ## Ocean and coastal detail update
 
 The river mouth now blends into directional 7–10 second ocean swell, smaller
