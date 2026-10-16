@@ -1,4 +1,4 @@
-import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, TINNY_HANDLING, waveHeight, waveChop } from '../config.js';
+import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, TINNY_HANDLING, CAT_HANDLING, waveHeight, waveChop } from '../config.js';
 import {tenderTurn} from './tender-handling.js';
 import { AirTricks } from './air-tricks.js';
 import { TUNING } from '../systems/progression.js';
@@ -64,7 +64,8 @@ export class VehiclePhysics {
     const mode=RIDE_MODES[this.rideMode],driveConfig=PROPULSION[this.type],hydro=HYDRODYNAMICS[this.type];
     this.trickCooldown = Math.max(0, this.trickCooldown - dt);
     this.throttle = damp(this.throttle, input.throttle, mode.throttleResponse, dt);
-    this.steer = damp(this.steer, input.steer, this.type==='tinny'?TINNY_HANDLING.steerResponse:6, dt);
+    const handling=this.type==='tinny'?TINNY_HANDLING:this.type==='cat'?CAT_HANDLING:null;
+    this.steer = damp(this.steer, input.steer, handling?.steerResponse||6, dt);
     if(!this.airborne){
       if(input.trimStep){
         if(this.type==='ski')this.trimDegrees=SKI_TRIM_POSITIONS[clamp(this.trimIndex+input.trimStep,0,8)];
@@ -139,8 +140,9 @@ export class VehiclePhysics {
     this.airTricks.update(dt,input.pose,this.airborne,this.y-water);
     if (!this.airborne) {
       const balanceMoment=1+Math.max(0,this.drive.trimAngle*180/Math.PI-6)*.018;
-      const bowWindow=this.type==='ski'?(forward>5?1:0):this.type==='tinny'?clamp((forward-TINNY_HANDLING.bowStart)/TINNY_HANDLING.bowRange,0,1):clamp((forward-3)/4,0,1);
-      const lift=input.freestyle?c.wheelieAngle*balanceMoment*this.riderAft*bowWindow*clamp(this.throttle,0,1)*clamp(1-Math.abs(this.steer)*(this.type==='tinny'?TINNY_HANDLING.bowSteeringLoss:.85),0,1):0;
+      const bowWindow=handling?clamp((forward-handling.bowStart)/handling.bowRange,0,1):(forward>5?1:0);
+      const bowSpeed=handling?.bowSpeedRange?1-handling.bowSpeedLoss*clamp((forward-handling.bowSpeedStart)/handling.bowSpeedRange,0,1):1;
+      const lift=input.freestyle?c.wheelieAngle*balanceMoment*this.riderAft*bowWindow*bowSpeed*clamp(this.throttle,0,1)*clamp(1-Math.abs(this.steer)*(handling?.bowSteeringLoss??.85),0,1):0;
       const plane = this.type !== 'ski' ? Math.max(0, this.throttle) * (this.type==='tinny'?.30:.24) * Math.sin(this.planing*Math.PI)*(1-this.riderAft*.7) : 0.035 * this.throttle;
       const trim = this.drive.trimAngle*(this.type==='ski'?.45:.65);
       // Angular inertia and damping retain a landing/chop response instead of
@@ -153,7 +155,7 @@ export class VehiclePhysics {
       const verticalReaction=clamp(this.drive.force.y/driveConfig.effectiveMass,-3,3);
       // As the bow rises, support moves toward the stern. Raise the body origin
       // around that support instead of submerging the transom a metre deep.
-      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*c.length*.29*clamp((this.pitch-.18)/.4,0,1);
+      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*c.length*(handling?.sternSupport??.29)*clamp((this.pitch-.18)/.4,0,1);
       const supportAcceleration=(water+sternSupportLift+sprayTurn.lift-this.y)*c.spring-this.vy*sprayTurn.damping+verticalReaction;
       this.vy+=supportAcceleration*dt;
       this.y += this.vy * dt;

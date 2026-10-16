@@ -472,3 +472,34 @@ geometry, capacity, sink animation, reset interval and score cooldown are
 unchanged. Across six wave phases, a scripted clean tender spray pass now
 leaves approximately 19–23% water aboard, rather than approximately 9–11%.
 These remain gameplay-scaled water volumes, independent of visual fan size.
+
+## Three user video references — 16 October 2026
+
+Inspected sampled frames throughout the three uploaded MP4s (durations 9.7,
+28.5 and 63 seconds), plus denser 3 fps sequences at 0–5 s, 3–9 s and 1–6 s
+respectively. The first and third show steep stern-supported tender bow rides
+and a drop into a wet turning catch; the second shows a shallower bow-high
+pass with changing pitch/roll through the turn. The footage does not supply
+speed, scale, mass, thrust or hull measurements, and does not establish a
+Thundercat physics calibration. No video imagery or sound is shipped as an asset.
+
+The response translates those visible motions into original game tuning:
+earlier aft-weight bow lift, more bow authority through steering, a small
+powered acceleration-pitch response, and distinct slower twin-pontoon
+catch/release motion. Stern support was moved aft to avoid dipping the deck
+at the steeper attitude. High-speed Thundercat bow angle relaxes continuously
+without dropping to the plane, retaining its sustained >60 gameplay km/h ride.
+
+Matched 60 Hz calm-water starts against 8fc7856 reach approximately 1.20 rad tender pitch
+at three seconds (previously 0.954), and approximately 0.965 rad Thundercat pitch (previously
+0.824). The unchanged power settings remain 25 hp / 50 hp game specifications.
+These are arcade reference motions, not validated real-world manoeuvres or a
+full free-surface fluid model. Existing gravity, wet propeller admission,
+reverse interlock, collisions, wave launches and landing checks still apply.
+
+Moored-tender sinking is easier again: side/rear captured-water scales are
+480/150 rather than 128/40, and drainage is 0.02 rather than 0.03 litres per
+simulation second. These volumes are gameplay-scaled. Capacity, receiver
+geometry, pool size, animation, reset and score cooldown are unchanged.
+Six normal-input tender passes at different calm-wave phases leave about
+30–44% aboard with the new handling; idle, nearby or missed spray adds none.

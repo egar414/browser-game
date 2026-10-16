@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import{tenderTurn}from'../src/vehicles/tender-handling.js';
 import{VehiclePhysics}from'../src/vehicles/physics.js';
-import{VEHICLES,PROPULSION,waveHeight,setSeaState}from'../src/config.js';
+import{VEHICLES,PROPULSION,TINNY_HANDLING,CAT_HANDLING,waveHeight,setSeaState}from'../src/config.js';
 import{sprayState,launchSpray}from'../src/systems/spray-model.js';
 import{buildTender}from'../src/vehicles/tender.js';
 import{makeVehicle}from'../src/vehicles/models.js';
@@ -91,7 +91,7 @@ test('the pontoon approach gives the tender enough run-up to land a powered side
    const t=i/60;if(!start&&v.speed>7)start={heading:v.heading};if(start&&start.heading-v.heading>.8)done=true;const turning=!!start&&!done;
    v.update(1/60,{...input,throttle:done?0:1,steer:turning?-1:0,freestyle:turning},phase+t);f.update(1/60,v,phase+t);
   }
-  assert(f.status[0].water>15,`clean spray pass should leave useful flooding at wave phase ${phase}`);
+  assert(f.status[0].water>28,`clean spray pass should leave useful flooding at wave phase ${phase}`);
  }
 });
 
@@ -99,9 +99,10 @@ test('loaded tender turns kick the stern, bounce on the water and settle when Sh
  setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;advance(v,6,{throttle:1});const h=v.heading;let low=Infinity,high=-Infinity,maxSlip=0;
  for(let i=0;i<240;i++){
   v.update(1/60,{...input,throttle:1,steer:1,freestyle:true},6+i/60);maxSlip=Math.max(maxSlip,Math.abs(v.slip));assert(!v.airborne&&!v.wipeout);
-  if(i>60){const pivot=Math.sin(Math.max(0,v.pitch))*v.config.length*.29*Math.max(0,Math.min(1,(v.pitch-.18)/.4)),heave=v.y-waveHeight(v.x,v.z,6+i/60)-v.config.rideHeight-pivot;low=Math.min(low,heave);high=Math.max(high,heave);}
+  if(i>60){const pivot=Math.sin(Math.max(0,v.pitch))*v.config.length*TINNY_HANDLING.sternSupport*Math.max(0,Math.min(1,(v.pitch-.18)/.4)),heave=v.y-waveHeight(v.x,v.z,6+i/60)-v.config.rideHeight-pivot;low=Math.min(low,heave);high=Math.max(high,heave);}
  }
- assert(v.heading-h>6);assert(maxSlip>10);assert(high-low>.18&&high-low<.42);assert(v.sprayTurnLoad>.2);
+ // More visible catch/drop travel is intentional in the supplied video reference.
+ assert(v.heading-h>6);assert(maxSlip>10);assert(high-low>.25&&high-low<.65);assert(v.sprayTurnLoad>.2);
  advance(v,2,{throttle:1},10);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.slip)<1.5);assert(Math.abs(v.roll)<.15);assert(!v.airborne&&!v.wipeout);
 });
 test('tender bounce needs powered wet steering load; idle, cruise and airtime cannot trigger it',()=>{
@@ -114,4 +115,33 @@ test('tender bounce needs powered wet steering load; idle, cruise and airtime ca
 test('tinny spray stays a compact falling fan under a fixed loaded turn',()=>{
  setSeaState('calm',0,true);const v=attacker(),state=sprayState(v,false,0),drop=launchSpray(v,state,-1,()=>.5);
  assert(Math.abs(drop.vx)>7&&Math.abs(drop.vx)<9.5);assert(drop.vy>4&&drop.vy<7);assert(drop.lifetime>0&&drop.lifetime<3.4);
+});
+
+test('clip-inspired outboards lift early, hold a stern-supported bow and retain powered steering',()=>{
+ setSeaState('calm',0,true);
+ for(const type of ['tinny','cat']){
+  const v=new VehiclePhysics(type);v.x=-200;v.z=-1000;v.heading=0;
+  advance(v,3,{throttle:1,freestyle:true});assert(v.pitch>(type==='tinny'?1.05:.90),`${type}: early bow lift`);
+  for(let i=0;i<900;i++){
+   v.update(1/60,{...input,throttle:1,freestyle:true},3+i/60);
+   assert(!v.airborne&&!v.wipeout);assert(v.pitch>.65&&v.pitch<v.config.wipeoutAngle);
+   const deck=bodyPoint(v,[0,type==='cat'?.5:.38,type==='cat'?-1.38:-.90]);assert(deck.y>waveHeight(deck.x,deck.z,3+i/60),`${type}: stern remains supported`);
+  }
+  const heading=v.heading;advance(v,2,{throttle:1,steer:.4,freestyle:true},18);
+  assert(v.heading-heading>.5);assert(v.pitch>.4);assert(!v.airborne&&!v.wipeout);
+  advance(v,3,{throttle:1},20);assert(Math.abs(v.pitch)<.25);assert(Math.abs(v.slip)<1);assert(!v.wipeout);
+ }
+});
+
+test('Thundercat loaded turns catch and rock without acquiring tender-like instant rotation or flight',()=>{
+ setSeaState('calm',0,true);const v=new VehiclePhysics('cat');v.x=-200;v.z=-1000;v.heading=0;
+ advance(v,6,{throttle:1});const h=v.heading;let min=Infinity,max=-Infinity,peakFan=0;
+ for(let i=0;i<240;i++){
+  const t=6+i/60;v.update(1/60,{...input,throttle:1,steer:1,freestyle:true},t);
+  assert(!v.airborne&&!v.wipeout);assert(Math.abs(v.yawRate)<=CAT_HANDLING.slideYawLimit+.0001);
+  const s=sprayState(v,false,t);peakFan=Math.max(peakFan,s.left,s.right);
+  if(i>60){const stern=bodyPoint(v,[0,0,-v.config.length*CAT_HANDLING.sternSupport]),height=stern.y-waveHeight(stern.x,stern.z,t);min=Math.min(min,height);max=Math.max(max,height);}
+ }
+ assert(v.heading-h>4&&v.heading-h<6);assert(max-min>.2&&max-min<.8);assert(peakFan>1);
+ advance(v,3,{throttle:1},10);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.roll)<.2);assert(Math.abs(v.slip)<1.5);
 });

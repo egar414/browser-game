@@ -3,7 +3,7 @@ import {sprayState,launchSpray,stepDroplet,pumpDischarge,jetPlumeSource} from '.
 
 // Gameplay-scaled capture volume: reward clean spray hits while keeping water
 // aboard between passes. Receiving geometry and sinking/reset timing stay fixed.
-export const MOORING_FLOOD={capacityLitres:55,drainLitresPerSecond:.03,sinkSeconds:4,resetSeconds:16,emissionHz:24,maxPackets:1024,fanStrands:5,sideLitresPerLoad:128,rearLitresPerPower:40};
+export const MOORING_FLOOD={capacityLitres:55,drainLitresPerSecond:.02,sinkSeconds:4,resetSeconds:16,emissionHz:24,maxPackets:1024,fanStrands:5,sideLitresPerLoad:480,rearLitresPerPower:150};
 export function insideTender(x,z,target){
   const dx=x-target.x,dz=z-target.z,right=dx*Math.cos(target.heading)-dz*Math.sin(target.heading),forward=dx*Math.sin(target.heading)+dz*Math.cos(target.heading);
   const width=forward>.25?.50-(forward-.25)*.5:.50;

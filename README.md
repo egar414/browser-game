@@ -389,3 +389,19 @@ Moored tenders now collect roughly twice as much water from successful hits
 and drain half as quickly between passes. The smaller fan still needs to land
 inside the open hull. Flooding keeps its existing sink animation, reset delay
 and scoring cooldown; it does not come from proximity or idle boats.
+
+### Video-reference outboard handling
+
+The tender and Thundercat now raise their bows earlier and keep more bow
+height while steering under power. A short acceleration response and loaded
+chine/pontoon catch-and-drop motion feed the existing physics springs. The
+Thundercat rocks more slowly and has less yaw/pitch authority than the tender;
+its bow balances a little lower as speed builds while remaining raised.
+Release Shift/LIFT to settle and regain normal grip. No extra key is needed.
+
+Tune `TINNY_HANDLING` / `CAT_HANDLING`, `VEHICLES` and `PROPULSION` in
+`src/config.js`; the shared outboard response is in
+`src/vehicles/tender-handling.js`. These are visual-reference arcade values,
+not measured craft performance. Successful falling-spray hits now carry 3.75×
+the preceding release's gameplay water volume, with slower drainage again.
+The smaller tender fan and actual open-hull hit requirement remain in place.

@@ -16,14 +16,14 @@ export const VEHICLES = {
     length: 4.1, width: 2.05, maxSpeed: 27,
     reverseMax: 3.3, lateralGrip: 2.6,
     slideGrip: 0.92, spring: 34, damping: 10, rideHeight: 0.16, airSteer: 0.83,
-    wheelieAngle: 0.75, wipeoutAngle: 1.08, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
+    wheelieAngle: 0.89, wipeoutAngle: 1.25, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
   },
   tinny: {
     name:'Tender Rat 225', subtitle:'2.25 m alloy tender · 25 hp',
     description:'Open aluminium tender, bench seats and a lively 25 hp outboard. Carve, shift your weight aft and throw water off the chines.',
     length:2.25,width:1.22,maxSpeed:15.5,reverseMax:2.8,
     lateralGrip:3.05,slideGrip:.54,spring:46,damping:12,rideHeight:.12,airSteer:1.15,
-    wheelieAngle:.90,wipeoutAngle:1.13,colours:['#bdc9cc','#c7d8ca','#d8d0b9'],
+    wheelieAngle:1.10,wipeoutAngle:1.40,colours:['#bdc9cc','#c7d8ca','#d8d0b9'],
   },
 };
 export { WAVES,WAVE_FIELD,SEA_STATES,OCEAN_SWELL,OCEAN_TUNING,waveChop,waveHeight,seaAmplitude,setSeaState,setWeatherClock,hourlyForecast,oceanReport,oceanExposure } from './ocean.js';
@@ -50,9 +50,15 @@ export const HYDRODYNAMICS = {
 };
 // Arcade chine catch/release during a powered tender spray turn. All reactions
 // require speed, wet contact and steering load; they never trigger a jump.
-export const TINNY_HANDLING={steerResponse:9,slideYawGain:.38,slideYawLimit:2.15,
-  bowStart:1.6,bowRange:3.2,bowSteeringLoss:.42,
-  bounceHz:1.12,chineLift:.22,pitchBounce:.20,rollBounce:.085,loadedDamping:7.8};
+export const TINNY_HANDLING={steerResponse:10,slideYawGain:.48,slideYawLimit:2.25,
+  bowStart:1.3,bowRange:2.6,bowSteeringLoss:.38,surgePitch:.035,sternSupport:.33,
+  bounceHz:1.12,chineLift:.24,pitchBounce:.23,rollBounce:.09,loadedDamping:7.8};
+// Broader twin-pontoon support: slower catch/release and less pitch authority
+// than the short tender. Clip-inspired arcade values, not real craft limits.
+export const CAT_HANDLING={steerResponse:7.8,slideYawGain:.24,slideYawLimit:1.75,
+  bowStart:2.4,bowRange:3.5,bowSteeringLoss:.48,surgePitch:.025,sternSupport:.34,
+  bowSpeedStart:10,bowSpeedRange:6,bowSpeedLoss:.18,
+  bounceHz:.83,chineLift:.17,pitchBounce:.14,rollBounce:.06,loadedDamping:7.4};
 export const PROPULSION = {
   ski:{
     kind:'waterjet',effectiveMass:330,maximumRpm:8000,idleFraction:.13,
@@ -62,7 +68,7 @@ export const PROPULSION = {
   },
   cat:{
     kind:'propeller',effectiveMass:360,maximumRpm:5500,idleFraction:.14,
-    shaftPower:37300,propellerArea:.053,steeringAngle:.44,
+    shaftPower:37300,propellerArea:.053,steeringAngle:.49,
     motorMount:[.18,.4,-1.65],propeller:[0,-.72,-.23],fullImmersion:.13,
     linearResistance:14,quadraticResistance:1.45,reverseEfficiency:.5,trimRate:6,
   },

@@ -274,3 +274,33 @@ slow drainage is halved. The normal-input physics pass now requires more than
 15% flooding across six wave phases; measured results were approximately
 19–23%. Existing idle/dry/absent-spray guards, full sinking, collision removal
 and finite reset checks remain active. The receiving footprint is unchanged.
+
+## Video-reference tender / Thundercat response — 16 October 2026
+
+- `npm test`: 82 passed. Added early lift and 15-second grounded bow-hold
+  checks for both outboards, including stern-deck clearance, powered steering
+  and clean settling. Added bounded Thundercat loaded-turn rocking, useful
+  side spray, distinct yaw limits and grip restoration checks.
+- Existing sustained Thundercat >60 gameplay km/h bow rides at 0/5/8 degrees
+  trim, ramps/landing, reverse, idle scoring, four-point buoyancy, actual
+  flooding/sinking/reset and navigable-route checks all passed.
+- Six normal-input pontoon approaches each leave >28% water aboard, measured
+  approximately 30–44%. Actual falling gunwale crossings remain necessary.
+- Production build passed. No new geometry, textures or particle budget.
+
+Initial tuning exposed transom immersion at the steeper bow angle and lost
+high-speed performance. Support was moved aft and high-speed bow attitude
+balanced lower; original stern-clearance and >60 km/h assertions now pass.
+The tender heave guard was updated for the deliberately larger reference-like
+catch/drop travel, remaining bounded below 0.65 m relative to stern support;
+it still rejects airborne or wipeout states throughout the loaded turn.
+Browser validation follows below. Physical phones and real hydrodynamic
+accuracy remain unverified; tests use Chromium 154 / SwiftShader.
+
+Five browser flows passed: the normal tender pontoon spray pass with pause,
+boat swapping and route-clearance checks; early bow lift, sustained loaded
+turn and settling for each outboard; and native multi-touch acceleration,
+steering, brake/reverse and recovery for each outboard. The pontoon flow was
+rerun successfully after the final captured-water tuning. Inspected the
+new tender bow-up view and phone layout; hosted Thundercat visual review is
+part of the release check. No critical runtime errors occurred in these flows.
