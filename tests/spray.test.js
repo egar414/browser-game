@@ -89,6 +89,28 @@ test('side sheets retain older water at fast frame rates and expire after emissi
   assert(!fan.mesh.visible);assert(fan.history.length<110);s.dispose();
 });
 
+test('live spray edge follows the current chine between stored history samples',()=>{
+ const s=new Spray(new THREE.Scene(),QUALITY.Low),v=boat('ski');
+ for(let i=0;i<24;i++){
+  v.z=i*.15;s.update(1/120,v,i/120,true);
+  for(const [j,fan]of s.fans.entries()){
+   const p=s.state.contacts[j],position=fan.geometry.attributes.position;
+   assert(Math.abs(position.getX(0)-p.x)<1e-5);assert(Math.abs(position.getZ(0)-p.z)<1e-5);
+  }
+ }
+ s.clear();assert(s.fans.every(f=>f.current===null));s.dispose();
+});
+
+test('rear jet retains forward boat momentum while carrying water farther aft through a full falling arc',async()=>{
+ const {jetPlumeSource}=await import('../src/systems/spray-model.js');
+ const {plumeTrajectory}=await import('../src/systems/jet-plume.js');
+ const v={...boat(),drive:{trimAngle:0}},d={origin:{x:0,y:.2,z:-1.6},velocity:{x:0,y:0,z:-20},flow:.16,reverse:0,aerial:false},source=jetPlumeSource(v,d);
+ assert(source.velocity.z>0); // Inherited forward momentum is not discarded.
+ const p={...source.origin,vx:source.velocity.x,vy:source.velocity.y,vz:source.velocity.z,drag:.32};
+ const apex=plumeTrajectory(p,.5),fall=plumeTrajectory(p,1);
+ assert(apex.y>p.y);assert(fall.vy<0);assert(v.vz-(source.velocity.z)>14);
+});
+
 test('rider shifts weight smoothly through a bow-ride countersteer and keeps the tiller hand attached',()=>{
   const parent=new THREE.Group(),motor=new THREE.Group();motor.position.set(.18,.4,-1.65);
   const rider=makeRider(parent,'cat'),parts={motor};

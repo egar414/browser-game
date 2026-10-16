@@ -334,3 +334,46 @@ bars and feet. Animation is smoothed rather than instantaneously flipping.
 No new measured spray data, manufacturer tests or CFD were available for
 this refinement. Fan width, opacity and bow-ride amplification are original
 game tuning, not claims of engineering or training accuracy.
+
+
+## Spray rendering and a findable bar — 16 October 2026
+
+The supplied Google Maps view centres on latitude -26.6880674, longitude
+153.1294513. A request to the supplied Maps URL was denied by the cloud
+network proxy (403). Queensland Globe, ELVIS elevation and the Queensland
+data portal also returned 403, including an escalated retry. No additional
+satellite imagery, elevation, canal survey or measured bathymetry was obtained.
+The existing OSM geometry is retained; the authored entrance shoals remain
+estimates. No claim of newly surveyed accuracy is made.
+
+A route follows the retained river centreline, clears the rock walls and rounds
+the headland to the estimated bar. Orange buoys, minimap shading, next-turn
+guidance and an original ODbL-attributed SVG map make that location findable.
+The route is a game guide, not real marine advice.
+
+The dense rear effect was expensive because growing overlapping sprites shaded
+large screen areas repeatedly. Early circular/transparent rejection, bounded
+packet growth and quality-scaled density reduce this overdraw while retaining
+the opaque core and falling water. Analytical drag now supplies velocity with
+one decay evaluation. The side fan has a fresh current contact sample each
+render frame, independent of its lower-frequency history, removing the stored
+sample delay at the hull. Rear visual exit speed increases from 10.5 to 15 m/s
+relative to the moving hull at full visual flow; hydraulic forces are unchanged.
+These speeds are effect tuning, not manufacturer measurements.
+
+The isolated 1000×650 Low-quality plume benchmark in Linux Chromium 154 with
+SwiftShader measured median frame intervals of 416.7 ms before and 100.0 ms
+after (40 recorded frames per version, 10 warm-up frames). P90 was 483.3 ms
+and 166.6 ms respectively. The fixed source and camera are identical. This
+intentionally heavy software-rendered stress case is not a hardware-GPU or
+whole-game FPS benchmark. Particle counts were 874 and 570; random breakup
+adds variation. No universal device performance is claimed.
+
+The bar now also has a local short-period set, gated by the authored shoal and
+ocean exposure. `BAR_BREAKERS` shares coefficients between CPU and GPU: an
+approximately 44 m wavelength, 5.7 s period and sea-state-scaled amplitude,
+with a second harmonic sharpening the crests. This is artistic shallow-water
+tuning; no actual depths, stationary tidal standing-wave solver or overturning
+breaking curl is implied. Pause → VISIT BAR WAVES is an explicit game travel
+action to a collision-checked launch within the shoal field. Primary Play
+still launches beside The Wharf.

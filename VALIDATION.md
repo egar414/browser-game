@@ -128,3 +128,38 @@ The initial rider attachment test selected the wrong unnamed scene child;
 named hand attachments made the assertion stable. No physical phone or
 hardware GPU performance measurement is claimed. Width, density, rider
 poses and bow-ride spray amplification remain stylised game approximations.
+
+
+## Spray performance and a findable bar — 16 October 2026
+
+- `npm test`: 66 passed. New checks cover live side-spray attachment between
+  history samples, rear-jet travel with inherited momentum, clear bar route
+  segments and a safe direct launch within the authored shoal field.
+- `npm run build`: passed.
+- Six distinct Chromium 154 / SwiftShader browser flows passed across targeted
+  runs: both boats' driving/spray/brake/reverse/recovery, all quality settings,
+  desktop bar guidance, native-touch phone guidance/direct travel, and desktop
+  direct travel/full SVG map/driving/return to the Wharf. The latest three
+  runs exercised the new bar sets, direct travel and all water quality shaders.
+  No critical runtime or shader errors remained.
+- The full physical-input route from the Wharf reached the bank in 177.75
+  simulated seconds, with a clean wave-hop landing and no wipeout. All route
+  segments are also collision-sampled. A separate actual-browser long drive
+  covered the early river legs before being stopped because the cloud software
+  renderer made a full trip excessively slow. A complete browser-driven
+  Wharf-to-bar trip is not claimed. Browser direct travel and wave-zone driving
+  did complete; the shoreline, local crests, larger map and phone HUD were
+  visually inspected.
+- The first desktop guidance test used an old settings fixture that correctly
+  migrated to hourly weather. Updating the fixture to a current saved record
+  verified calm-to-swell behavior; hourly weather is separately preserved.
+- The isolated fixed-plume benchmark at 1000×650 / Low recorded 40 frames after
+  warm-up: median 416.7 ms before versus 100.0 ms after; P90 483.3 versus
+  166.6 ms. This is a deliberately heavy software-rendering stress case, not
+  full-game or hardware-GPU performance. See RESEARCH.md and the benchmark tool.
+
+Physical mobile devices and new marine surveys remain untested/unavailable.
+The sandbanks and short steep sets are original game estimates, using matching
+CPU/GPU wave functions; there are no physical overturning wave curls. No Google
+imagery or newly measured depths were obtained. Multiplayer is still a separate
+prepared branch and is not enabled by this release.

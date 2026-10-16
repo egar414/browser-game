@@ -9,6 +9,7 @@ import {SPAWN,VEHICLES} from '../src/config.js';
 import {collision,solids} from '../src/systems/environment.js';
 import {mapData} from '../src/systems/geography.js';
 import * as THREE from 'three';
+import { BarGuide, BAR_ROUTE, BAR_MARKERS, BAR_ZONE, BAR_LAUNCH } from '../src/systems/bar-guide.js';
 
 test('Wharf launch has turning room and entrance shoals remain navigable',()=>{
  const wharf=mapData.pois.find(p=>p.name==='The Wharf Mooloolaba');assert(Math.hypot(SPAWN.x-wharf.x,SPAWN.z-wharf.z)<80);assert.equal(collision(SPAWN.x,SPAWN.z,12),null);
@@ -20,6 +21,20 @@ test('entrance banks stand up the swell, without raising canal waves',()=>{
  const range=(x,z)=>{let lo=Infinity,hi=-Infinity;for(let t=0;t<240;t+=.1){const h=waveHeight(x,z,t);lo=Math.min(lo,h);hi=Math.max(hi,h);}return hi-lo;};
  const bank=range(1270,-1745),off=range(1270,-1850),canal=range(-39,-87);
  assert(bank>off*1.35,`${bank} vs ${off}`);assert(canal<.5);setSeaState('calm',0,true);
+});
+test('bar guide follows clear water from the Wharf around the headland and marks the actual wave zone',()=>{
+ assert.equal(collision(BAR_LAUNCH.x,BAR_LAUNCH.z,8),null);assert(Math.hypot(BAR_LAUNCH.x-BAR_ZONE.x,BAR_LAUNCH.z-BAR_ZONE.z)<BAR_ZONE.radius);
+ const guide=new BarGuide(),v={...SPAWN};guide.toggle(v);assert(guide.active);assert.equal(guide.status(v).index,1);
+ const original=solids.length;try{
+  for(const [x,z]of BAR_MARKERS){assert.equal(collision(x,z,3),null);solids.push({x,z,w:1.8,d:1.8,height:5.7,name:'Bar wave-zone buoy'});}
+  for(let i=1;i<BAR_ROUTE.length;i++){
+   const a=BAR_ROUTE[i-1],b=BAR_ROUTE[i],samples=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/5);
+   for(let j=0;j<=samples;j++){const t=j/samples;assert.equal(collision(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,3),null,`bar route leg ${i}`);}
+   guide.update({x:b[0],z:b[1]});
+  }
+ }finally{solids.length=original;}
+ const end=guide.status({...BAR_ZONE,heading:0});assert(end.arrived);assert.equal(end.index,BAR_ROUTE.length-1);assert(shoalInfluence(BAR_ZONE.x,BAR_ZONE.z)>.9);
+ guide.toggle(v);assert(!guide.active);
 });
 test('aerial poses require airtime and a deliberate hold, bank once, and wipeouts discard them',()=>{
  const tricks=new AirTricks();for(let i=0;i<120;i++)tricks.update(1/60,'hangman',false,0);assert.equal(tricks.land(true).length,0);

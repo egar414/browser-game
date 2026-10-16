@@ -286,3 +286,24 @@ keeping their hands on the controls. Use W + Shift, Q/E trim and A/D to carve;
 the existing mobile throttle, LIFT, BOW +/− and steering controls do the same.
 Tune `SIDE_SPRAY` / `JET_PLUME` in `src/systems/spray-model.js` and `RIDER_WEIGHT`
 in `src/vehicles/rider.js`. These visual changes preserve vehicle handling.
+
+
+### Finding the bar and smoother rear spray
+
+Press **N** or tap **BAR WAVES** to mark the route from The Wharf through the
+river entrance and around the headland. Follow the arrow and orange minimap
+route to the three labelled buoys, or use **Pause → VISIT BAR WAVES** for a direct trip. **MAP ↗** opens the [larger route map](public/bar-route.svg).
+Calm conditions switch smoothly to Rolling swell; hourly weather is retained.
+The bar is an original estimated game shoal on the Point Cartwright side.
+Its shorter, steeper inshore sets use the same CPU/GPU wave functions. It is not surveyed
+bathymetry, and the map is not a navigation chart.
+
+Rear spray now carries water farther aft, avoids oversized overlapping mist
+sprites and uses quality-dependent emission density. The side fan's live edge
+follows its current contact every frame while its older water retains its
+falling history. Adjust `QUALITY.*.plumeDensity` in `src/config.js`, or the
+`JET_PLUME` exit speed and size limits in `src/systems/spray-model.js`.
+`tools/spray-benchmark.html` measures a repeatable isolated plume workload;
+it is a development scene, not a claim about gameplay frame rates. Rebuild
+the route map with `python3 scripts/build-bar-guide-map.py` after changing
+`BAR_ROUTE` in `src/systems/bar-guide.js`.

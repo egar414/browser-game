@@ -4,6 +4,9 @@ const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a));return t*t*(3-2*t);};
 export const WAVE_FIELD=mapData.waveField;
 // Estimated entrance shoals on the Point Cartwright side, not surveyed depths.
 export const ENTRANCE_SHOALS=[{x:1110,z:-1740,rx:110,rz:42},{x:1270,z:-1745,rx:105,rz:39},{x:1395,z:-1725,rx:75,rz:33}];
+// A short, steep inshore set over the authored banks. Original game tuning;
+// not measured depths or a solver for breaking waves and tidal currents.
+export const BAR_BREAKERS={kx:.14,kz:-.025,speed:1.1,amplitude:.30,sharpness:.28};
 export function shoalInfluence(x,z){return Math.min(1,ENTRANCE_SHOALS.reduce((sum,b)=>sum+Math.exp(-2*(((x-b.x)/b.rx)**2+((z-b.z)/b.rz)**2)),0));}
 export const SHOAL_GLSL=`float entranceShoal(vec2 p){return min(1.,${ENTRANCE_SHOALS.map(b=>`exp(-2.*dot((p-vec2(${b.x}.,${b.z}.))/vec2(${b.rx}.,${b.rz}.),(p-vec2(${b.x}.,${b.z}.))/vec2(${b.rx}.,${b.rz}.)))`).join('+')});}`;
 
@@ -50,6 +53,8 @@ export function waveHeight(x,z,time){
   const bank=shoalInfluence(x,z),sharp=.16+bank*.22;
   const swell=(.4+amplitude*.5)*.536*ocean*group*(1+bank*.8);
   for(const w of OCEAN_SWELL){const p=x*w.kx+z*w.kz+time*w.speed;height+=(Math.sin(p)-sharp*Math.cos(p*2))*w.weight*swell;}
+  const b=BAR_BREAKERS,p=x*b.kx+z*b.kz+time*b.speed;
+  height+=(Math.sin(p)-b.sharpness*Math.cos(p*2))*b.amplitude*amplitude*bank*ocean;
  }
  return height;
 }
@@ -65,5 +70,8 @@ vec3 oceanWave(vec2 p,float time,float amplitude,float chop){
  float bank=entranceShoal(p),sharp=.16+bank*.22;
  float group=.66+.34*(.5+.5*sin(gp)),swell=(.4+amplitude*.5)*.536*ocean*(1.+bank*.8);
  ${OCEAN_SWELL.map(v=>`{float phase=dot(p,vec2(${f(v.kx)},${f(v.kz)}))+time*${f(v.speed)};float h=sin(phase)-sharp*cos(2.*phase),slope=cos(phase)+2.*sharp*sin(2.*phase),a=${f(v.weight)}*swell;w+=vec3(h*group,slope*${f(v.kx)}*group+h*.17*cos(gp)*.008,slope*${f(v.kz)}*group+h*.17*cos(gp)*.004)*a;}`).join('\n')}
+ {float phase=dot(p,vec2(${f(BAR_BREAKERS.kx)},${f(BAR_BREAKERS.kz)}))+time*${f(BAR_BREAKERS.speed)};
+ float h=sin(phase)-${f(BAR_BREAKERS.sharpness)}*cos(phase*2.),slope=cos(phase)+${f(BAR_BREAKERS.sharpness*2)}*sin(phase*2.);
+ w+=vec3(h,slope*${f(BAR_BREAKERS.kx)},slope*${f(BAR_BREAKERS.kz)})*${f(BAR_BREAKERS.amplitude)}*amplitude*bank*ocean;}
  return w;
 }`;

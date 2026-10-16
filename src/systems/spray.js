@@ -91,7 +91,7 @@ class FoamWake {
 
 class SprayFan {
   constructor(scene,texture,side,segments) {
-    this.side=side;this.strength=0;this.history=[];this.rows=Math.max(16,segments*2);this.columns=8;
+    this.side=side;this.strength=0;this.history=[];this.current=null;this.rows=Math.max(16,segments*2);this.columns=8;
     const stride=this.columns+1,count=(this.rows+1)*stride,positions=new Float32Array(count*3),uvs=new Float32Array(count*2),indices=[];
     for(let i=0;i<=this.rows;i++)for(let j=0;j<=this.columns;j++)uvs.set([j/this.columns,i/this.rows],(i*stride+j)*2);
     for(let i=0;i<this.rows;i++)for(let j=0;j<this.columns;j++){const a=i*stride+j;indices.push(a,a+1,a+stride,a+1,a+stride+1,a+stride);}
@@ -116,18 +116,19 @@ class SprayFan {
   }
   update(dt,v,time,strength,state) {
     this.strength=THREE.MathUtils.lerp(this.strength,strength,1-Math.exp(-dt*9));
-    if(dt>0&&(!this.history.length||time-this.history[0].time>=1/SIDE_SPRAY.historyHz-1e-6)){
+    if(dt>0){
       const drops=Array.from({length:this.columns+1},(_,j)=>launchSpray(v,state,this.side,()=>j/this.columns));
-      this.history.unshift({time,strength,drops});
+      this.current={time,strength,drops};
+      if(!this.history.length||time-this.history[0].time>=1/SIDE_SPRAY.historyHz-1e-6)this.history.unshift(this.current);
     }
     while(this.history.length&&(time-this.history.at(-1).time>SIDE_SPRAY.sheetLife+.15||this.history.length>Math.ceil(SIDE_SPRAY.sheetLife*SIDE_SPRAY.historyHz)+4))this.history.pop();
-    const peak=this.history.reduce((max,f)=>Math.max(max,f.strength*clamp(1-(time-f.time)/SIDE_SPRAY.sheetLife)),0);
+    const peak=this.history.reduce((max,f)=>Math.max(max,f.strength*clamp(1-(time-f.time)/SIDE_SPRAY.sheetLife)),this.current?.strength||0);
     this.mesh.visible=peak>.06;
     if(!this.mesh.visible)return;
     const p=this.geometry.attributes.position,wet=this.geometry.attributes.aWet;
     for(let i=0;i<=this.rows;i++){
       const wanted=time-i/this.rows*SIDE_SPRAY.sheetLife;
-      let newer=this.history[0],older=newer;
+      let newer=this.current||this.history[0],older=newer;
       for(const f of this.history){older=f;if(f.time>=wanted)newer=f;else break;}
       const fraction=clamp((wanted-older.time)/(newer.time-older.time||1));
       const birth=THREE.MathUtils.lerp(older.time,newer.time,fraction),age=time-birth;
@@ -188,12 +189,12 @@ export class Spray {
         #include <colorspace_fragment>
       }`});
     this.points=new THREE.Points(g,this.material);this.points.frustumCulled=false;this.points.renderOrder=4;scene.add(this.points);
-    this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,Math.min(3200,Math.round(1600+quality.particles*.8)));
+    this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,Math.min(3200,Math.round(1600+quality.particles*.8)),quality.plumeDensity??.65);
     this.wake=new FoamWake(scene,this.texture,quality.wakeSamples);
     this.fans=[new SprayFan(scene,this.texture,-1,quality.fanSegments),new SprayFan(scene,this.texture,1,quality.fanSegments)];
     this.state={left:0,right:0,rate:0};this.time=0;
   }
-  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.mesh.visible=false;}}
+  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.current=null;fan.mesh.visible=false;}}
   emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
   splash(v,impact) {
     const count=Math.min(this.count*.4,40+impact*13);

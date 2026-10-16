@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Spray rendering benchmark</title><link rel="icon" href="data:,"><style>body{margin:0;background:#356b70}canvas{display:block}pre{position:fixed;left:12px;top:0;background:#142e36dd;color:white;padding:12px}</style></head><body><pre id="result">Measuring a fixed loaded plume…</pre><script type="module">
+// Development-only, repeatable render workload. Not a laptop performance claim.
+import * as THREE from 'three';
+import {Spray}from'/src/systems/spray.js';
+import {QUALITY}from'/src/config.js';
+const quality=new URLSearchParams(location.search).get('quality')||'Low',q=QUALITY[quality]||QUALITY.Low;
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(58,1000/650,.1,200),renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(1000,650);renderer.setPixelRatio(1);renderer.toneMapping=THREE.ACESFilmicToneMapping;document.body.appendChild(renderer.domElement);
+scene.background=new THREE.Color('#8facb4');camera.position.set(5,3,-11);camera.lookAt(0,2,-1);
+const surface=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshBasicMaterial({color:'#266c70'}));surface.rotation.x=-Math.PI/2;surface.position.y=-.05;scene.add(surface);
+const spray=new Spray(scene,q),source={origin:{x:0,y:.2,z:0},velocity:{x:0,y:13,z:-13},power:1,loaded:1};let t=0;
+for(let i=0;i<240;i++){t+=1/60;spray.plume.update(1/60,source,t);}
+const samples=[];let frame=0,last;
+function draw(now){if(last&&frame>10)samples.push(now-last);last=now;t+=1/60;spray.plume.update(1/60,source,t);renderer.render(scene,camera);frame++;
+if(samples.length<40)requestAnimationFrame(draw);else{const sorted=[...samples].sort((a,b)=>a-b);window.benchmark={quality,frames:samples.length,median:sorted[20],p90:sorted[36],packets:spray.plume.geometry.instanceCount,falling:spray.plume.falling,drawCalls:renderer.info.render.calls};document.querySelector('#result').textContent=JSON.stringify(window.benchmark,null,2);}}
+requestAnimationFrame(draw);
+</script></body></html>
