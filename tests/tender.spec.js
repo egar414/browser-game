@@ -1,0 +1,20 @@
+import{test,expect}from'@playwright/test';
+const status=p=>p.evaluate(()=>window.__ESTUARY__.status);
+test('tender: reference hull, house pontoons, falling-spray flooding, pause and same-place swap',async({page})=>{
+ test.setTimeout(240000);const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await page.setViewportSize({width:960,height:640});await page.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true,seaState:'calm',oceanVersion:1})));
+ await page.goto('/');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
+ await page.locator('[data-vehicle="tinny"]').click();await expect(page.locator('#vehicle-number')).toHaveText('03 / 03');await expect(page.locator('#vehicle-description')).toContainText('25 hp');await page.screenshot({path:'test-results/tender-garage.png'});
+ await page.locator('#play').click();await page.keyboard.press('Escape');await page.locator('#visit-pontoons').click();
+ let s=await status(page);expect(s.scenery.housePontoons).toBeGreaterThan(200);expect(s.moorings.length).toBeGreaterThan(s.scenery.housePontoons);expect(s.position.x).toBeGreaterThan(500);
+ await page.screenshot({path:'test-results/tender-house-pontoons.png'});
+ await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).speed,{timeout:45000}).toBeGreaterThan(7);
+ const heading=(await status(page)).heading;await page.keyboard.down('ShiftLeft');await page.keyboard.down('KeyD');
+ await expect.poll(async()=>heading-(await status(page)).heading,{timeout:25000,intervals:[150]}).toBeGreaterThan(.8);
+ await page.keyboard.up('KeyD');await page.keyboard.up('ShiftLeft');await page.keyboard.up('KeyW');await page.screenshot({path:'test-results/tender-carve.png'});
+ await expect.poll(async()=>Math.max(...(await status(page)).moorings.map(b=>b.water)),{timeout:45000}).toBeGreaterThan(0);
+ await page.screenshot({path:'test-results/tender-soaked-mooring.png'});
+ await page.keyboard.press('Escape');s=await status(page);const position=s.position,water=s.moorings.map(b=>b.water);await page.waitForTimeout(300);expect((await status(page)).moorings.map(b=>b.water)).toEqual(water);
+ await page.locator('#garage').click();await page.locator('[data-vehicle="cat"]').click();await page.locator('#play').click();s=await status(page);expect(s.position.x).toBeCloseTo(position.x,3);expect(s.position.z).toBeCloseTo(position.z,3);expect(s.vehicle).toBe('cat');expect(Math.max(...s.moorings.map(b=>b.water))).toBeGreaterThan(0);
+ const passages=await page.evaluate(async()=>{const {mapData}=await import('/src/systems/geography.js');const {collision}=await import('/src/systems/environment.js');const blocked=[];for(const c of [...mapData.channels,{name:'Race',points:mapData.race}])for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/4);for(let j=0;j<=n;j++){const x=a[0]+(b[0]-a[0])*j/n,z=a[1]+(b[1]-a[1])*j/n,hit=collision(x,z,2);if(hit)blocked.push({name:c.name,x,z,hit});}}return blocked;});expect(passages).toEqual([]);expect(errors).toEqual([]);
+});

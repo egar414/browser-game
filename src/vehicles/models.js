@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { makeRider } from './rider.js';
+import { buildTender } from './tender.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 const mat = (colour, roughness = 0.5) => new THREE.MeshStandardMaterial({ color: colour, roughness, metalness: 0.08 });
 let skiShell=null;
@@ -92,6 +93,10 @@ export function makeVehicle(type, colour, design='classic') {
     box(body, 0.65, 0.035, 0.3, 0, 0.17, -1.2, rubber);
     for(const side of [-1,1])label(body,'ER',.23,.105,side*.555,.28,-.08,side*Math.PI/2);
     person = makeRider(body, type);
+  } else if(type==='tinny') {
+    const tender=buildTender(colour,design);body.add(tender);({motor,propeller}=tender.userData);
+    // Keep the motor attachment in body coordinates for the shared rider IK.
+    body.attach(motor);person=makeRider(body,type);
   } else {
     for (const side of [-1, 1]) {
       const x = side * 0.73;
@@ -134,7 +139,7 @@ export function makeVehicle(type, colour, design='classic') {
   if(design!=='classic'){
     const stripe=mat(design==='race'?'#f2e6c4':'#eea851',.35);
     if(type==='ski')for(const side of [-1,1])tube(body,[[side*.49,.33,-.83],[side*.51,.39,-.1],[side*.38,.54,.56],[side*.22,.41,1.04]],design==='race'?.018:.032,stripe,16);
-    else for(const side of [-1,1])tube(body,[[side*.94,.35,-1.5],[side*1.01,.4,0],[side*.92,.52,1.3]],design==='race'?.025:.045,stripe,16);
+    else if(type==='cat')for(const side of [-1,1])tube(body,[[side*.94,.35,-1.5],[side*1.01,.4,0],[side*.92,.52,1.3]],design==='race'?.025:.045,stripe,16);
   }
   root.userData = { blenderShell:type==='ski'&&!!skiShell, body, motor, nozzle, propeller, bucket, handlebars, rider: person };
   person.userData.update({riderAft:0,steer:0,surgeAcceleration:0},1,root.userData);

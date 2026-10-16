@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { coastalCanopy } from './foliage.js';
+import {mappedResidentialHomes,planResidentialMoorings} from './residential-moorings.js';
 import { createMooredTinnies } from './moored-boats.js';
 import { buildMappedBuildings, roofMaterial, facadeWindowMaterial } from './architecture.js';
 import { groundMaterial } from './terrain-materials.js';
 import { box, tube } from '../vehicles/models.js';
 import { mapData, lands, landAt, pointInPoly, edgeDistance } from './geography.js';
+import { BAR_RAMP, rampProfile, rampBaseHeight } from '../vehicles/ramps.js';
 const material=color=>new THREE.MeshStandardMaterial({color,roughness:.85});
 function shapeOf(area){
   const s=new THREE.Shape(area.points.map(([x,z])=>new THREE.Vector2(x,-z)));
@@ -173,10 +175,30 @@ export function buildEstuaryScenery(scene,quality,solids){
       for(let j=0;j<3;j++){const c=new THREE.Mesh(new THREE.IcosahedronGeometry(1,quality.trees>.6?1:0),garden);c.position.set(x+(j-1)*1.8,3.4+(j%2)*.5,z+(j%2)*1.5);c.scale.set(2.8,1.8,2.5);root.add(c);}
     }
   }
+  const residentialMoorings=planResidentialMoorings([...mappedResidentialHomes(),...homeSites]);
   const tinnySites=[],boatSites=[],boatRandom=seeded(8051);
+  for(const p of residentialMoorings){
+    const end=[p.dock.x,p.dock.z],heading=p.heading;
+    segment(p.shore,end,1.15,.72,.15,timber);
+    const dock=box(root,6,.25,2.5,p.dock.x,.52,p.dock.z,timber);dock.rotation.y=heading;
+    for(const offset of [-2.4,2.4]){
+      const px=p.dock.x+Math.cos(heading)*offset,pz=p.dock.z-Math.sin(heading)*offset;
+      box(root,.20,1.7,.20,px,.35,pz,navy);
+      const float=box(root,1.1,.4,2.25,px,.16,pz,navy);float.rotation.y=heading;
+      tube(root,[[px,.67,pz],[p.x+Math.sin(heading)*offset*.3,.4,p.z+Math.cos(heading)*offset*.3]],.018,navy,4);
+    }
+    for(let i=-4;i<=4;i++){
+      const x=p.dock.x+Math.cos(heading)*i*.62,z=p.dock.z-Math.sin(heading)*i*.62;
+      const seam=box(root,.025,.012,2.35,x,.654,z,navy);seam.rotation.y=heading;
+    }
+    const a=[p.dock.x-Math.cos(heading)*3,p.dock.z+Math.sin(heading)*3],b=[p.dock.x+Math.cos(heading)*3,p.dock.z-Math.sin(heading)*3];
+    solids.push({name:'House pontoon',a,b,width:2.5,height:1.05},{name:'House gangway',a:p.shore,b:end,width:1.15,height:1.05});
+    const collider={name:'Moored tender',x:p.x,z:p.z,w:2.9,d:2.9,height:1.6};solids.push(collider);
+    tinnySites.push({...p,collider});boatSites.push([p.x,p.z]);
+  }
   // Original boats at mapped marina fingers; not claims of actual moorings.
   for(const p of mapData.piers){
-    if(boatRandom()>.78||boatSites.length>=24)continue;
+    if(boatRandom()>.78||boatSites.length>=residentialMoorings.length+24)continue;
     let a=p.points[0],b=p.points.at(-1);
     if(p.area){let longest=0;for(let i=1;i<p.points.length;i++){const d=Math.hypot(p.points[i][0]-p.points[i-1][0],p.points[i][1]-p.points[i-1][1]);if(d>longest){longest=d;a=p.points[i-1];b=p.points[i];}}}
     const len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<8||len>130)continue;
@@ -184,13 +206,13 @@ export function buildEstuaryScenery(scene,quality,solids){
     if(landAt(x,z)||Math.hypot(x-mapData.spawn.x,z-mapData.spawn.z)<90||mapData.race.some((g,i)=>edgeDistance(x,z,g,mapData.race[(i+1)%mapData.race.length])<10)||boatSites.some(p=>Math.hypot(x-p[0],z-p[1])<8)||mapData.piers.some(p=>p.area?pointInPoly(x,z,p.points):p.points.some((q,i)=>i&&edgeDistance(x,z,p.points[i-1],q)<3)))continue;
     if(mapData.channels.some(c=>c.points.some((q,i)=>i&&edgeDistance(x,z,c.points[i-1],q)<7)))continue;
     boatSites.push([x,z]);
-    if(tinnySites.length<30&&boatRandom()<.72){tinnySites.push({x,z,heading:Math.atan2(b[0]-a[0],b[1]-a[1])});solids.push({name:'Moored tinny',x,z,w:3,d:5,height:2.5});continue;}
+    if(boatRandom()<.72){tinnySites.push({x,z,heading:Math.atan2(b[0]-a[0],b[1]-a[1])});const collider={name:'Moored tender',x,z,w:2.9,d:2.9,height:1.6};solids.push(collider);tinnySites.at(-1).collider=collider;continue;}
     const boat=new THREE.Group();boat.position.set(x,0,z);boat.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);root.add(boat);
     const hull=new THREE.Mesh(new THREE.CapsuleGeometry(1.25,4.5,3,8),walls[0]);hull.rotation.x=Math.PI/2;hull.scale.z=.5;hull.position.y=.3;boat.add(hull);
     box(boat,1.85,1.4,3,0,1.2,-.4,walls[0],true);box(boat,1.9,.5,2.4,0,1.8,-.3,windows,true);box(boat,2.15,.15,3.1,0,2.13,-.4,navy);
     solids.push({name:'Moored boat',x,z,w:3,d:7,height:3});
   }
-  const updateTinnies=createMooredTinnies(root,tinnySites);updateTinnies(0);root.userData.update=updateTinnies;
+  const updateTinnies=createMooredTinnies(root,tinnySites,undefined,quality.trees>.9?650:quality.trees>.6?480:320);updateTinnies(0,mapData.spawn);root.userData.update=updateTinnies;root.userData.moorings=updateTinnies.fleet;
   // Mapped entrance breakwater, dressed with original interlocking stone blocks.
   const stone=material('#697575'),stoneGeo=new THREE.IcosahedronGeometry(1,1),rockSites=[];
   for(const wall of mapData.breakwaters)for(let i=1;i<wall.points.length;i++){
@@ -213,6 +235,18 @@ export function buildEstuaryScenery(scene,quality,solids){
     g.setAttribute('position',new THREE.Float32BufferAttribute([-w,0,-l,w,0,-l,w,r.height,l,-w,r.height,l,-w,0,l,w,0,l],3));g.setIndex([0,3,2,0,2,1,3,4,5,3,5,2,0,4,3,1,2,5]);g.computeVertexNormals();const mesh=new THREE.Mesh(g,material('#dba749'));mesh.position.set(r.x,.08,r.z);root.add(mesh);
     for(const side of [-1,1]){const rail=box(root,.16,.16,r.length,r.x+side*w,r.height/2+.3,r.z,walls[0]);rail.rotation.x=Math.atan2(r.height,r.length);}
   }
+  const kicker=new THREE.Group();kicker.position.set(BAR_RAMP.x,0,BAR_RAMP.z);root.add(kicker);
+  const profile=new THREE.Shape();profile.moveTo(-BAR_RAMP.length/2,-.35);profile.lineTo(-BAR_RAMP.length/2,0);
+  const railPoints=[];
+  for(let i=0;i<=20;i++){const z=-BAR_RAMP.length/2+i/20*BAR_RAMP.length,y=rampProfile(BAR_RAMP,i/20).height;profile.lineTo(z,y);railPoints.push([0,y+.18,z]);}
+  profile.lineTo(BAR_RAMP.length/2,-.35);profile.closePath();
+  const kickerGeometry=new THREE.ExtrudeGeometry(profile,{depth:BAR_RAMP.width,bevelEnabled:false,steps:1});kickerGeometry.rotateY(-Math.PI/2);kickerGeometry.translate(BAR_RAMP.width/2,0,0);
+  kicker.add(new THREE.Mesh(kickerGeometry,material('#e4b650')));
+  for(const side of [-1,1]){tube(kicker,railPoints.map(p=>[side*BAR_RAMP.width*.49,p[1],p[2]]),.10,walls[0],32);box(kicker,1.2,.55,BAR_RAMP.length,side*BAR_RAMP.width*.43,-.3,0,navy);}
+  // Dynamic meshes stay out of the static scenery batches. Visual and physics
+  // use the same curved deck profile and water-sampled floating base.
+  kicker.traverse(o=>{if(o.isMesh){o.userData.dynamic=true;o.castShadow=o.receiveShadow=true;}});
+  root.userData.update=(time,view)=>{updateTinnies(time,view);kicker.position.y=rampBaseHeight(BAR_RAMP,time);if(root.userData.stats)root.userData.stats.visibleTinnies=updateTinnies.visibleCount;};root.userData.update(0,mapData.spawn);
   // Merge compatible static meshes. Instanced foliage remains separate.
   root.updateMatrixWorld(true);const batches=new Map(),originals=[];
   root.traverse(mesh=>{
@@ -230,6 +264,6 @@ export function buildEstuaryScenery(scene,quality,solids){
     const g=mergeGeometries(geometries,false);if(!g)throw new Error('Scenery batching failed');const m=new THREE.Mesh(g,mat);m.castShadow=true;m.receiveShadow=true;root.add(m);geometries.forEach(g=>g.dispose());
   }
   for(const m of originals){m.removeFromParent();m.geometry.dispose();}
-  root.userData.stats={...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mooredTinnies:tinnySites.length,breakwaterRocks:rockSites.length};
+  root.userData.stats={...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mooredTinnies:tinnySites.length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
   return root;
 }

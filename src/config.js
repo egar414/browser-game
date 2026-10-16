@@ -18,6 +18,13 @@ export const VEHICLES = {
     slideGrip: 0.92, spring: 34, damping: 10, rideHeight: 0.16, airSteer: 0.83,
     wheelieAngle: 0.75, wipeoutAngle: 1.08, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
   },
+  tinny: {
+    name:'Tender Rat 225', subtitle:'2.25 m alloy tender · 25 hp',
+    description:'Open aluminium tender, bench seats and a lively 25 hp outboard. Carve, shift your weight aft and throw water off the chines.',
+    length:2.25,width:1.22,maxSpeed:15.5,reverseMax:2.8,
+    lateralGrip:3.05,slideGrip:.78,spring:46,damping:12,rideHeight:.12,airSteer:1.15,
+    wheelieAngle:.77,wipeoutAngle:1.13,colours:['#bdc9cc','#c7d8ca','#d8d0b9'],
+  },
 };
 export { WAVES,WAVE_FIELD,SEA_STATES,OCEAN_SWELL,OCEAN_TUNING,waveChop,waveHeight,seaAmplitude,setSeaState,setWeatherClock,hourlyForecast,oceanReport,oceanExposure } from './ocean.js';
 export const QUALITY = {
@@ -39,6 +46,7 @@ export const SKI_TRIM_POSITIONS = [-10,-7.5,-5,-2.5,0,4,8,13,19];
 export const HYDRODYNAMICS = {
   ski:{coastDrag:1,planingStart:4,planingEnd:13,minimumWetted:.56,pitchSpring:17,pitchDamping:6.8,rollSpring:24,rollDamping:8.2,yawInertia:340,yawDamping:2.7,yawSpeedDamping:.09},
   cat:{bowPloughDrag:.32,coastDrag:3.5,planingStart:5,planingEnd:15,minimumWetted:.62,pitchSpring:12,pitchDamping:5.4,rollSpring:19,rollDamping:7,yawInertia:550,yawDamping:2.2,yawSpeedDamping:.04},
+  tinny:{bowPloughDrag:.48,coastDrag:2.8,planingStart:3.5,planingEnd:9,minimumWetted:.58,pitchSpring:16,pitchDamping:6.5,rollSpring:23,rollDamping:8,yawInertia:125,yawDamping:2.8,yawSpeedDamping:.065},
 };
 export const PROPULSION = {
   ski:{
@@ -52,5 +60,11 @@ export const PROPULSION = {
     shaftPower:37300,propellerArea:.053,steeringAngle:.44,
     motorMount:[.18,.4,-1.65],propeller:[0,-.72,-.23],fullImmersion:.13,
     linearResistance:14,quadraticResistance:1.45,reverseEfficiency:.5,trimRate:6,
+  },
+  tinny:{
+    kind:'propeller',effectiveMass:185,maximumRpm:5600,idleFraction:.14,
+    shaftPower:18640,propellerArea:.034,steeringAngle:.49,
+    motorMount:[.12,.27,-1.12],propeller:[0,-.65,-.18],fullImmersion:.12,
+    linearResistance:13,quadraticResistance:1.25,reverseEfficiency:.44,trimRate:5,
   },
 };

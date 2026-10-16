@@ -2,6 +2,7 @@ import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM
 import { AirTricks } from './air-tricks.js';
 import { TUNING } from '../systems/progression.js';
 import { Propulsion, hullImmersion } from './propulsion.js';
+import { rampProfile, rampBaseHeight } from './ramps.js';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 export class VehiclePhysics {
@@ -37,7 +38,7 @@ export class VehiclePhysics {
   }
   get trimIndex(){return this.type==='ski'?SKI_TRIM_POSITIONS.indexOf(this.trimDegrees):null;}
   updateTrim(dt,direction){
-    if(this.type==='cat'){this.setTrim(this.trimDegrees+direction*PROPULSION.cat.trimRate*dt);return;}
+    if(this.type!=='ski'){this.setTrim(this.trimDegrees+direction*PROPULSION[this.type].trimRate*dt);return;}
     if(!direction){this.trimHeld=0;this.trimRepeat=0;return;}
     this.trimRepeat+=dt;
     if(direction!==this.trimHeld||this.trimRepeat>=.2){
@@ -46,6 +47,11 @@ export class VehiclePhysics {
     this.trimHeld=direction;
   }
   setType(type) { this.type = type; this.config = VEHICLES[type];this.propulsion=new Propulsion(type);this.setTrim(this.trimDegrees); this.recover(); }
+  respawnAt(position,time=0){
+    this.safe={x:position.x,z:position.z,heading:position.heading};this.recover();
+    if(this.collision(this.x,this.z,this.config.width*.5+.35,0))this.recover(true);
+    this.y=waveHeight(this.x,this.z,time)+this.config.rideHeight;this.previous=this.snapshot();
+  }
   wipe(reason) {
     if (this.wipeout) return;
     this.airTricks.reset();this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
@@ -86,7 +92,7 @@ export class VehiclePhysics {
       const immersed=hullImmersion(this,time);
       const trimDrag=1+Math.max(0,-this.pitch)*.7+Math.max(0,this.pitch-.3)*.25;
       const planeDrag=1+.26*(1-this.planing)*clamp(this.speed/6,0,1);
-      const coastDrag=this.type==='cat'&&(this.drive.shifting||Math.abs(this.throttle)<.05)?hydro.coastDrag:1;
+      const coastDrag=this.type!=='ski'&&(this.drive.shifting||Math.abs(this.throttle)<.05)?hydro.coastDrag:1;
       // At high bow angle the stern pushes a larger wetted face through water.
       // A small gameplay drag penalty allows a sustained powered bow ride all
       // the way to its speed ceiling; releasing the aft stance settles the hull.
@@ -133,7 +139,7 @@ export class VehiclePhysics {
       const balanceMoment=1+Math.max(0,this.drive.trimAngle*180/Math.PI-6)*.018;
       const bowWindow=this.type==='ski'?(forward>5?1:0):clamp((forward-3)/4,0,1);
       const lift=input.freestyle?c.wheelieAngle*balanceMoment*this.riderAft*bowWindow*clamp(this.throttle,0,1)*clamp(1-Math.abs(this.steer)*.85,0,1):0;
-      const plane = this.type === 'cat' ? Math.max(0, this.throttle) * .24 * Math.sin(this.planing*Math.PI)*(1-this.riderAft*.7) : 0.035 * this.throttle;
+      const plane = this.type !== 'ski' ? Math.max(0, this.throttle) * (this.type==='tinny'?.30:.24) * Math.sin(this.planing*Math.PI)*(1-this.riderAft*.7) : 0.035 * this.throttle;
       const trim = this.drive.trimAngle*(this.type==='ski'?.45:.65);
       // Angular inertia and damping retain a landing/chop response instead of
       // instantly following a prescribed orientation.
@@ -154,10 +160,12 @@ export class VehiclePhysics {
       for (const ramp of ramps) {
         // A ramp rises toward +Z. Entering backward hits its foam-covered side instead of launching.
         if (Math.abs(this.x - ramp.x) < ramp.width / 2 && this.z > ramp.z - ramp.length / 2 && this.z < ramp.z + ramp.length / 2 && this.vz > 7) {
+          const profile=rampProfile(ramp,(this.z-(ramp.z-ramp.length/2))/ramp.length),base=rampBaseHeight(ramp,time),deck=base+profile.height+c.rideHeight;
+          if(ramp.floating&&this.y>deck+.7)continue;
           onRamp=true;
-          const slopeY = ((this.z - (ramp.z - ramp.length / 2)) / ramp.length) * ramp.height;
-          this.y = Math.max(this.y, slopeY + c.rideHeight); this.vy = this.vz * ramp.height / ramp.length;
-          if (this.z > ramp.z + ramp.length / 2 - Math.max(0.7, this.vz * dt * 1.5)) { this.launch(Math.max(4.5, this.vy+1), 0.23); break; }
+          const heave=ramp.floating?(rampBaseHeight(ramp,time+.01)-rampBaseHeight(ramp,time-.01))/.02:0;
+          this.y = Math.max(this.y,deck); this.vy = this.vz*profile.slope+heave;
+          if (this.z > ramp.z + ramp.length / 2 - Math.max(0.7, this.vz * dt * 1.5)) { this.launch(ramp.curved?clamp(this.vy+1,4.5,8.5):Math.max(4.5,this.vy+1),ramp.curved?Math.atan(profile.slope)*.8:.23); break; }
         }
       }
       // Large steep chop can unweight a fast hull. No jump input or repeated aerial launch.
@@ -196,7 +204,7 @@ export class VehiclePhysics {
     const nextForward=this.vx*fx+this.vz*fz;
     this.surgeAcceleration=damp(this.surgeAcceleration,clamp((nextForward-forward)/dt,-12,12),7,dt);
     if (!this.airborne && !hit && this.speed < 12 && Math.abs(this.pitch) < 0.4 && !this.boundary) this.safe = { x: this.x, z: this.z, heading: this.heading };
-    if (![this.x, this.y, this.z, this.heading, this.vx, this.vz].every(Number.isFinite) || this.y < -3) this.recover();
+    if (![this.x,this.y,this.z,this.heading,this.pitch,this.roll,this.vx,this.vy,this.vz].every(Number.isFinite) || this.y < waveHeight(this.x,this.z,time)-6) this.recover();
   }
   launch(velocity, pitch, wave=false) { if (this.airborne) return; this.airTricks.reset();this.airborne = true;this.waveLaunch=wave; this.vy = velocity; this.pitch = pitch; this.airTime = 0; this.spin = 0; }
 }

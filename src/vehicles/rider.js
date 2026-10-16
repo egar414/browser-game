@@ -35,8 +35,8 @@ export function makeRider(parent,type){
   let aft=0,lean=0,bow=0;
   root.userData.update=(v,dt,parts)=>{
     const target=riderWeightTargets(v),blend=1-Math.exp(-dt*RIDER_WEIGHT.response);aft+=(target.aft-aft)*blend;lean+=(target.lean-lean)*blend;bow+=(target.bow-bow)*blend;
-    const cat=type==='cat',load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6);
-    const hip=new THREE.Vector3((cat?-.42:0)+lean*(cat?.85:1),cat?.74-bow*.035:.75+aft*.15,(cat?-.77:-.38)-aft*(cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
+    const cat=type==='cat',tinny=type==='tinny',outboard=cat||tinny,load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6);
+    const hip=new THREE.Vector3((tinny?-.25:cat?-.42:0)+lean*(outboard?.85:1),tinny?.53+aft*.05:cat?.74-bow*.035:.75+aft*.15,(tinny?-.57:cat?-.77:-.38)-aft*(tinny?.13:cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
     const pose=v.airTricks?.pose,b=v.airTricks?.blend||0;
     if(pose==='hangman'){hip.x-=b*.24;hip.y+=b*.08;}
     if(pose==='superman'){hip.y+=b*.42;hip.z-=b*.38;}
@@ -49,8 +49,8 @@ export function makeRider(parent,type){
       const {side}=l;
       const shoulder=new THREE.Vector3(side*.21,.48,0).applyMatrix4(torso.matrix);
       let hand;
-      if(cat){
-        hand=side===1?new THREE.Vector3(-.25,.45,.65).applyEuler(parts.motor.rotation).add(parts.motor.position):new THREE.Vector3(-.66,.61,-.36);
+      if(outboard){
+        hand=side===1?(tinny?new THREE.Vector3(-.32,.27,.54):new THREE.Vector3(-.25,.45,.65)).applyEuler(parts.motor.rotation).add(parts.motor.position):(tinny?new THREE.Vector3(-.49,.43,-.26):new THREE.Vector3(-.66,.61,-.36));
       }else{
         hand=new THREE.Vector3(side*.3,0,-.12).applyAxisAngle(Y,-v.steer*.43).add(parts.handlebars.position);
       }
@@ -58,7 +58,7 @@ export function makeRider(parent,type){
       const elbow=joint(shoulder,hand,.36,.39,new THREE.Vector3(side,.1,-.2));
       placeSegment(l.arm[0],shoulder,elbow);placeSegment(l.arm[1],elbow,hand);l.hand.position.copy(hand);
       const legHip=hip.clone().add(new THREE.Vector3(side*.14,0,0));
-      const foot=new THREE.Vector3(cat?-.42+side*.23:side*.44,cat?.4:.32,(cat?-.75:-.37)-aft*(cat?.12:.48));
+      const foot=new THREE.Vector3(tinny?-.20+side*.22:cat?-.42+side*.23:side*.44,tinny?.04:cat?.4:.32,(tinny?-.20:cat?-.75:-.37)-aft*(outboard?.12:.48));
       if(pose==='hangman')foot.lerp(new THREE.Vector3(hip.x-.55,hip.y-.25,hip.z-.35+side*.15),b);
       if(pose==='superman')foot.lerp(new THREE.Vector3(hip.x+side*.18,hip.y+.12,hip.z-.82),b);
       const knee=joint(legHip,foot,.46,.47,new THREE.Vector3(side*.6,.05,1));

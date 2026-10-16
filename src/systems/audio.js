@@ -28,7 +28,7 @@ export class GameAudio {
     }
     const rpm=Math.max(v.type==='ski'?1000:750,v.drive?.rpm||0),load=(v.drive?.wetness||0)*Math.abs(v.throttle);
     // Three-cylinder four-stroke PWC versus an original two-stroke outboard timbre.
-    const firing=rpm/60*(v.type==='ski'?1.5:3);
+    const firing=rpm/60*(v.type==='ski'?1.5:v.type==='tinny'?2:3);
     this.osc.frequency.setTargetAtTime(firing,now,.12);
     this.sub.frequency.setTargetAtTime(rpm/60,now,.15);
     this.engineFilter.frequency.setTargetAtTime(450+load*1600+(v.drive?.ventilation||0)*450,now,.16);

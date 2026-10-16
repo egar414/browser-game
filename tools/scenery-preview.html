@@ -18,5 +18,5 @@ if(view==='tinny'){
 }
 views.ocean={eye:[1650,1.6,-1000],look:[1790,.2,-1260]};
 const v=views[view]||views.mouth;camera.position.fromArray(v.eye);camera.lookAt(new THREE.Vector3(...v.look));document.querySelector('#label').textContent=`${view.toUpperCase()} · ORIGINAL DETAIL / OSM GEOMETRY`;
-let t=40,last=performance.now();function frame(now){requestAnimationFrame(frame);t+=Math.max(0,Math.min(.1,(now-last)/1000));last=now;environment.userData.update(t);water.update(t,v.eye[0],v.eye[2]);atmosphere.update(t,camera.position);water.reflect(renderer,camera);renderer.render(scene,camera);window.inspection={ready:true,time:t,stats:environment.userData.stats,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};}requestAnimationFrame(frame);
+let t=40,last=performance.now();function frame(now){requestAnimationFrame(frame);t+=Math.max(0,Math.min(.1,(now-last)/1000));last=now;environment.userData.update(t,{x:v.eye[0],z:v.eye[2]});water.update(t,v.eye[0],v.eye[2]);atmosphere.update(t,camera.position);water.reflect(renderer,camera);renderer.render(scene,camera);window.inspection={ready:true,time:t,stats:environment.userData.stats,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};}requestAnimationFrame(frame);
 </script></body></html>

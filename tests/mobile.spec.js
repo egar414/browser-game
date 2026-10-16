@@ -14,7 +14,7 @@ test.beforeEach(async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({muted:true})));
   await page.goto('/');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
 });
-for(const type of ['ski','cat'])test(`phone ${type}: native multi-touch drives, steers, brakes, reverses and recovers`,async({page})=>{
+for(const type of ['ski','cat','tinny'])test(`phone ${type}: native multi-touch drives, steers, brakes, reverses and recovers`,async({page})=>{
   test.setTimeout(180000);
   const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.locator(`[data-vehicle="${type}"]`).tap();await page.locator('#play').tap();

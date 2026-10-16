@@ -75,14 +75,14 @@ export class Propulsion {
     const demand=clamp(Math.abs(v.throttle));
     const braking=reversing&&forward>2.78;
     if(!reversing)this.reverseReady=false;else if(forward<=2.2)this.reverseReady=true;
-    const shifting=this.type==='cat'&&reversing&&!this.reverseReady;
+    const shifting=this.type!=='ski'&&reversing&&!this.reverseReady;
     const reversePower=reversing?(braking?mode.brakePower:mode.reversePower):1;
     const targetRpm=c.idleFraction+(1-c.idleFraction)*Math.sqrt(shifting?0:demand)*Math.cbrt(mode.power*reversePower);
     this.rpmFraction=damp(this.rpmFraction,targetRpm,dt>0?8:0,dt);
     this.reverse=damp(this.reverse,reversing&&!shifting?1:0,mode.gateResponse,dt);
     const selectedTrim=rad(clamp(v.trimDegrees||0,this.type==='ski'?SKI_TRIM_POSITIONS[0]:-7,this.type==='ski'?SKI_TRIM_POSITIONS.at(-1):8));
     // The selected VTS position may change at idle; the physical nozzle moves in forward thrust.
-    if(this.type==='cat'||(!reversing&&demand>.025))this.trimAngle=damp(this.trimAngle,selectedTrim,5,dt);
+    if(this.type!=='ski'||(!reversing&&demand>.025))this.trimAngle=damp(this.trimAngle,selectedTrim,5,dt);
     const trimAngle=this.trimAngle;
     const steeringAngle=v.steer*c.steeringAngle;
     const {origin,intake,direction}=propulsionPose(v,trimAngle,steeringAngle);
@@ -107,7 +107,7 @@ export class Propulsion {
       exitSpeed=solution.slipstreamSpeed;flow=c.propellerArea*(Math.abs(forward)+solution.inducedSpeed)*wet;
       massFlow=flow*WATER_DENSITY;thrust=solution.thrust*wet;
     }
-    const neutral=shifting||(this.type==='cat'&&reversing&&this.reverse<.55)||(demand<.025&&Math.abs(forward)<.4);
+    const neutral=shifting||(this.type!=='ski'&&reversing&&this.reverse<.55)||(demand<.025&&Math.abs(forward)<.4);
     // Smooth bucket routing in the body frame. Unlike a reversing propeller,
     // the impeller keeps rotating the same way while the bucket redirects water.
     // The bucket bends the fore/aft stream; it retains its lateral component.

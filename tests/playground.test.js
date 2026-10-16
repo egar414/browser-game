@@ -19,10 +19,11 @@ test('Wharf launch has turning room and entrance shoals remain navigable',()=>{
 test('entrance banks stand up the swell, without raising canal waves',()=>{
  setSeaState('swell',0,true);
  const range=(x,z)=>{let lo=Infinity,hi=-Infinity;for(let t=0;t<240;t+=.1){const h=waveHeight(x,z,t);lo=Math.min(lo,h);hi=Math.max(hi,h);}return hi-lo;};
- const bank=range(1270,-1745),off=range(1270,-1850),canal=range(-39,-87);
+ const bank=range(BAR_ZONE.x,BAR_ZONE.z),off=range(600,-1870),canal=range(-39,-87);
  assert(bank>off*1.35,`${bank} vs ${off}`);assert(canal<.5);setSeaState('calm',0,true);
 });
-test('bar guide follows clear water from the Wharf around the headland and marks the actual wave zone',()=>{
+test('bar guide follows clear water from the Wharf to the left-hand wave zone',()=>{
+ assert(BAR_ZONE.x<800);assert(shoalInfluence(1270,-1745)<.01);assert(shoalInfluence(430,-1630)>.35);
  assert.equal(collision(BAR_LAUNCH.x,BAR_LAUNCH.z,8),null);assert(Math.hypot(BAR_LAUNCH.x-BAR_ZONE.x,BAR_LAUNCH.z-BAR_ZONE.z)<BAR_ZONE.radius);
  const guide=new BarGuide(),v={...SPAWN};guide.toggle(v);assert(guide.active);assert.equal(guide.status(v).index,1);
  const original=solids.length;try{

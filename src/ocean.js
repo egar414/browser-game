@@ -2,11 +2,11 @@ import mapData from './data/mooloolaba.json' with {type:'json'};
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a));return t*t*(3-2*t);};
 export const WAVE_FIELD=mapData.waveField;
-// Estimated entrance shoals on the Point Cartwright side, not surveyed depths.
-export const ENTRANCE_SHOALS=[{x:1110,z:-1740,rx:110,rz:42},{x:1270,z:-1745,rx:105,rz:39},{x:1395,z:-1725,rx:75,rz:33}];
+// Broad game shoals left of the outbound entrance, not surveyed depths.
+export const ENTRANCE_SHOALS=[{x:420,z:-1600,rx:170,rz:90},{x:610,z:-1650,rx:195,rz:105},{x:790,z:-1660,rx:140,rz:90}];
 // A short, steep inshore set over the authored banks. Original game tuning;
 // not measured depths or a solver for breaking waves and tidal currents.
-export const BAR_BREAKERS={kx:.14,kz:-.025,speed:1.1,amplitude:.30,sharpness:.28};
+export const BAR_BREAKERS={kx:.14,kz:-.025,speed:1.1,amplitude:.44,sharpness:.36};
 export function shoalInfluence(x,z){return Math.min(1,ENTRANCE_SHOALS.reduce((sum,b)=>sum+Math.exp(-2*(((x-b.x)/b.rx)**2+((z-b.z)/b.rz)**2)),0));}
 export const SHOAL_GLSL=`float entranceShoal(vec2 p){return min(1.,${ENTRANCE_SHOALS.map(b=>`exp(-2.*dot((p-vec2(${b.x}.,${b.z}.))/vec2(${b.rx}.,${b.rz}.),(p-vec2(${b.x}.,${b.z}.))/vec2(${b.rx}.,${b.rz}.)))`).join('+')});}`;
 

@@ -163,3 +163,78 @@ The sandbanks and short steep sets are original game estimates, using matching
 CPU/GPU wave functions; there are no physical overturning wave curls. No Google
 imagery or newly measured depths were obtained. Multiplayer is still a separate
 prepared branch and is not enabled by this release.
+
+
+## Left-hand bar, curved kicker and boat swaps — 16 October 2026
+
+- `npm test`: 69 passed. Added checks cover curved-ramp takeoff/landing for
+  both craft, same-position swaps at sampled water height, and legitimate deep
+  troughs without a false recovery. Route and marker clearances cover the new
+  left-hand bank.
+- `npm run build`: passed.
+- Five actual-browser flows passed in Linux Chromium / SwiftShader: desktop
+  bar guidance and swell selection; phone touch guidance/direct travel/boat
+  swap; desktop direct travel/map/driving/same-position swap; a real curved
+  kicker takeoff and scored clean landing using normal controls; all graphics
+  profiles and reflection switching. No runtime or shader errors were reported.
+- Inspected the ramp takeoff and landing, left-hand bar route map and phone
+  flow screenshots. Both craft also completed ramp launches and clean landings
+  in physics simulations at seven different swell phases each, without wipeouts.
+
+The shoal placements and waves remain authored gameplay approximations, not
+surveyed Mooloolaba depths. The floating gold ramp is a game feature. Phone
+checks used touch emulation; physical devices and hardware GPU performance
+were not tested. Multiplayer remains disabled.
+
+
+## Tender 225, house pontoons and falling-spray flooding — 16 October 2026
+
+- `npm test`: 77 passed. New checks cover the third craft's 25 hp tuning,
+  planing, powered slides, reverse, trim, bow riding, buoyancy and rider/tiller
+  attachment; all three craft flooding a tender; no flooding from idle, dry or
+  absent spray; a finite sink/reset cycle; route clearances; draw-distance
+  compaction independent of simulation; and normal powered spray passes at
+  six different wave phases.
+- `npm run build`: passed. The existing large vendor-chunk warning remains.
+- Eight distinct actual-browser flows passed across targeted runs in Linux
+  Chromium 154.0.8037.57 / SwiftShader: jet-ski, Thundercat and tender keyboard
+  drive/steer/spray/brake/reverse/recover; all graphics profiles/reflections;
+  native-touch tender driving; phone bar guidance and boat swap; the tender's
+  normal-input pontoon spray/flooding/pause/same-position swap; and a real gold
+  kicker takeoff with a banked clean landing. The last two ran again against
+  the final app build after the world-boundary placement fix.
+- The full generated environment was collision-sampled along mapped channel
+  centres and race legs in the browser, with all 320 house pontoons and 338
+  moored tenders registered. Those passages remained clear. Pontoons also
+  reserve the bar route, existing targets/signs and playable world margins.
+- Visually inspected the open alloy hull, bench seats, fuel tank, 25 marking,
+  outboard and tiller rider in a close development view, plus garage, canal,
+  carve and touch screenshots. A separate accelerated development fixture
+  using the same moored renderer/flooding system showed water inside the hull
+  at 55%, sinking at 100% and restoration to a dry floating hull. The actual
+  main-game browser flow independently confirmed falling spray increases its
+  moored-boat meter and survives a craft change. No critical runtime/shader
+  errors occurred in the passed flows or visual fixture.
+
+The first broad browser run exposed slow software rendering when every tender
+was submitted; visible-instance compaction now limits the drawn fleet by viewing
+distance. A populated-canal diagnostic at 960×640 / Low recorded 2.3 FPS, 249
+draw calls and 557,345 triangles in cloud SwiftShader. This is a software renderer,
+not a hardware-GPU or physical-phone performance measurement; no universal
+frame rate is claimed.
+
+The tender initially inherited the faster boats' acceleration assertion; its
+check now requires its own lower speed while retaining the original thresholds
+for the jet ski/cat. Reverse diagnostics showed negative thrust and clear water;
+the unchanged reverse-speed assertion needed more wall-clock time on this slow
+renderer. The spray test also held steering while taking a slow screenshot,
+overshooting the aimed pass; controls are now released before capture. Actual
+falling-water detection additionally samples five strands of each fan and
+interpolates its swept gunwale crossing rather than its frame-end position.
+
+Moored water volumes, sink thresholds and reset timing are gameplay approximations.
+Sinking was exercised fully in simulation and the visual fixture; a complete
+sinking cycle driven solely by a human in the main game was not tested. Phone
+checks use Chromium touch emulation, not physical iOS/Android devices. Moorings
+and estimated houses are authored game scenery rather than surveyed properties.
+Multiplayer/accounts remain disabled.

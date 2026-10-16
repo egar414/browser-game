@@ -56,3 +56,6 @@
 
 .bar-hint{position:absolute;left:35px;bottom:300px;max-width:245px;display:flex;align-items:center;gap:10px;background:#153b40ed;border:1px solid #f4b86b90;color:#ffe6bd;border-radius:5px;padding:10px 12px;font-size:10px;line-height:1.5;letter-spacing:.04em}.bar-hint>span:first-child{display:inline-block;font-size:30px;line-height:1;flex-shrink:0}#bar-waves[aria-pressed="true"]{background:#a85c29;color:#fff1d1;border-color:#f4b86b}.touch-device .bar-hint{left:14px;bottom:225px;max-width:210px;font-size:9px}@media(max-height:500px){.touch-device .bar-hint{bottom:217px;max-width:195px;font-size:8px;padding:7px 9px}.touch-device .bar-hint>span:first-child{font-size:24px}}
 .bar-map{color:#ffd69e;font-size:9px;white-space:nowrap;text-decoration:underline;padding:5px;pointer-events:auto}.bar-hint{max-width:290px}.touch-device .bar-hint{max-width:230px}
+
+/* Keep all three craft names legible on narrow garage cards. */
+.vehicle-tabs button{flex:1;min-width:0;padding-inline:7px;font-size:8px}.settings-footer{flex-wrap:wrap}.settings-footer button{flex:1 1 100px}

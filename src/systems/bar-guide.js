@@ -2,17 +2,17 @@ import * as THREE from 'three';
 import { SPAWN, waveHeight } from '../config.js';
 import { mapData } from './geography.js';
 
-export const BAR_ZONE={x:1270,z:-1745,radius:140};
-export const BAR_LAUNCH={x:1160,z:-1770,heading:Math.PI/2};
+export const BAR_ZONE={x:600,z:-1630,radius:240};
+export const BAR_LAUNCH={x:625,z:-1770,heading:0};
 // Follow the mapped river, leave between the rock walls, then round the
-// headland into the authored shoals. A straight arrow from the marina cuts land.
+// left into the authored shoals. A straight arrow from the marina cuts land.
 export const BAR_ROUTE=[
   [SPAWN.x,SPAWN.z],[-220,-1003],
   ...mapData.channels.find(c=>c.name==='Mooloolah River').points.slice(25),
-  [960,-1480],[900,-1540],[820,-1610],[800,-1725],[1000,-1790],
+  [960,-1480],[900,-1540],[820,-1610],
   [BAR_ZONE.x,BAR_ZONE.z],
 ];
-export const BAR_MARKERS=[[1100,-1690],[1270,-1810],[1430,-1725]];
+export const BAR_MARKERS=[[350,-1550],[600,-1830],[800,-1685]];
 const angle=a=>Math.atan2(Math.sin(a),Math.cos(a));
 export class BarGuide {
   constructor(scene=null,solids=[]){

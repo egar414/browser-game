@@ -4,11 +4,12 @@ test.beforeEach(async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true})));
   await page.goto('/');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready);
 });
-for(const type of ['ski','cat'])test(`${type}: choose, drive, spray, steer, brake, reverse and recover`,async({page})=>{
+for(const type of ['ski','cat','tinny'])test(`${type}: choose, drive, spray, steer, brake, reverse and recover`,async({page})=>{
+  test.setTimeout(180000);await page.setViewportSize({width:960,height:640});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.locator(`[data-vehicle="${type}"]`).click();await page.locator('#play').click();
   expect((await status(page)).vehicle).toBe(type);
-  await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).speed,{timeout:25000}).toBeGreaterThan(11);
+  await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).speed,{timeout:25000}).toBeGreaterThan(type==='tinny'?9:11);
   expect((await status(page)).liveParticles).toBeGreaterThan(0);
   const initial=(await status(page)).heading;
   await page.keyboard.down('KeyA');await page.keyboard.down('ShiftLeft');
@@ -18,7 +19,7 @@ for(const type of ['ski','cat'])test(`${type}: choose, drive, spray, steer, brak
   expect(spray.left).toBeGreaterThan(spray.right);
   expect(spray.wakeSamples).toBeGreaterThan(3);
   await page.keyboard.up('KeyA');await page.keyboard.up('ShiftLeft');await page.keyboard.up('KeyW');
-  await page.keyboard.down('KeyS');await expect.poll(async()=>(await status(page)).forwardSpeed,{timeout:50000}).toBeLessThan(-1);await page.keyboard.up('KeyS');
+  await page.keyboard.down('KeyS');await expect.poll(async()=>(await status(page)).forwardSpeed,{timeout:80000}).toBeLessThan(-1);await page.keyboard.up('KeyS');
   await page.keyboard.press('KeyR');await expect.poll(async()=>(await status(page)).speed).toBeLessThan(.5);
   expect((await status(page)).liveParticles).toBe(0);
   expect((await status(page)).spray.wakeSamples).toBe(0);

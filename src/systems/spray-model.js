@@ -30,13 +30,13 @@ export function sprayState(v,_freestyle=false,time=0) {
   const loadHead=Math.sqrt(Math.abs(v.lateralAcceleration||0)*v.config.width);
   const turn=clamp(Math.abs(sternCrossFlow)*.20+loadHead*.13,0,3.5);
   const outside=Math.sign(sternCrossFlow);
-  const side=sign=>(clamp(speed/23)*.65+turn*(outside===sign?1:.1)*clamp(speed/7))*contacts[sign===-1?0:1].wet;
+  const side=sign=>(clamp(speed/(v.type==='tinny'?14:23))*.65+turn*(outside===sign?1:.1)*clamp(speed/7))*contacts[sign===-1?0:1].wet;
   const left=side(-1),right=side(1);
   return {speed,outside,left,right,rate:clamp((left+right)*135,0,680),jet,contacts};
 }
 export function launchSpray(v,state,side,random=Math.random) {
   const strength=side===-1?state.left:state.right,p=state.contacts[side===-1?0:1];
-  const cat=v.type==='cat',bow=bowSprayLoad(v),broad=cat?SIDE_SPRAY.catWidth:1.06,lift=cat?SIDE_SPRAY.catLift:1.32;
+  const cat=v.type==='cat',bow=bowSprayLoad(v),broad=cat?SIDE_SPRAY.catWidth:v.type==='tinny'?1.28:1.06,lift=cat?SIDE_SPRAY.catLift:v.type==='tinny'?1.48:1.32;
   const spread=random(),angle=-.2+spread*1.45,flow=(2+strength*3.2)*broad*(1+bow*SIDE_SPRAY.bowReach);
   // Spray leaves the wet waterline. Rotating its up-vector with a bow-high hull
   // incorrectly aimed the entire fan underwater, cutting off a bow-ride spray.

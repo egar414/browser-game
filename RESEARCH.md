@@ -377,3 +377,63 @@ tuning; no actual depths, stationary tidal standing-wave solver or overturning
 breaking curl is implied. Pause → VISIT BAR WAVES is an explicit game travel
 action to a collision-checked launch within the shoal field. Primary Play
 still launches beside The Wharf.
+
+
+## Left-hand bar and curved kicker — 16 October 2026
+
+The user's corrected placement moves the authored shoals left of the outbound
+entrance, west of the rock-wall exit. Three overlapping lobes broaden the
+field; the short local set has higher amplitude and stronger crest sharpening.
+CPU and GPU still use the same wave coefficients. Route, launch, buoys and
+map have moved together. No new imagery or surveyed bathymetry was obtained.
+
+The gold kicker is an original floating game ramp: 18 m wide, 28 m long and
+3.6 m high, with a quadratic rising deck and a bounded takeoff speed. Its
+rendered profile and physical support/tangent use the same helper functions.
+A sampled moving water base provides heave. This is not a real-world structure
+or structural/dynamics simulation. Both craft completed launch/clean landing
+checks at seven swell phase offsets (14 runs) without a wipeout.
+
+Garage entry now remembers horizontal position and heading; returning from a
+vehicle change respawns at that point with zero velocity and the new hull's
+water height. Nearby-water recovery handles a larger hull that cannot fit.
+The instability guard uses depth below the local wave, so a legitimate deep
+trough no longer triggers a fixed world-height reset.
+
+
+## Photo-referenced Tender 225 and residential moorings — 16 October 2026
+
+The user corrected the requested engine from 6 hp to 25 hp. The original
+procedural tender follows the photograph's short open alloy hull, shallow V
+chines, tapering bow, rolled rim, transverse bench seats, exposed framing, fuel
+tank and compact dark outboard. Its model source is `src/vehicles/tender.js`.
+The shared moored version uses instanced geometry, not a hotlinked asset.
+
+The propulsion solver now supports the third outboard configuration explicitly.
+Its selected 18.64 kW shaft power corresponds approximately to the requested
+25 hp label; all mass, drag, steering inertia, trim, planing and performance
+values remain original game tuning. No real model's load capacity, safe engine
+rating or measured handling has been established. The tender is lighter and
+shorter than the Thundercat, with a smaller propeller disk, lower speed ceiling
+and a quicker powered yaw response. It shares propeller-neutral/reverse logic
+rather than a jet-ski reverse bucket. Bow rides pivot about stern support and
+retain the existing angular bounds and recovery.
+
+Waterfront house placement projects each eligible home's nearest bank onto a
+short gangway and pontoon. Candidates reserve the mapped channel, race and bar
+route corridors, bridge clearance, existing piers and neighbouring moorings.
+320 safe house sites are generated from available mapped houses plus original
+estimated homes. These do not establish actual legal parcels or mooring locations.
+
+The flooding model emits quality-independent water packets from `launchSpray`
+and `jetPlumeSource`, integrates falling trajectories using the existing droplet
+gravity/drag, and checks downward gunwale crossings against a tapered open-hull
+footprint. A spatial hash and fixed packet pool bound work. Viewer-based instance
+compaction excludes distant tender geometry; flooding and collision state remain
+independent of visibility. Water volume per
+sample is deliberately gameplay-scaled; this does not conserve a full ocean
+fluid field. Collected water is drawn inside the hull and lowers freeboard,
+then triggers finite sinking, collision removal and a 16-second reset.
+Score cooldowns prevent an immediately respawned tender awarding repeated points.
+No new external research, map survey or asset license was required for this
+photo-based original model and game-mechanics update.

@@ -3,7 +3,7 @@
 **Play:** https://egar414.github.io/browser-game/
 
 A playable single-player 3D coastal boating playground. Free roam is the default:
-pick a compact freestyle jet ski or a twin-pontoon racing inflatable and launch
+pick a compact freestyle jet ski, twin-pontoon racing inflatable, or 2.25 m alloy tender and launch
 into a Mooloolah River estuary based on actual OpenStreetMap shorelines. No account, API key, or external asset
 service is required to play.
 
@@ -33,9 +33,10 @@ residential areas and the mapped entrance rock wall. Roof shapes/heights use
 available OSM tags; missing details are original estimates. Individual windows,
 gutters, roof materials, doorways and garages replace plain blocks. There are
 313 additional estimated waterfront homes within mapped residential areas, not
-surveyed house replicas. Sloping shore edges, improved palms/clouds and 19
-wave-following moored aluminium tinnies enrich the surroundings. The three tinny
-styles are scenery; the jet ski and Thundercat remain the two drivable craft.
+surveyed house replicas. Sloping shore edges, improved palms/clouds and
+wave-following moored aluminium tenders enrich the surroundings. The playable
+Tender Rat 225 adds a third craft, with an original 25 hp outboard. Residential
+pontoons and flooding tenders are described below.
 
 The supplied 22.8-second video informed denser, taller loaded-turn sheets,
 broader Thundercat pontoon spray and finer falling droplets. Straight-line rear
@@ -260,7 +261,7 @@ landing banks the pose once per jump. On phones use HANG / NO HANDS / SUPER.
 There is no jump button. Mobile still prefers landscape and supports portrait.
 
 The rear plume now separates into soft water packets which fall back into the
-water and leave foam. The estimated Point Cartwright entrance shoals steepen
+water and leave foam. The estimated entrance shoals steepen
 waves locally and show shallow colour/crest foam. Their depths and locations
 are approximate, not a surveyed reconstruction or navigational information.
 
@@ -291,10 +292,10 @@ in `src/vehicles/rider.js`. These visual changes preserve vehicle handling.
 ### Finding the bar and smoother rear spray
 
 Press **N** or tap **BAR WAVES** to mark the route from The Wharf through the
-river entrance and around the headland. Follow the arrow and orange minimap
+river entrance and left into the larger offshore bar zone. Follow the arrow and orange minimap
 route to the three labelled buoys, or use **Pause → VISIT BAR WAVES** for a direct trip. **MAP ↗** opens the [larger route map](public/bar-route.svg).
 Calm conditions switch smoothly to Rolling swell; hourly weather is retained.
-The bar is an original estimated game shoal on the Point Cartwright side.
+The bar is an original estimated game shoal to the left as you head out through the entrance.
 Its shorter, steeper inshore sets use the same CPU/GPU wave functions. It is not surveyed
 bathymetry, and the map is not a navigation chart.
 
@@ -307,3 +308,64 @@ falling history. Adjust `QUALITY.*.plumeDensity` in `src/config.js`, or the
 it is a development scene, not a claim about gameplay frame rates. Rebuild
 the route map with `python3 scripts/build-bar-guide-map.py` after changing
 `BAR_ROUTE` in `src/systems/bar-guide.js`.
+
+
+### Bigger left-hand bar, curved kicker and boat swaps
+
+The bar is on the **left heading out of the entrance**. N / BAR WAVES, the
+three buoys and the full route map all follow the new location. Pause →
+VISIT BAR WAVES lines you up with a wide gold curved kicker. Its gradual
+entry and rising takeoff face float with the same water used by physics.
+Both craft can use it; hold throttle, then level the hull for landing.
+The larger bar has taller, sharper wave faces, with the canals kept sheltered.
+These remain original game features, not a surveyed real-world sandbar/ramp.
+
+Changing watercraft now returns you to your current water location and heading,
+with motion cleared. If the larger hull cannot fit, recovery selects nearby
+clear water. First launch after loading the page still starts at The Wharf.
+Tune the bank in `ENTRANCE_SHOALS` / `BAR_BREAKERS` in `src/ocean.js`, the
+kicker in `BAR_RAMP` in `src/vehicles/ramps.js`, and route/buoys in
+`src/systems/bar-guide.js`. Rebuild the SVG map with the supplied Python script.
+
+
+### Tender Rat 225 and house pontoons
+
+The third garage tab selects a **2.25 m aluminium tender with a 25 hp outboard**,
+based on the supplied photograph. The original open V-hull has rolled gunwales,
+ribs/rivets, black-topped bench seats, a red fuel tank and hose, a small outboard
+with a 25 marking, lower unit and animated propeller. Its driver sits on the rear
+bench, follows acceleration/steering and keeps a hand on the turning tiller.
+Colours and unlocked designs work on the new hull. No photographed brand logos
+or third-party model files are copied.
+
+**WASD** drives; **W + Shift + A/D** throws a powered sliding chine spray;
+**W + Shift** shifts weight aft for a bow ride. **Q/E** trims the outboard,
+**S** brakes then shifts into reverse, and **R** recovers. The existing phone
+GO/arrows/LIFT/BOW controls do the same. Tender choice and trim save locally.
+Handling, top speed and the engine label are game specifications, not measured
+real-world performance or a real tender's capacity rating.
+
+Short house pontoons now serve eligible mapped and estimated waterfront homes:
+320 additional pontoon sites and 338 moored tenders in the current map. Locations
+are authored and checked against land, mapped piers, bridge corridors and central
+water routes. Inland homes and sites that cannot fit safely receive no pontoon.
+Moored tenders use instanced meshes with a limited draw distance on Low quality;
+distant boats keep their flooding state without drawing every hull.
+Pontoons, gangways and visible boats collide; fully submerged boats stop blocking
+the water until they reset. These are game moorings, not actual property records.
+
+Use **Pause → VISIT HOUSE PONTOONS** to try a canal run. Falling side spray from
+all three craft, and the jet ski's rear plume, can enter an open tender. The boat
+shows water inside, settles lower, rolls and sinks when full; it resets after
+16 seconds of active simulation. The nearby HUD shows water aboard and reset
+time. Flooding remains when changing craft, pauses with gameplay and is
+independent of graphics quality. It is session-local and clears on page reload.
+
+Physics emits a bounded pool of water packets using the same chine/plume sources
+as the visible spray. Only descending packets crossing an open gunwale add water;
+nearby driving, idle and dry/airborne craft cannot flood boats by proximity.
+Water volumes and reset timing are gameplay tuning, not a fluid simulation.
+Tune `VEHICLES.tinny`, `PROPULSION.tinny` and `HYDRODYNAMICS.tinny` in
+`src/config.js`; edit the hull in `src/vehicles/tender.js`, sites in
+`src/systems/residential-moorings.js`, and flooding in
+`MOORING_FLOOD` in `src/systems/mooring-flood.js`.
