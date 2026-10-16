@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import{tenderTurn}from'../src/vehicles/tender-handling.js';
 import{VehiclePhysics}from'../src/vehicles/physics.js';
 import{VEHICLES,PROPULSION,waveHeight,setSeaState}from'../src/config.js';
-import{sprayState}from'../src/systems/spray-model.js';
+import{sprayState,launchSpray}from'../src/systems/spray-model.js';
 import{buildTender}from'../src/vehicles/tender.js';
 import{makeVehicle}from'../src/vehicles/models.js';
 import{loadSettings}from'../src/systems/storage.js';
@@ -22,8 +23,8 @@ test('25 hp tender has its own bounded planing, powered slide, braking and rever
  setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;
  assert.equal(v.config.length,2.25);assert.equal(PROPULSION.tinny.shaftPower,18640);
  advance(v,6,{throttle:1});assert(v.speed>9&&v.speed<16);assert(v.planing>.9);
- const heading=v.heading;advance(v,1.5,{throttle:1,steer:1,freestyle:true},6);
- const turnDelta=v.heading-heading;assert(turnDelta>1);assert(Math.abs(v.slip)>5);assert(sprayState(v,false,7.5).left>1.5);
+ const heading=v.heading;let peakSpray=0;for(let i=0;i<90;i++){v.update(1/60,{...input,throttle:1,steer:1,freestyle:true},6+i/60);peakSpray=Math.max(peakSpray,sprayState(v,false,6+i/60).left);}
+ const turnDelta=v.heading-heading;assert(turnDelta>1);assert(Math.abs(v.slip)>5);assert(peakSpray>1.5);
  advance(v,14,{throttle:-1},7.5);const forward=v.vx*Math.sin(v.heading)+v.vz*Math.cos(v.heading);assert(forward<-.7&&v.speed<3.8);
  const coast=new VehiclePhysics('tinny');coast.x=-200;coast.z=-1000;advance(coast,6,{throttle:1});const h=coast.heading;advance(coast,1.5,{steer:1},6);assert(coast.heading-h<turnDelta);
 });
@@ -43,7 +44,7 @@ test('reference tender is an open alloy hull and rider stays attached to its ste
 });
 test('falling spray from every craft enters an open tender, sinks it once and resets finitely',()=>{
  for(const type of ['ski','cat','tinny']){
-  const events=[],fleet=new MooringFlood([{id:type,x:type==='ski'?6:-10,z:type==='ski'?-2:0,heading:0}],e=>events.push(e)),v=attacker(type);
+  const events=[],fleet=new MooringFlood([{id:type,x:type==='ski'?6:type==='tinny'?-7:-10,z:type==='ski'?-2:0,heading:0}],e=>events.push(e)),v=attacker(type);
   for(let i=0;i<2100&&!fleet.boats[0].resetIn;i++){v.y=waveHeight(0,0,i/60)+.14;fleet.update(1/60,v,i/60);}
   assert.equal(fleet.boats[0].sinks,1,type);assert.equal(events.length,1);assert.equal(fleet.status[0].water,100);
   const standingWater=fleet.boats[0].water;fleet.clearSpray();for(let i=0;i<120;i++)fleet.update(1/60,v,40+i/60,false);assert(fleet.boats[0].sinking>.4);assert.equal(fleet.boats[0].water,standingWater);
@@ -90,6 +91,27 @@ test('the pontoon approach gives the tender enough run-up to land a powered side
    const t=i/60;if(!start&&v.speed>7)start={heading:v.heading};if(start&&start.heading-v.heading>.8)done=true;const turning=!!start&&!done;
    v.update(1/60,{...input,throttle:done?0:1,steer:turning?-1:0,freestyle:turning},phase+t);f.update(1/60,v,phase+t);
   }
-  assert(f.status[0].water>0,`normal spray pass at wave phase ${phase}`);
+  assert(f.status[0].water>15,`clean spray pass should leave useful flooding at wave phase ${phase}`);
  }
+});
+
+test('loaded tender turns kick the stern, bounce on the water and settle when Shift is released',()=>{
+ setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;advance(v,6,{throttle:1});const h=v.heading;let low=Infinity,high=-Infinity,maxSlip=0;
+ for(let i=0;i<240;i++){
+  v.update(1/60,{...input,throttle:1,steer:1,freestyle:true},6+i/60);maxSlip=Math.max(maxSlip,Math.abs(v.slip));assert(!v.airborne&&!v.wipeout);
+  if(i>60){const pivot=Math.sin(Math.max(0,v.pitch))*v.config.length*.29*Math.max(0,Math.min(1,(v.pitch-.18)/.4)),heave=v.y-waveHeight(v.x,v.z,6+i/60)-v.config.rideHeight-pivot;low=Math.min(low,heave);high=Math.max(high,heave);}
+ }
+ assert(v.heading-h>6);assert(maxSlip>10);assert(high-low>.18&&high-low<.42);assert(v.sprayTurnLoad>.2);
+ advance(v,2,{throttle:1},10);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.slip)<1.5);assert(Math.abs(v.roll)<.15);assert(!v.airborne&&!v.wipeout);
+});
+test('tender bounce needs powered wet steering load; idle, cruise and airtime cannot trigger it',()=>{
+ for(const changes of [{speed:0},{throttle:0},{steer:0},{airborne:true},{wipeout:1},{drive:{wetness:0}}]){
+  const v={...attacker(),steer:1,config:VEHICLES.tinny,...changes};for(let i=0;i<120;i++){const turn=tenderTurn(v,{freestyle:true},1/60);assert.equal(turn.lift,0);assert.equal(turn.pitch,0);assert.equal(Math.abs(turn.roll),0);}
+ }
+ const v={...attacker(),steer:1,config:VEHICLES.tinny};for(let i=0;i<120;i++)assert.equal(tenderTurn(v,{freestyle:false},1/60).lift,0);
+});
+
+test('tinny spray stays a compact falling fan under a fixed loaded turn',()=>{
+ setSeaState('calm',0,true);const v=attacker(),state=sprayState(v,false,0),drop=launchSpray(v,state,-1,()=>.5);
+ assert(Math.abs(drop.vx)>7&&Math.abs(drop.vx)<9.5);assert(drop.vy>4&&drop.vy<7);assert(drop.lifetime>0&&drop.lifetime<3.4);
 });

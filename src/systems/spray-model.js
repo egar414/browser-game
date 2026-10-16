@@ -3,6 +3,7 @@ import { bodyPoint, bodyVector, propulsionPose, hullImmersion } from '../vehicle
 export const SPRAY_TUNING = { minimumSpeed:.7, maximumSpeed:32, gravity:9.81, wakeLifetime:7, wakeSpread:.16, sampleSpacing:.48 };
 export const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 export const SIDE_SPRAY = { catWidth:1.72, catLift:1.12, bowReach:.32, bowLift:1.8, sheetLife:3.2, historyHz:30, dropletLife:3.4 };
+export const TINNY_SPRAY={width:1.10,lift:1.20,loadScale:.88};
 // Actual powered, aft-weighted bow attitude; pressing Shift alone adds no spray.
 export function bowSprayLoad(v){return v.airborne||v.wipeout?0:clamp(((v.pitch||0)-.25)/.6)*clamp(v.riderAft||0)*clamp(v.throttle||0);}
 
@@ -31,12 +32,12 @@ export function sprayState(v,_freestyle=false,time=0) {
   const turn=clamp(Math.abs(sternCrossFlow)*.20+loadHead*.13,0,3.5);
   const outside=Math.sign(sternCrossFlow);
   const side=sign=>(clamp(speed/(v.type==='tinny'?14:23))*.65+turn*(outside===sign?1:.1)*clamp(speed/7))*contacts[sign===-1?0:1].wet;
-  const left=side(-1),right=side(1);
+  const scale=v.type==='tinny'?TINNY_SPRAY.loadScale:1,left=side(-1)*scale,right=side(1)*scale;
   return {speed,outside,left,right,rate:clamp((left+right)*135,0,680),jet,contacts};
 }
 export function launchSpray(v,state,side,random=Math.random) {
   const strength=side===-1?state.left:state.right,p=state.contacts[side===-1?0:1];
-  const cat=v.type==='cat',bow=bowSprayLoad(v),broad=cat?SIDE_SPRAY.catWidth:v.type==='tinny'?1.28:1.06,lift=cat?SIDE_SPRAY.catLift:v.type==='tinny'?1.48:1.32;
+  const cat=v.type==='cat',bow=bowSprayLoad(v),broad=cat?SIDE_SPRAY.catWidth:v.type==='tinny'?TINNY_SPRAY.width:1.06,lift=cat?SIDE_SPRAY.catLift:v.type==='tinny'?TINNY_SPRAY.lift:1.32;
   const spread=random(),angle=-.2+spread*1.45,flow=(2+strength*3.2)*broad*(1+bow*SIDE_SPRAY.bowReach);
   // Spray leaves the wet waterline. Rotating its up-vector with a bow-high hull
   // incorrectly aimed the entire fan underwater, cutting off a bow-ride spray.

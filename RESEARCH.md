@@ -437,3 +437,38 @@ then triggers finite sinking, collision removal and a 16-second reset.
 Score cooldowns prevent an immediately respawned tender awarding repeated points.
 No new external research, map survey or asset license was required for this
 photo-based original model and game-mechanics update.
+
+
+## Tender bow lift, stern slides and chine bounce — 16 October 2026
+
+The user found the tender hard to shaft/slide, its side sprays too large and
+its hull too settled during spray turns. Bow lift now begins at lower forward
+speed and retains more support while steering. Faster tiller response, a
+slightly wider motor angle, less lateral grip under Shift and bounded extra
+powered yaw authority let the stern break away; ordinary grip returns on release.
+
+A speed-, throttle-, wetness- and steering-load gate drives a bounded 1.12 Hz
+chine pressure cycle through the existing vertical, pitch and roll springs.
+The source lift is limited to 0.22 m and damps away when load is removed.
+It supplies no airborne impulse; airtime still needs a ramp or wave launch.
+This is intentionally arcade catch/release behaviour, not a measured fluid
+instability or a validated real tender manoeuvre.
+
+In matched 60 Hz scripted runs with four seconds of full powered steering,
+total heading change rose from 5.05 to 6.88 rad and measured hull heave range
+relative to water/stern support rose from 0.117 to 0.258 m. Neither run launched
+or wiped out. At three seconds of straight powered bow riding, pitch rose
+from 0.801 to 0.954 rad. Comparisons use the preceding a2afeb9 source archive.
+
+A fixed loaded-turn spray sample reduced outward exit speed from 11.28 to
+8.76 m/s and upward speed from 8.76 to 6.39 m/s. This only changes the tender's
+side fans; existing jet-ski and Thundercat parameters are unchanged. The
+pontoon approach uses an 18 m run-up to suit its shorter fan and tighter carve.
+
+
+The user's follow-up asks for easier moored-tinny sinking. Side and rear capture
+volumes are doubled, while slow background drainage is halved. Receiving hull
+geometry, capacity, sink animation, reset interval and score cooldown are
+unchanged. Across six wave phases, a scripted clean tender spray pass now
+leaves approximately 19–23% water aboard, rather than approximately 9–11%.
+These remain gameplay-scaled water volumes, independent of visual fan size.

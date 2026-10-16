@@ -369,3 +369,23 @@ Tune `VEHICLES.tinny`, `PROPULSION.tinny` and `HYDRODYNAMICS.tinny` in
 `src/config.js`; edit the hull in `src/vehicles/tender.js`, sites in
 `src/systems/residential-moorings.js`, and flooding in
 `MOORING_FLOOD` in `src/systems/mooring-flood.js`.
+
+
+### More playful tender handling
+
+The tinny lifts its bow sooner with **W + Shift** (GO + LIFT on phones).
+Add A/D to kick the stern into a tighter powered slide. Let go of Shift and
+ease the steering to regain grip. Its smaller side fans now pulse with a
+bounded chine catch/release bounce: the hull bobs and rocks while the loaded
+turn keeps water contact. Coasting, idle and airborne craft cannot generate
+this powered bounce, and there is still no jump key.
+
+Tune the response in `TINNY_HANDLING` in `src/config.js` and the fan size in
+`TINNY_SPRAY` in `src/systems/spray-model.js`. These are arcade reactions to
+turn loading, not a validated hydrodynamic porpoising model.
+
+
+Moored tenders now collect roughly twice as much water from successful hits
+and drain half as quickly between passes. The smaller fan still needs to land
+inside the open hull. Flooding keeps its existing sink animation, reset delay
+and scoring cooldown; it does not come from proximity or idle boats.

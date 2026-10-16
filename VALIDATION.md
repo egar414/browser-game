@@ -238,3 +238,39 @@ sinking cycle driven solely by a human in the main game was not tested. Phone
 checks use Chromium touch emulation, not physical iOS/Android devices. Moorings
 and estimated houses are authored game scenery rather than surveyed properties.
 Multiplayer/accounts remain disabled.
+
+
+## Easier tender bow lift / stern slides, smaller fans and spray bounce — 16 October 2026
+
+- `npm test`: 80 passed. New checks require a sustained loaded turn to kick
+  the stern, produce bounded water-relative heave without flight/wipeout, and
+  settle with grip restored after Shift release. Idle, cruise, dry contact and
+  airtime cannot trigger powered bounce. A fixed loaded spray fixture also
+  constrains outward/upward speed to the smaller requested fan envelope.
+- `npm run build`: passed.
+- Four Chromium 154 / SwiftShader browser flows passed: tender keyboard
+  drive/spray/brake/reverse/recover; native-touch phone driving; a normal
+  smaller-fan pass flooding a moored tender while preserving pause/swap state
+  and clear channels; and easy bow lift, sustained water-relative bouncing
+  through a powered turn, and clean settling after releasing Shift.
+- Inspected the bow-up, loaded turn, smaller fan and settled screenshots.
+  The game uses the same desktop and touch controls; no jump input was added.
+- Earlier tests sampled one instant of a continuous fan. They now check its
+  wet-phase peak over a turn because catch/release intentionally pulses the
+  water contact. The flood receiver fixture moved from 10 m to 7 m for the
+  shorter tender fan, retaining its full sink/reset assertions. Production
+  pontoon travel now gives the tender an 18 m run-up; normal spray passes were
+  tested at six wave phases.
+
+These are tuned arcade reactions and a bounded pressure-cycle approximation.
+No real hydrodynamic porpoising model, physical-phone test or hardware-GPU
+performance measurement is claimed. Other craft retain their existing tuning.
+
+
+### Follow-up: easier sinking
+
+Successful side/rear hits deliver twice the previous gameplay water volume;
+slow drainage is halved. The normal-input physics pass now requires more than
+15% flooding across six wave phases; measured results were approximately
+19–23%. Existing idle/dry/absent-spray guards, full sinking, collision removal
+and finite reset checks remain active. The receiving footprint is unchanged.

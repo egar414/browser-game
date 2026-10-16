@@ -19,7 +19,7 @@ function reserved(x,z,r){
     lines(mapData.bridges,(a,b,c)=>edgeDistance(x,z,a,b)<r+c.w/2+3);
 }
 export function pontoonApproach(boats,type,collision){
-  const runUp=type==='ski'?18:24,offset=6;
+  const runUp=type==='cat'?24:18,offset=6;
   for(const b of boats.filter(b=>b.normal))for(const direction of [1,-1]){
     const heading=b.heading+(direction<0?Math.PI:0),x=b.x+b.normal[0]*offset-Math.sin(heading)*runUp,z=b.z+b.normal[1]*offset-Math.cos(heading)*runUp;
     if(Array.from({length:13},(_,i)=>i*2).every(d=>!collision(x+Math.sin(heading)*d,z+Math.cos(heading)*d,3)))return {x,z,heading};
