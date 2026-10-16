@@ -27,13 +27,14 @@ for(const type of ['ski','cat','tinny'])test(`${type}: choose, drive, spray, ste
   await page.screenshot({path:`test-results/${type}-driving.png`});
 });
 test('all graphics profiles render without errors and reflections switch safely',async({page})=>{
+  test.setTimeout(300000);
   const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.setViewportSize({width:960,height:640});await page.locator('#play').click();
   for(const quality of ['Medium','High','Low']){
     await page.keyboard.press('Escape');await page.locator('#quality').selectOption(quality);await page.locator('#resume').click();
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     const s=await status(page);expect(s.quality).toBe(quality);expect(s.spray.reflections).toBe(quality!=='Low');
-    expect(s.state).toBe('playing');await page.screenshot({path:`test-results/graphics-${quality}.png`});
+    expect(s.state).toBe('playing');expect(s.graphics.groundContacts).toBeGreaterThan(1000);expect(s.graphics.shadows).toBe(quality!=='Low');expect(s.graphics.reflectionHz).toBe(quality==='Low'?0:quality==='High'?30:20);console.log('Graphics profile',JSON.stringify({quality:s.quality,graphics:s.graphics,fps:s.fps,calls:s.drawCalls,triangles:s.triangles}));await page.screenshot({path:`test-results/graphics-${quality}.png`});
   }
   expect(errors).toEqual([]);
 });

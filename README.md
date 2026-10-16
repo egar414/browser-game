@@ -18,6 +18,26 @@ spread mainly sideways from the pontoons; its propeller has a separate wash.
 Powered steering is now quicker on both craft, with less excessive yaw damping
 and separate effective inertias. The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
+## Laptop lighting and scenery pass
+
+Warm sunlight and cooler ambient light give hulls and shore buildings more depth.
+Grass and sand have world-space colour variation and fine detail; facades darken
+near their bases. A single instanced soft-shade layer anchors 3,600+ houses and
+trees without requiring cast shadows on Low. This is authored contact shading.
+
+**Auto** starts desktop browsers at Medium and touch devices at Low, then retains
+the existing frame-rate fallback. CPU core count is no longer used to assume a
+powerful GPU. Medium adds a focused 1,024 px sun-shadow map; High uses 2,048 px.
+Planar reflections use 384 px / up to 20 captures per second on Medium and 768 px /
+up to 30 on High. The main camera and simulation still update independently.
+Low keeps reflection rendering and cast shadows off. Manually choose a quality
+level in Pause → Visual quality. Actual frame rates depend on the device.
+
+Tune rendering budgets in `QUALITY` in `src/config.js`, procedural ground/contact
+shade in `src/systems/scenery-lighting.js`, and sun/ambient light in `src/main.js`.
+All new surface detail is generated locally; there are no extra asset downloads,
+API keys, third-party plugins or accounts needed.
+
 ## Free-roam local boaters
 
 Six AI drivers cruise the Wharf, Kawana canals and upstream water in original

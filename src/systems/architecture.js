@@ -38,7 +38,8 @@ export function buildMappedBuildings(root,buildings,roads,surface,segment,m){
  const glass=m.windows,frame=m.fence,shadow=new THREE.MeshStandardMaterial({color:'#172e33',roughness:.74}),solar=new THREE.MeshStandardMaterial({color:'#173744',roughness:.17,metalness:.65});
  buildings.forEach((b,index)=>{
   const f=buildingFrame(b.points),wall=m.walls[index%m.walls.length],roof=m.roofs[index%m.roofs.length],base=(m.heightAt?.(f.cx,f.cz)||.62)+.03,top=base+b.h;
-  surface(root,b,top,wall,b.h);
+  const shell=surface(root,b,top,wall,b.h);shell.userData.facade={base,top};
+  const centre=f.point(0,0);m.contacts?.push({x:centre[0],z:centre[1],w:f.w,d:f.d,y:base-.03,heading:-Math.atan2(f.s,f.c)});
   const low=b.h<9&&f.area<700,domestic=low&&!['school','retail','commercial','roof','shed','garage'].includes(b.kind);
   const pitched=low&&f.rectangular&&b.roofShape!=='flat'&&(b.roofShape||index%4!==0);
   if(pitched){

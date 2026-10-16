@@ -120,6 +120,7 @@ export class Water {
     this.scene=scene;this.mesh=null;this.reflector=null;this.setQuality(quality);
   }
   setQuality(quality) {
+    this.reflectionHz=quality.reflectionHz||0;this.lastReflection=-Infinity;this.reflectionCaptures=0;
     if(this.mesh){this.scene.remove(this.mesh);this.mesh.geometry.dispose();}
     const g=new THREE.PlaneGeometry(2,2,quality.waterSegments,quality.waterSegments);g.rotateX(-Math.PI/2);
     const p=g.attributes.position;
@@ -140,8 +141,9 @@ export class Water {
   }
   reflect(renderer,camera) {
     if(!this.reflector)return;
+    const now=performance.now()/1000;if(now-this.lastReflection<1/Math.max(1,this.reflectionHz))return;this.lastReflection=now;
     camera.updateMatrixWorld();this.mesh.visible=false;
-    try{this.reflector.onBeforeRender(renderer,this.scene,camera);this.material.uniforms.uReflect.value=1;}
+    try{this.reflector.onBeforeRender(renderer,this.scene,camera);this.material.uniforms.uReflect.value=1;this.reflectionCaptures++;}
     finally{this.mesh.visible=true;}
   }
 }

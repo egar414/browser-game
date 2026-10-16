@@ -41,7 +41,7 @@ export function createAtmosphere(scene, renderer) {
   environmentScene.add(new THREE.Mesh(dome.geometry, material));
   const pmrem = new THREE.PMREMGenerator(renderer);
   const environment = pmrem.fromScene(environmentScene, .06, .1, 2000, { size: 128 });
-  scene.environment = environment.texture; scene.environmentIntensity = .65;
+  scene.environment = environment.texture; scene.environmentIntensity = .8;
   pmrem.dispose();
   return { update(time,position) { material.uniforms.uTime.value = time;if(position)dome.position.copy(position); }, dispose() { environment.dispose(); } };
 }

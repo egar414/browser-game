@@ -368,3 +368,24 @@ included). This is software-renderer inspection, not a hardware-GPU FPS claim.
   were visually inspected. Physical iOS/Android hardware remains untested.
 - The production build passes. Static-server publication is verified separately
   after deployment; these browser tests used the local Vite server.
+
+## Laptop graphics pass — 16 October 2026
+
+- All 91 existing Node tests pass after the visual changes. Production build
+  passes; gameplay physics, wave sampling and spray scoring are unchanged.
+- Chromium rendered Low, Medium and High through normal pause/settings menus
+  with no page or shader-console errors. Each profile reports 3,636 ground
+  contact instances at the Low-generated scenery density used by this check.
+  Low disables cast shadows/reflections; Medium and High enable the configured
+  1,024/2,048 px shadows and 20/30 Hz reflection limits. Settings can switch back
+  to Low safely. Screenshots were inspected.
+- This environment uses Linux Chromium with SwiftShader software WebGL. The
+  initial compilation/profile-switch samples were around 0.5–0.7 fps; they are
+  not a warmed-up hardware benchmark. A physical laptop/GPU and real mobile
+  hardware remain untested. No universal frame-rate target is claimed.
+- A separate interactive browser pass confirms desktop Auto starts on Medium,
+  with 4,893 contacts at that initial scenery density, then reaches ~10.9 m/s
+  during a normal keyboard carve. A touch-emulated landscape phone starts on
+  Low, drives the Thundercat at ~9.2 m/s and steers using simultaneous touches
+  alongside free-roam AI. Neither run logged runtime/console errors or wiped
+  out. Garage, waterfront and driving screenshots were visually inspected.

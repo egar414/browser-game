@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {addGroundContacts,finishGroundMaterial} from './scenery-lighting.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { coastalCanopy } from './foliage.js';
 import {mappedResidentialHomes,planResidentialMoorings} from './residential-moorings.js';
@@ -23,8 +24,8 @@ function surface(parent,area,y,mat,depth=0){
 }
 function seeded(seed){let s=seed;return()=>((s=Math.imul(s,1664525)+1013904223|0)>>>0)/4294967296;}
 export function buildEstuaryScenery(scene,quality,solids){
-  const root=new THREE.Group();scene.add(root);
-  const sand=groundMaterial('#f0dbb1','sand'),grass=groundMaterial('#b4bf8d','grass'),park=groundMaterial('#94b47f','grass'),road=material('#737d78');
+  const root=new THREE.Group();scene.add(root);const contacts=[];
+  const sand=groundMaterial('#e5cfaa','sand'),grass=groundMaterial('#8d9d73','grass'),park=groundMaterial('#7c966d','grass'),road=material('#737d78');
   const concrete=material('#c3c4b6'),timber=material('#92836c'),navy=material('#263e4f');
   const walls=['#e2e3d7','#c4d3ce','#d3c2ac','#f0e5cf'].map(material),roofs=['#647675','#a7886d','#40535b','#bbc0b8','#77675a'].map(roofMaterial);
   const garden=material('#537d57'),fence=material('#d3d2ba'),homeGlass=facadeWindowMaterial();
@@ -64,7 +65,7 @@ export function buildEstuaryScenery(scene,quality,solids){
   for(const {a,b,count}of hillEdges.values())if(count===1){const ah=terrainHeight(...a),bh=terrainHeight(...b);for(const [x,y,z]of[[a[0],ah,a[1]],[a[0],.56,a[1]],[b[0],bh,b[1]],[a[0],.56,a[1]],[b[0],.56,b[1]],[b[0],bh,b[1]]]){hillVertices.push(x,y,z);hillUV.push(x*.14,z*.14);}}
   const hill=new THREE.BufferGeometry();hill.setAttribute('position',new THREE.Float32BufferAttribute(hillVertices,3));hill.setAttribute('uv',new THREE.Float32BufferAttribute(hillUV,2));hill.computeVertexNormals();root.add(new THREE.Mesh(hill,grass));
   // Footprints and available levels are geographic data; facade details are original.
-  const architectureStats=buildMappedBuildings(root,mapData.buildings.filter(b=>landAt(...b.points[0])),mapData.roads,surface,segment,{walls,roofs,windows,fence,concrete,heightAt:terrainHeight});
+  const architectureStats=buildMappedBuildings(root,mapData.buildings.filter(b=>landAt(...b.points[0])),mapData.roads,surface,segment,{walls,roofs,windows,fence,concrete,heightAt:terrainHeight,contacts});
   for(const p of mapData.piers){
     if(p.area){surface(root,p,1.15,timber,.35);}
     else for(let i=1;i<p.points.length;i++){
@@ -117,7 +118,8 @@ export function buildEstuaryScenery(scene,quality,solids){
   function coastalHome(x,z,heading,w,d,index){
     const group=new THREE.Group();group.position.set(x,.62,z);group.rotation.y=heading;root.add(group);
     const wall=walls[index%walls.length],roof=roofs[index%roofs.length],h=index%3===0?6.4:4.2;
-    box(group,w,h,d,0,h/2,0,wall);box(group,w+.9,.3,d+1,0,h+.12,0,roof);
+    contacts.push({x,z,w,d,heading,y:.62});
+    const shell=box(group,w,h,d,0,h/2,0,wall);shell.userData.facade={base:.62,top:.62+h};box(group,w+.9,.3,d+1,0,h+.12,0,roof);
     if(index%2===0){
       const g=new THREE.BufferGeometry(),a=w*.55,b=d*.56,y=h+.2;
       g.setAttribute('position',new THREE.Float32BufferAttribute([-a,y,-b,a,y,-b,-a,y,b,a,y,b,0,y+2,-b,0,y+2,b],3));g.setIndex([0,2,5,0,5,4,4,5,3,4,3,1,0,4,1,2,3,5]);g.computeVertexNormals();group.add(new THREE.Mesh(g,roof));
@@ -162,6 +164,7 @@ export function buildEstuaryScenery(scene,quality,solids){
     if(mapData.roads.some(r=>r.points.some((p,i)=>i&&edgeDistance(x,z,r.points[i-1],p)<r.w/2+2)))continue;
     const scale=.65+random()*.9,ground=(x>1120&&z<-1280)?terrainHeight(x,z):.6;trunks.push([x,ground+3*scale,z,scale]);crowns.push([x,ground+6*scale,z,scale]);
   }
+  for(const p of trunks)contacts.push({x:p[0],z:p[2],y:p[1]-3*p[3],w:1.5*p[3],d:1.5*p[3]});
   const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),q=new THREE.Quaternion();
   const trunkGeo=new THREE.CylinderGeometry(.23,.5,6,7),canopy=coastalCanopy(),crownGeo=canopy.geometry,foliageMat=canopy.material;
   const tiles=new Map();
@@ -286,15 +289,16 @@ export function buildEstuaryScenery(scene,quality,solids){
     let g=mesh.geometry.clone();if(g.index)g=g.toNonIndexed();g.applyMatrix4(mesh.matrixWorld);g.computeBoundingSphere();
     const sphere=g.boundingSphere,tile=sphere.radius<150?`${Math.floor(sphere.center.x/400)}:${Math.floor(sphere.center.z/400)}`:'large';
     const key=[tile,m.type,m.roughness,m.metalness,m.map?.uuid,m.normalMap?.uuid,m.alphaTest,m.transparent,m.opacity,m.side].join(':');
-    const colour=m.color||new THREE.Color('white'),colours=new Float32Array(g.attributes.position.count*3);for(let i=0;i<g.attributes.position.count;i++)colours.set([colour.r,colour.g,colour.b],i*3);g.setAttribute('color',new THREE.BufferAttribute(colours,3));
+    const colour=m.color||new THREE.Color('white'),colours=new Float32Array(g.attributes.position.count*3);for(let i=0;i<g.attributes.position.count;i++){const facade=mesh.userData.facade,shade=facade ? .78+.22*THREE.MathUtils.clamp((g.attributes.position.getY(i)-facade.base)/(facade.top-facade.base),0,1) : 1;colours.set([colour.r*shade,colour.g*shade,colour.b*shade],i*3);}g.setAttribute('color',new THREE.BufferAttribute(colours,3));
     if(!batches.has(key)){const mergedMaterial=m.clone();mergedMaterial.vertexColors=true;mergedMaterial.color.set('#ffffff');batches.set(key,{material:mergedMaterial,geometries:[]});}
     if(!g.attributes.uv)g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
     batches.get(key).geometries.push(g);originals.push(mesh);
   });
   for(const {material:mat,geometries} of batches.values()){
-    const g=mergeGeometries(geometries,false);if(!g)throw new Error('Scenery batching failed');const m=new THREE.Mesh(g,mat);m.castShadow=true;m.receiveShadow=true;root.add(m);geometries.forEach(g=>g.dispose());
+    const g=mergeGeometries(geometries,false);if(!g)throw new Error('Scenery batching failed');finishGroundMaterial(mat);const m=new THREE.Mesh(g,mat);m.castShadow=true;m.receiveShadow=true;root.add(m);geometries.forEach(g=>g.dispose());
   }
   for(const m of originals){m.removeFromParent();m.geometry.dispose();}
-  root.userData.stats={...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
+  const contactShadows=addGroundContacts(root,contacts);
+  root.userData.stats={contactShadows,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
   return root;
 }

@@ -550,3 +550,19 @@ spray packets against the current deck plane. A nearby fan alone cannot flood a
 boat. Drivers duck with hands still constrained to the tiller. Ambient reactions
 award no score; the optional timed battle remains separate. The 55-litre capture
 threshold and 16-second relaunch are deliberate gameplay values.
+
+## Laptop scenery lighting
+
+This visual pass uses original procedural shading and the existing Three.js
+renderer. No map imagery, third-party textures or new models were imported.
+Ground colour is modulated by two scales of world-space noise, with close-range
+fine detail. Building bases receive baked vertex-colour attenuation. One
+instanced soft rectangle field supplies authored contact shade for buildings and
+trees, fading at distance. It is not screen-space ambient occlusion or a physical
+shadow simulation. Medium/High also use the real directional-light shadow map
+with a smaller camera-relative footprint for improved nearby texel density.
+Planar reflection captures have a wall-clock refresh limit independent of fixed
+physics steps. This limits extra scene passes on capable GPUs without reducing
+simulation frequency. Desktop Auto begins conservatively at Medium; the existing
+measured-frame-rate downgrade remains active. There is no dependency on Blender
+or an external graphics plugin.
