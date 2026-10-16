@@ -304,3 +304,43 @@ steering, brake/reverse and recovery for each outboard. The pontoon flow was
 rerun successfully after the final captured-water tuning. Inspected the
 new tender bow-up view and phone layout; hosted Thundercat visual review is
 part of the release check. No critical runtime errors occurred in these flows.
+
+## Upstream / western map extension and bridge pass — 16 October 2026
+
+- 85 simulation tests passed, including all mapped channel passages, existing
+  island race, Wharf-to-mouth/bar guide, support collisions, falling-spray
+  flooding and the previous video-reference handling checks.
+- New checks cover added geographic bounds/source hashes, mapped pools,
+  bridge names and tagged widths, paired road/sidewalk deck levels, overhead
+  collision bands and clear water passages, connected road approaches, and
+  all three craft driving in the new upstream Wyuna reach without a reset.
+- Rebuilt the map into a separate temporary output and compared it byte-for-
+  byte with the checked-in JSON: identical. The production build passed.
+- The smaller-map building-count assertion was updated to require the expanded
+  coverage. Bridge passage checks now sample actual water crossings instead
+  of the endpoint chord midpoint, which can lie on land on a bent bridge.
+- Extending river vertices exposed the old bar-guide fixed index. Stable
+  entrance anchors retain the tested route. Paired sidewalk/road deck heights
+  were also aligned after collision checks exposed the original mismatch.
+
+Browser/visual results are recorded after completing the release checks below.
+This is a geometry/coverage pass. Exact present-day houses, bridge structures
+and measured clearances are not established by this data. No new aerial
+imagery, LiDAR or Microsoft footprint import is claimed. Physical phones and
+hardware-GPU frame rates remain untested.
+
+Four browser flows passed: upstream desktop driving in both outboards with
+same-position swapping and return to the bar; landscape phone shortcut/native
+GO input; the existing normal-input pontoon spray, pause/swap and channel
+clearance flow; and the coastal mode/loadout/persistence/battle menu flow.
+The upstream test originally released throttle immediately on reaching speed,
+before travelling its required distance; it now waits for actual movement.
+The final menu check exposed battle HUD latency while the first rival frame
+rendered. Battle start now updates the HUD immediately; that check passed.
+
+Inspected Medium-quality bridge, upstream and housing views, the full SVG map,
+and the upstream desktop/phone game screenshots. No critical runtime errors.
+On Linux Chromium 154 / SwiftShader, the three Medium scenery views reached
+capture in roughly 21–26 seconds including first rendering, with 165–401 draw
+calls and approximately 0.92–1.31 million rendered triangles (reflections
+included). This is software-renderer inspection, not a hardware-GPU FPS claim.

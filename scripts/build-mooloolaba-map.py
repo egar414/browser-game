@@ -7,8 +7,9 @@ from pathlib import Path
 from hashlib import sha256
 from shapely.geometry import Polygon, LineString, Point, box
 from shapely.ops import unary_union, polygonize
-parser=argparse.ArgumentParser();parser.add_argument('--source-dir',type=Path,required=True);parser.add_argument('--output',type=Path,default=Path('src/data/mooloolaba.json'));args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--source-dir',type=Path,required=True);parser.add_argument('--extended',action='store_true');parser.add_argument('--output',type=Path,default=Path('src/data/mooloolaba.json'));args=parser.parse_args()
 files=['mooloolaba-osm-map','mooloolaba-map-south','mooloolaba-map-north','mooloolaba-river-full']
+if args.extended:files+=['mooloolaba-map-upstream','mooloolaba-map-west']
 nodes={};ways={};rels={}
 for name in files:
  root=ET.parse(args.source_dir/name).getroot()
@@ -18,7 +19,7 @@ def xy(lon,lat):return ((float(lon)-153.124)*111320*math.cos(math.radians(26.694
 def coords(e):return [xy(nodes[n.get('ref')].get('lon'),nodes[n.get('ref')].get('lat')) for n in e.findall('nd')]
 def rounded(points):return [[round(x,1),round(z,1)] for x,z in points]
 def geometry_parts(g,kind):return [g] if g.geom_type==kind else [p for p in getattr(g,'geoms',[]) if p.geom_type==kind]
-world_box=box(*xy(153.108,-26.677),*xy(153.142,-26.711));xmin,zmin,xmax,zmax=world_box.bounds
+world_box=box(*xy(153.099 if args.extended else 153.108,-26.677),*xy(153.142,-26.728 if args.extended else -26.711));xmin,zmin,xmax,zmax=world_box.bounds
 outer=[];inner=[]
 for m in rels['1380756'].findall('member'):
  if m.get('type')=='way':(inner if m.get('role')=='inner' else outer).append(LineString(coords(ways[m.get('ref')])) )
@@ -56,7 +57,7 @@ n=math.ceil(d/82);race=[course.interpolate((start+sign*(i+1)*d/n)%d) for i in ra
 for a,b in zip([p0,*race[:-1]],race):
  if not water.buffer(-2).covers(LineString([a,b])):raise RuntimeError('Race chord crosses shore; increase sampling density')
 p1=race[0];spawn={'x':-220,'z':-1080,'heading':math.atan2(p1.x+220,p1.y+1080)} # clear water beside The Wharf
-features={'buildings':[],'roads':[],'piers':[],'bridges':[],'channels':[],'parks':[],'beaches':[],'pois':[],'residential':[],'breakwaters':[]}
+features={'buildings':[],'roads':[],'piers':[],'bridges':[],'channels':[],'parks':[],'beaches':[],'pois':[],'residential':[],'breakwaters':[],'pools':[]}
 for ident,w in ways.items():
  t=tags(w);points=coords(w)
  if len(points)<2:continue
@@ -70,9 +71,9 @@ for ident,w in ways.items():
    try:h=float(t.get('building:levels','1'))*3.1
    except ValueError:h=4.5
   features['buildings'].append({'id':ident,'points':rounded(points),'h':round(max(3.5,min(h,52)),1),'name':t.get('name',''),'kind':t.get('building','yes'),'roofShape':t.get('roof:shape',''),'heightSource':'mapped height' if t.get('height') else 'mapped levels' if t.get('building:levels') else 'estimate'})
- if t.get('highway') in ['residential','tertiary','secondary','primary','trunk','unclassified','service'] and not t.get('bridge'):
+ if t.get('highway') in ['residential','tertiary','secondary','primary','trunk','motorway','unclassified','service','cycleway','footway'] and not t.get('bridge'):
   for seg in geometry_parts(line.intersection(world_box),'LineString'):
-   features['roads'].append({'points':rounded(seg.simplify(2).coords),'name':t.get('name',''),'kind':t.get('highway',''),'w':9 if t.get('highway') in ['primary','trunk','secondary'] else 5})
+   features['roads'].append({'points':rounded(seg.simplify(2).coords),'name':t.get('name',''),'kind':t.get('highway',''),'w':3 if t.get('highway') in ['cycleway','footway'] else 9 if t.get('highway') in ['primary','trunk','secondary','motorway'] else 5})
  if t.get('landuse')=='residential' and len(points)>3 and points[0]==points[-1]:
   for p in geometry_parts(Polygon(points).buffer(0).intersection(world_box),'Polygon'):
    features['residential'].append({'points':rounded(p.exterior.coords)})
@@ -82,12 +83,27 @@ for ident,w in ways.items():
  if t.get('man_made')=='pier':
   for seg in geometry_parts(line.intersection(world_box),'LineString'):
    if seg.length>5:features['piers'].append({'id':ident,'points':rounded(seg.simplify(.6).coords),'area':points[0]==points[-1]})
- if t.get('bridge')=='yes' and t.get('highway') in ['residential','secondary','primary','tertiary','trunk']:
+ if t.get('bridge')=='yes' and t.get('highway') in ['residential','secondary','primary','tertiary','trunk','motorway','cycleway','footway']:
+  kind=t['highway'];walking=kind in ['cycleway','footway']
+  try:lanes=max(1,min(6,int(t.get('lanes','1' if walking or t.get('oneway')=='yes' else '2'))))
+  except ValueError:lanes=2
+  try:width=float(t.get('width','').replace('m','').strip());width_source='mapped width'
+  except ValueError:width=3 if walking else lanes*3.3+1; width_source='estimated from lanes' if t.get('lanes') else 'estimated'
   for seg in geometry_parts(line.intersection(world_box),'LineString'):
-   if seg.length>15 and seg.intersects(water):features['bridges'].append({'name':t.get('name','Road bridge'),'points':rounded(seg.simplify(2).coords),'w':7})
+   # Retain complete mapped alignments, including pedestrian bridges. OSM does
+   # not supply local navigational clearances; those are explicit game values.
+   if seg.length>12 and seg.intersection(water).length>8:
+    features['bridges'].append({'id':ident,'name':t.get('bridge:name',t.get('name','Footbridge' if walking else 'Road bridge')),'roadName':t.get('name',''),'points':rounded(seg.simplify(.5).coords),'w':round(max(2,min(width,25)),1),'widthSource':width_source,'kind':kind,'lanes':lanes,'material':t.get('bridge:material',t.get('surface','concrete')),'clearanceSource':'gameplay estimate'})
+ if t.get('leisure')=='swimming_pool' and len(points)>3 and points[0]==points[-1]:
+  p=Polygon(points).buffer(0)
+  if not p.is_empty and world_box.covers(p) and 6<p.area<1500:features['pools'].append({'id':ident,'points':rounded(p.exterior.coords)})
  if t.get('waterway') in ['canal','river','stream']:
-  for seg in geometry_parts(line.intersection(world_box),'LineString'):
-   if seg.length>20 and seg.intersection(water).length>seg.length*.8:features['channels'].append({'name':t.get('name','Canal'),'points':rounded(seg.simplify(4).coords)})
+  navigable=water.buffer(-4)
+  for seg in geometry_parts(line.intersection(world_box).intersection(navigable),'LineString'):
+   if seg.length>20:
+    path=seg.simplify(4)
+    if not water.buffer(-3).covers(path):path=seg
+    features['channels'].append({'name':t.get('name','Canal'),'points':rounded(path.coords)})
  if t.get('natural')=='beach' and len(points)>3:features['beaches'].append({'points':rounded(points)})
  if t.get('leisure')=='park' and len(points)>3:features['parks'].append({'name':t.get('name','Coastal park'),'points':rounded(points)})
  if t.get('man_made')=='lighthouse':
@@ -99,8 +115,24 @@ for n in nodes.values():
  if t.get('man_made')=='lighthouse' or 'lighthouse' in t.get('name','').lower():
   x,z=xy(n.get('lon'),n.get('lat'))
   if world_box.covers(Point(x,z)):features['pois'].append({'name':t.get('name','Lighthouse'),'x':round(x,1),'z':round(z,1),'lighthouse':True})
+# Sidewalk ways mapped beside a road bridge share its estimated deck level.
+# A separately mapped walk/ride crossing keeps its own pedestrian profile.
+road_bridges=[b for b in features['bridges'] if b['kind'] not in ['cycleway','footway']]
+for b in features['bridges']:
+ walking=b['kind'] in ['cycleway','footway'];thickness=.45 if walking else .8
+ clearance=4.8 if walking else 5.2 if b['kind']=='residential' else 7.2
+ b['gameDeckTop']=round(clearance+thickness,2)
+ if walking:
+  line=LineString(b['points']);a,c=b['points'][0],b['points'][-1];dx,dz=c[0]-a[0],c[1]-a[1]
+  candidates=[]
+  for r in road_bridges:
+   rline=LineString(r['points']);ra,rc=r['points'][0],r['points'][-1];rx,rz=rc[0]-ra[0],rc[1]-ra[1]
+   dot=abs(dx*rx+dz*rz)/max(.01,math.hypot(dx,dz)*math.hypot(rx,rz))
+   if dot>.8 and line.distance(rline)<12 and line.intersection(rline.buffer(12)).length>line.length*.55:candidates.append((line.distance(rline),r))
+  if candidates:
+   r=min(candidates,key=lambda q:q[0])[1];b['pairedRoad']=r['id'];b['gameDeckTop']=6.0 if r['kind']=='residential' else 8.0
 # Identical width-sensitive wave field for CPU buoyancy and the GPU surface.
-size=128;field=[]
+size=192 if args.extended else 128;field=[]
 for iz in range(size):
  for ix in range(size):
   p=Point(xmin+(xmax-xmin)*ix/(size-1),zmin+(zmax-zmin)*iz/(size-1))
@@ -112,6 +144,6 @@ for iz in range(size):
 ramps=[{'x':1500,'z':-1050,'width':13,'length':17,'height':3.4},{'x':1600,'z':-940,'width':12,'length':20,'height':4.6}]
 for ramp in ramps:
  if water.boundary.distance(Point(ramp['x'],ramp['z']))<20 or not water.covers(Point(ramp['x'],ramp['z'])):raise RuntimeError('Unsafe stunt placement')
-data={'source':{'name':'OpenStreetMap contributors','license':'ODbL 1.0','url':'https://www.openstreetmap.org/copyright','date':'2026-10-15','projection':{'longitude':153.124,'latitude':-26.694,'units':'metres, east +X / south +Z'},'extract_sha256':{name:sha256((args.source_dir/name).read_bytes()).hexdigest() for name in files}},'world':{'minX':round(xmin,1),'maxX':round(xmax,1),'minZ':round(zmin,1),'maxZ':round(zmax,1)},'land':land_data,'spawn':spawn,'race':rounded([(p.x,p.y) for p in race]),'ramps':ramps,'stunt':{'x':1550,'z':-1000,'radius':190},'waveField':{'size':size,'values':field},**features}
+data={'source':{'name':'OpenStreetMap contributors','license':'ODbL 1.0','url':'https://www.openstreetmap.org/copyright','date':'2026-10-16' if args.extended else '2026-10-15','projection':{'longitude':153.124,'latitude':-26.694,'units':'metres, east +X / south +Z'},'extract_sha256':{name:sha256((args.source_dir/name).read_bytes()).hexdigest() for name in files}},'world':{'minX':round(xmin,1),'maxX':round(xmax,1),'minZ':round(zmin,1),'maxZ':round(zmax,1)},'land':land_data,'spawn':spawn,'race':rounded([(p.x,p.y) for p in race]),'ramps':ramps,'stunt':{'x':1550,'z':-1000,'radius':190},'waveField':{'size':size,'values':field},**features}
 args.output.write_text(json.dumps(data,separators=(',',':'))+'\n')
 print('Wrote',args.output,args.output.stat().st_size,'bytes;', {k:len(v) for k,v in features.items()},'race gates',len(race),'spawn',spawn)

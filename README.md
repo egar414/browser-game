@@ -28,11 +28,11 @@ clock, including across reloads. This is gameplay weather, not live observations
 Pause → Sea conditions offers lighter seas, chop, swell and hourly conditions.
 An older save adopts hourly conditions once; later manual choices are preserved.
 
-The land follows 422 OSM building footprints, 828 road segments, 60 mapped
+The land follows 759 OSM building footprints, 2,962 road/path segments, 83 mapped
 residential areas and the mapped entrance rock wall. Roof shapes/heights use
 available OSM tags; missing details are original estimates. Individual windows,
 gutters, roof materials, doorways and garages replace plain blocks. There are
-313 additional estimated waterfront homes within mapped residential areas, not
+311 additional estimated waterfront homes within mapped residential areas, not
 surveyed house replicas. Sloping shore edges, improved palms/clouds and
 wave-following moored aluminium tenders enrich the surroundings. The playable
 Tender Rat 225 adds a third craft, with an original 25 hp outboard. Residential
@@ -121,8 +121,8 @@ Repeated actions have diminishing rewards and cooldowns; idling scores nothing.
 
 The map follows the real Mooloolah River, Minyama and Mooloolah Islands,
 connected residential canals, Tuckers Creek, marina, Mooloolaba Spit and the
-river mouth beside Point Cartwright. Its approximately 3.4 × 3.8 km horizontal
-layout is in metres. Nine mapped road bridges have enlarged gameplay clearance.
+river mouth beside Point Cartwright. Its approximately 4.3 × 5.7 km horizontal
+layout is in metres. 37 mapped bridge alignments include road spans and pedestrian ways; their clearances are gameplay estimates.
 Gold squares on the
 minimap mark the ramps. Gates appear only during races. Vehicle choice, colour,
 riding mode, trim for each craft, quality, audio, camera, best race time and best trick session are saved locally.
@@ -346,7 +346,7 @@ Handling, top speed and the engine label are game specifications, not measured
 real-world performance or a real tender's capacity rating.
 
 Short house pontoons now serve eligible mapped and estimated waterfront homes:
-320 additional pontoon sites and 338 moored tenders in the current map. Locations
+317 additional pontoon sites and 335 moored tenders in the current map. Locations
 are authored and checked against land, mapped piers, bridge corridors and central
 water routes. Inland homes and sites that cannot fit safely receive no pontoon.
 Moored tenders use instanced meshes with a limited draw distance on Low quality;
@@ -405,3 +405,30 @@ Tune `TINNY_HANDLING` / `CAT_HANDLING`, `VEHICLES` and `PROPULSION` in
 not measured craft performance. Successful falling-spray hits now carry 3.75×
 the preceding release's gameplay water volume, with slower drainage again.
 The smaller tender fan and actual open-hull hit requirement remain in place.
+
+### Extended canals and mapped bridge pass
+
+The geographic area now spans roughly **4.3 × 5.7 km**, extending west into
+Mountain Creek / Hideaway Waters and south through the Wyuna Canal / upstream
+river bends. **Pause → VISIT UPSTREAM CANALS** launches in clear Wyuna water;
+**ESTUARY MAP** opens the full-area map. The Wharf remains the default spawn.
+
+The checked-in source has 759 mapped building footprints, 45 mapped pools,
+2,962 road/path segments and 37 mapped bridge alignments (including parallel
+carriageways and pedestrian ways, not 37 distinct bridge structures). Bridge
+names and widths are retained where mapped; otherwise widths use tagged lanes
+or explicit estimates. Sidewalks beside road bridges share their deck level.
+Bank supports, underside beams, rails and connected mapped-road approaches
+replace the old uniform slabs. Rendered supports and deck collisions share a
+layout, leaving surface-water passages clear.
+
+This is a first accuracy pass. Existing artistic houses still fill gaps in OSM
+coverage; façades, roof details, terrain heights, bridge structure details and
+vertical clearances remain estimates. The supplemental Microsoft footprint
+source was identified but its download domain is not yet allowed by this
+cloud environment; none of that data is claimed as imported. No aerial
+imagery is bundled. See `src/data/README.md` for provenance and regeneration.
+
+Tune bridge profiles in `src/systems/bridge-layout.js`; source widths and
+pairing are built by `scripts/build-mooloolaba-map.py --extended`. Generate the
+whole-area guide with `python scripts/build-estuary-map.py`.

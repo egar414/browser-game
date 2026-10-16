@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createAtmosphere, SUN_DIRECTION } from './systems/atmosphere.js';
 import './style.css';
-import { FIXED_STEP, VEHICLES, QUALITY, RIDE_MODES, setSeaState, SEA_STATES, setWeatherClock, oceanReport, waveHeight, SPAWN } from './config.js';
+import { FIXED_STEP, VEHICLES, QUALITY, RIDE_MODES, setSeaState, SEA_STATES, setWeatherClock, oceanReport, waveHeight, SPAWN, UPSTREAM_LAUNCH } from './config.js';
 import { VehiclePhysics } from './vehicles/physics.js';
 import { makeVehicle, loadCraftAssets } from './vehicles/models.js';
 import { buildEnvironment, collision, ramps, solids } from './systems/environment.js';
@@ -56,7 +56,7 @@ const ui=new UI(settings,{
   colour(index){settings.colour=index;saveSettings(settings);replaceModel();ui.selectVehicle();},
   loadout(key,value){const options=key==='design'?DESIGNS:TUNING;if(!options[value]||!hasUnlock(settings,options[value]))return;settings[key]=value;vehicle.tuning=settings.tuning;saveSettings(settings);replaceModel();ui.selectVehicle();},
   setting(key,value){if(key==='seaState'){settings.seaState=value;setSeaState(value,simulationTime);saveSettings(settings);ui.toast(SEA_STATES[value].name,'Water conditions change smoothly. Faster crests can launch wave hops.');return;}if(key==='rideMode'){setRideMode(value);return;}settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
-  race(){if(state==='playing'){battle.cancel();activities.startRace(vehicle);}},challenge(){if(state==='playing'){battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,
+  race(){if(state==='playing'){battle.cancel();activities.startRace(vehicle);}},challenge(){if(state==='playing'){battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,
 });
 new TouchControls(input);
 const activities=new Activities(scene,settings,(title,subtitle)=>ui.toast(title,subtitle));
@@ -64,7 +64,13 @@ const battle=new SprayBattle(scene,event=>{
   if(event.type==='score')activities.event(event);
   else{if(event.type==='battle-sink'){activities.combo=0;activities.comboTime=0;input.clear();}if(event.type==='battle-recover'){input.clear();spray?.clear();environment?.userData.moorings?.clearSpray();}ui.toast(event.label,event.detail);}
 });
-function startBattle(){if(state!=='playing')return;activities.cancel();battle.start(vehicle);}
+function updateHud(dt){ui.update(dt,vehicle,activities,fps,qualityName,battle.status,oceanReport(simulationTime),playground.status,barGuide.status(vehicle),environment.userData.moorings.status);}
+function startBattle(){
+  if(state!=='playing')return;activities.cancel();battle.start(vehicle);
+  // The first rival frame can compile shaders on slower devices. Show the
+  // new mode and water meter immediately instead of waiting for that frame.
+  updateHud(0);
+}
 function toggleBar(){
   if(state!=='playing'||!barGuide)return;
   barGuide.toggle(vehicle);
@@ -84,6 +90,12 @@ function visitPontoons(){
   if(!spawn){ui.toast('Find a waterfront pontoon','Moored alloy tenders are dotted along the residential canals.');return;}
   battle.cancel();activities.cancel();vehicle.respawnAt(spawn,simulationTime);spray.clear();environment.userData.moorings.clearSpray();chase.reset();input.clear();resume();
   ui.toast('House pontoon run','Carve alongside and land spray inside the tender. Watch its water meter.');
+}
+function visitUpstream(){
+  if(!ready)return;
+  battle.cancel();activities.cancel();activities.combo=0;activities.comboTime=0;
+  vehicle.respawnAt(UPSTREAM_LAUNCH,simulationTime);spray.clear();environment.userData.moorings.clearSpray();chase.reset();input.clear();barGuide.active=false;resume();
+  ui.toast('Upstream · Wyuna Canal','Explore the added canal reach and river bends. You can cruise back toward the Wharf.');
 }
 function replaceModel(){
   if(model){scene.remove(model);model.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material?.map)o.material.map.dispose();});}
@@ -146,7 +158,7 @@ try {
     chase.update(dt,render,input,settings.camera,state==='home');atmosphere.update(simulationTime,camera.position);
     spray.resize(innerHeight,camera.fov,renderer.getPixelRatio());
     sun.position.set(vehicle.x+SUN_DIRECTION.x*400,SUN_DIRECTION.y*400,vehicle.z+SUN_DIRECTION.z*400);sun.target.position.set(vehicle.x,0,vehicle.z);
-    audio.update(vehicle,state==='playing');uiTime+=dt;if(uiTime>.09){ui.update(uiTime,vehicle,activities,fps,qualityName,battle.status,oceanReport(simulationTime),playground.status,barGuide.status(vehicle),environment.userData.moorings.status);uiTime=0;}
+    audio.update(vehicle,state==='playing');uiTime+=dt;if(uiTime>.09){updateHud(uiTime);uiTime=0;}
     water.reflect(renderer,camera);renderer.render(scene,camera);
   }
   requestAnimationFrame(frame);

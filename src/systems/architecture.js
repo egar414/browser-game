@@ -32,6 +32,7 @@ export function facadeWindowMaterial(){if(facadeMaterial)return facadeMaterial;
 }
 export function buildMappedBuildings(root,buildings,roads,surface,segment,m){
  let detailWindows=0;
+ const roadEdges=roads.flatMap(r=>r.points.slice(1).map((b,i)=>{const a=r.points[i];return{a,b,minX:Math.min(a[0],b[0]),maxX:Math.max(a[0],b[0]),minZ:Math.min(a[1],b[1]),maxZ:Math.max(a[1],b[1])};}));
  const facadeGlass=facadeWindowMaterial();
  const windowGeometry=new THREE.PlaneGeometry(1,1);
  const glass=m.windows,frame=m.fence,shadow=new THREE.MeshStandardMaterial({color:'#172e33',roughness:.74}),solar=new THREE.MeshStandardMaterial({color:'#173744',roughness:.17,metalness:.65});
@@ -60,7 +61,8 @@ export function buildMappedBuildings(root,buildings,roads,surface,segment,m){
   }
   const floors=Math.max(1,Math.min(15,Math.round(b.h/3.1))),floorHeight=b.h/floors;
   let front=0,nearest=Infinity;
-  for(let j=0;j<b.points.length-1;j++){const a=b.points[j],c=b.points[j+1],x=(a[0]+c[0])/2,z=(a[1]+c[1])/2;for(const r of roads)for(let k=1;k<r.points.length;k++){const distance=edgeDistance(x,z,r.points[k-1],r.points[k]);if(distance<nearest){nearest=distance;front=j;}}}
+  const reach=Math.max(f.w,f.d)+85,nearRoads=roadEdges.filter(r=>r.minX<f.cx+reach&&r.maxX>f.cx-reach&&r.minZ<f.cz+reach&&r.maxZ>f.cz-reach);
+  for(let j=0;j<b.points.length-1;j++){const a=b.points[j],c=b.points[j+1],x=(a[0]+c[0])/2,z=(a[1]+c[1])/2;for(const r of nearRoads){const distance=edgeDistance(x,z,r.a,r.b);if(distance<nearest){nearest=distance;front=j;}}}
   for(let j=0;j<b.points.length-1;j++){
    const a=b.points[j],c=b.points[j+1],dx=c[0]-a[0],dz=c[1]-a[1],len=Math.hypot(dx,dz);if(len<3)continue;
    let nx=dz/len,nz=-dx/len;if(nx*((a[0]+c[0])/2-f.cx)+nz*((a[1]+c[1])/2-f.cz)<0){nx=-nx;nz=-nz;}

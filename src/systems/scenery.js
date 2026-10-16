@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { coastalCanopy } from './foliage.js';
 import {mappedResidentialHomes,planResidentialMoorings} from './residential-moorings.js';
 import { createMooredTinnies } from './moored-boats.js';
+import {bridgeLayout} from './bridge-layout.js';
 import { buildMappedBuildings, roofMaterial, facadeWindowMaterial } from './architecture.js';
 import { groundMaterial } from './terrain-materials.js';
 import { box, tube } from '../vehicles/models.js';
@@ -71,16 +72,46 @@ export function buildEstuaryScenery(scene,quality,solids){
       const len=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let t=0;t<=1;t+=Math.min(1,15/len))box(root,.35,2.2,.35,a[0]+(b[0]-a[0])*t,.7,a[1]+(b[1]-a[1])*t,timber);
     }
   }
-  // The real bridge alignments, with deliberately enlarged game clearance.
-  for(const bridge of mapData.bridges)for(let i=1;i<bridge.points.length;i++){
-    const a=bridge.points[i-1],b=bridge.points[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),nx=dz/len,nz=-dx/len;
-    segment(a,b,bridge.w+2,10.1,1,concrete);segment(a,b,bridge.w,10.66,.1,road);
-    for(const side of [-1,1]){
-      segment([a[0]+nx*side*(bridge.w/2+.65),a[1]+nz*side*(bridge.w/2+.65)],[b[0]+nx*side*(bridge.w/2+.65),b[1]+nz*side*(bridge.w/2+.65)],.22,11.7,.18,concrete);
-      for(let t=0;t<=1;t+=Math.min(1,9/len))box(root,.15,1.1,.15,a[0]+dx*t+nx*side*(bridge.w/2+.65),11.2,a[1]+dz*t+nz*side*(bridge.w/2+.65),concrete);
+  // Mapped road/footbridge alignments and available widths. Clearance and
+  // approach profiles remain authored game estimates, not surveyed heights.
+  for(const bridge of mapData.bridges){
+    const plan=bridgeLayout(bridge,landAt,mapData.roads),top=plan.clearance+plan.thickness,deckMaterial=bridge.material==='wood'?timber:concrete;
+    for(const {a,b,length:len}of plan.sections){
+      const dx=b[0]-a[0],dz=b[1]-a[1],nx=dz/len,nz=-dx/len;
+      segment(a,b,plan.width+.8,plan.clearance+plan.thickness/2,plan.thickness,concrete);
+      segment(a,b,plan.width,top+.025,.05,plan.walking?deckMaterial:road);
+      // Longitudinal underside beams, kerbs and closely spaced safety rails.
+      for(const side of [-1,1]){
+        const offset=(p,d)=>[p[0]+nx*side*d,p[1]+nz*side*d],edge=plan.width/2+.28;
+        segment(offset(a,plan.width*.30),offset(b,plan.width*.30),.3,plan.clearance+.13,.25,concrete);
+        segment(offset(a,edge),offset(b,edge),.20,top+.13,.26,concrete);
+        for(const y of [.55,1.1])segment(offset(a,edge),offset(b,edge),.065,top+y,.065,fence);
+        const count=Math.ceil(len/2.8);for(let j=0;j<=count;j++){
+          const t=j/count;box(root,.075,1.15,.075,a[0]+dx*t+nx*side*edge,top+.58,a[1]+dz*t+nz*side*edge,fence);
+        }
+      }
+      if(!plan.walking&&bridge.lanes>1)for(let d=2;d<len-2;d+=9){
+        const e=Math.min(d+3,len);segment([a[0]+dx*d/len,a[1]+dz*d/len],[a[0]+dx*e/len,a[1]+dz*e/len],.1,top+.058,.012,roadMark);
+      }
     }
-    // Supports are close to the banks, leaving a wide central navigation gap.
-    for(const t of [.06,.94]){const x=a[0]+dx*t,z=a[1]+dz*t;box(root,1.4,10,1.4,x,4.8,z,concrete);}
+    for(const [x,z]of plan.supports){
+      box(root,1.2,plan.clearance+.5,1.2,x,(plan.clearance-.5)/2,z,concrete);
+      box(root,plan.width+.5,.45,1.65,x,plan.clearance-.05,z,concrete);
+    }
+    for(const {a,b,ya,yb}of plan.approaches){
+      const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),rise=yb-ya;
+      const mesh=box(root,plan.width,.16,Math.hypot(len,rise),(a[0]+b[0])/2,(ya+yb)/2,(a[1]+b[1])/2,plan.walking?concrete:road);
+      mesh.rotation.set(-Math.atan2(rise,len),Math.atan2(dx,dz),0,'YXZ');
+      const steps=Math.max(1,Math.ceil(len/3));for(let j=0;j<steps;j++){
+        const t=(j+.5)/steps,x=a[0]+dx*t,z=a[1]+dz*t,h=ya+rise*t-.7;
+        if(h>.1&&landAt(x,z)){const fill=box(root,plan.width+.5,h,len/steps+.1,x,.62+h/2,z,concrete);fill.rotation.y=Math.atan2(dx,dz);}
+      }
+    }
+  }
+  // Only pools actually mapped in the source are placed here.
+  for(const pool of mapData.pools||[]){
+    surface(root,pool,.65,concrete,.16);surface(root,pool,.69,windows);
+    for(let i=1;i<pool.points.length;i++)segment(pool.points[i-1],pool.points[i],.32,.72,.10,concrete);
   }
   const random=seeded(2311),trunks=[],crowns=[];
   function coastalHome(x,z,heading,w,d,index){
@@ -264,6 +295,6 @@ export function buildEstuaryScenery(scene,quality,solids){
     const g=mergeGeometries(geometries,false);if(!g)throw new Error('Scenery batching failed');const m=new THREE.Mesh(g,mat);m.castShadow=true;m.receiveShadow=true;root.add(m);geometries.forEach(g=>g.dispose());
   }
   for(const m of originals){m.removeFromParent();m.geometry.dispose();}
-  root.userData.stats={...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mooredTinnies:tinnySites.length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
+  root.userData.stats={...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
   return root;
 }

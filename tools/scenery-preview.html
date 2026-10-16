@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import {createAtmosphere,SUN_DIRECTION}from'/src/systems/atmosphere.js';
 import {buildEnvironment}from'/src/systems/environment.js';
 import {Water}from'/src/systems/water.js';
+import{mapData,landAt}from'/src/systems/geography.js';
+import{bridgeLayout}from'/src/systems/bridge-layout.js';
 import{QUALITY,setSeaState,SPAWN,waveHeight,setWeatherClock}from'/src/config.js';
 const view=new URLSearchParams(location.search).get('view')||'mouth',scene=new THREE.Scene();scene.fog=new THREE.FogExp2('#a2b9bd',.00082);
 const renderer=new THREE.WebGLRenderer({canvas:document.querySelector('canvas'),antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(1);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;
@@ -16,6 +18,10 @@ if(view==='house-close'){
 if(view==='tinny'){
  const boat=environment.children.find(g=>g.isInstancedMesh&&g.userData.dynamic),matrix=new THREE.Matrix4();boat.getMatrixAt(0,matrix);const eye=new THREE.Vector3(5,2.4,6).applyMatrix4(matrix),look=new THREE.Vector3(0,.35,0).applyMatrix4(matrix);views.tinny={eye:eye.toArray(),look:look.toArray()};
 }
+const bridge=mapData.bridges.find(b=>b.name==='Mooloolaba Walk and Ride Bridge');
+if(bridge){const plan=bridgeLayout(bridge,landAt,mapData.roads),p=plan.passages[0],a=bridge.points[0],b=bridge.points.at(-1),len=Math.hypot(b[0]-a[0],b[1]-a[1]),dx=(b[0]-a[0])/len,dz=(b[1]-a[1])/len;
+ views.bridge={eye:[p[0]-dx*38+dz*15,2.4,p[1]-dz*38-dx*15],look:[p[0],plan.clearance,p[1]]};}
+views.upstream={eye:[150,10,2570],look:[115,2,2430]};
 views.ocean={eye:[1650,1.6,-1000],look:[1790,.2,-1260]};
 const v=views[view]||views.mouth;camera.position.fromArray(v.eye);camera.lookAt(new THREE.Vector3(...v.look));document.querySelector('#label').textContent=`${view.toUpperCase()} · ORIGINAL DETAIL / OSM GEOMETRY`;
 let t=40,last=performance.now();function frame(now){requestAnimationFrame(frame);t+=Math.max(0,Math.min(.1,(now-last)/1000));last=now;environment.userData.update(t,{x:v.eye[0],z:v.eye[2]});water.update(t,v.eye[0],v.eye[2]);atmosphere.update(t,camera.position);water.reflect(renderer,camera);renderer.render(scene,camera);window.inspection={ready:true,time:t,stats:environment.userData.stats,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};}requestAnimationFrame(frame);

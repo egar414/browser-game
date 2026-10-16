@@ -17,7 +17,7 @@ test('mapped house frames retain rotation and footprint dimensions, with documen
  const a=.37,c=Math.cos(a),s=Math.sin(a),points=[[-6,-4],[6,-4],[6,4],[-6,4],[-6,-4]].map(([x,z])=>[120+x*c-z*s,-800+x*s+z*c]),f=buildingFrame(points);
  assert(f.rectangular);assert(Math.abs(f.area-96)<1e-6);assert(Math.abs(f.w-12)<1e-6);assert(Math.abs(f.d-8)<1e-6);
  for(const b of mapData.buildings){assert(['mapped height','mapped levels','estimate'].includes(b.heightSource));assert(buildingFrame(b.points).area>0);}
- assert.equal(mapData.buildings.length,422);assert(mapData.residential.length>50);assert(mapData.breakwaters.some(b=>b.name==='Rock Wall Mooloolaba'));
+ assert(mapData.buildings.length>700);assert(mapData.residential.length>50);assert(mapData.breakwaters.some(b=>b.name==='Rock Wall Mooloolaba'));
 });
 
 test('existing saves adopt hourly seas once without losing records; later manual choices persist',()=>{

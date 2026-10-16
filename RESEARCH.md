@@ -503,3 +503,38 @@ simulation second. These volumes are gameplay-scaled. Capacity, receiver
 geometry, pool size, animation, reset and score cooldown are unchanged.
 Six normal-input tender passes at different calm-wave phases leave about
 30–44% aboard with the new handling; idle, nearby or missed spray adds none.
+
+## Extended geographic area / bridge geometry — 16 October 2026
+
+Downloaded two additional OSM API extracts covering the upstream/southern and
+western strips. The 153.099–153.142° E / 26.728–26.677° S bounds cover roughly
+4.3 × 5.7 km, retaining the previous Wharf and entrance. The same local metre
+projection is used; no fake islands or disconnected decorative canals were
+added. Shoreline simplification remains 1.2 m. A 192-square shared wave field
+preserves sheltered-water sampling over the larger area.
+
+The combined data contains 759 mapped building outlines, 45 pools and 37 bridge
+way alignments. Bridge lane/width, road type, surface and bridge:name tags are
+retained, including McKenzies Bridge and the 5 m tagged Mooloolaba Walk and Ride
+Bridge. Parallel road and pedestrian ways are distinct alignments of the same
+structure; the count is not 37 separate bridges. Connected road vertices supply
+approaches; bank intersections place shared visual/collision supports. Sidewalk
+ways beside a road span share its estimated deck top. Structural design,
+clearance and approach elevation are game approximations, not source surveys.
+Actual mapped outlines are preserved horizontally. Roofs/façades, gap-filling
+houses, terrain heights and decorative moorings remain original estimates.
+
+Extending the channel data exposed an old fixed-index dependency in BAR_ROUTE.
+Its stable entrance anchors are now independent of upstream vertex counts.
+Channel guide paths are clipped to water with a clearance margin instead of
+retaining sections that cross unrepresented/narrow water. Original entrance,
+race and central-channel collision checks continue to pass.
+
+Investigated Microsoft Global ML Building Footprints. The author's current
+README identifies CDLA Permissive 2.0 data and the 13 August 2026 index at
+https://bfppub.blob.core.windows.net/%24web/2026-08-13/dataset-links.csv . The
+host is absent from the runtime network allowlist, so no such footprint data
+has been imported or claimed as present. ArcGIS catalogue search is likewise
+blocked. Required domains were saved in the environment configuration draft,
+preserving the existing allowed destinations; saving does not apply the change.
+OSM and its ODbL licence remain the only geographic data actually shipped here.

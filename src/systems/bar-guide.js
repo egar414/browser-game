@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { SPAWN, waveHeight } from '../config.js';
-import { mapData } from './geography.js';
 
 export const BAR_ZONE={x:600,z:-1630,radius:240};
 export const BAR_LAUNCH={x:625,z:-1770,heading:0};
@@ -8,7 +7,21 @@ export const BAR_LAUNCH={x:625,z:-1770,heading:0};
 // left into the authored shoals. A straight arrow from the marina cuts land.
 export const BAR_ROUTE=[
   [SPAWN.x,SPAWN.z],[-220,-1003],
-  ...mapData.channels.find(c=>c.name==='Mooloolah River').points.slice(25),
+  // Stable geographic route anchors: new upstream channel vertices must not
+  // move the entrance guide to a different river section.
+  [-225.4, -1003.5],
+  [-32.3, -992.8],
+  [181.4, -891.2],
+  [330.9, -755.6],
+  [583.5, -744.2],
+  [804.3, -782.6],
+  [926.8, -844.7],
+  [1011.4, -915.8],
+  [1096.6, -1034.7],
+  [1117.6, -1319.6],
+  [1108.7, -1358.5],
+  [1083.9, -1394.1],
+  [1040.2, -1423.8],
   [960,-1480],[900,-1540],[820,-1610],
   [BAR_ZONE.x,BAR_ZONE.z],
 ];

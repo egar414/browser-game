@@ -23,7 +23,7 @@ Download the following XML resources to the filenames shown, then run the builde
 
 ```sh
 python -m pip install shapely
-python scripts/build-mooloolaba-map.py --source-dir /path/to/extracts
+python scripts/build-mooloolaba-map.py --source-dir /path/to/extracts --extended
 ```
 
 The JSON records source extract SHA-256 hashes. Future OSM edits may change the
@@ -35,7 +35,7 @@ connected river/ocean component defines playable water. Isolated ponds are
 omitted. Shorelines are simplified to approximately 1.2 m, coordinates rounded
 to 0.1 m. Projection is a local planar metre approximation about 153.124° E,
 26.694° S, with east +X and south +Z. Horizontal distances are approximately 1:1;
-this is not survey accuracy. Extent is approximately 3.4 × 3.8 km.
+this is not survey accuracy. Extent is approximately 4.3 × 5.7 km.
 
 The database also contains mapped buildings, roads, piers, bridges, parks,
 beaches and named channels. Missing building heights use original estimates.
@@ -44,7 +44,7 @@ bridge clearance is deliberately enlarged for gameplay. Floating ramps, race
 gates, moored decorative boats and planted palms are original game additions,
 not claims about real navigation facilities. Never use the game as a chart.
 
-The 128 × 128 wave-exposure field is derived from shoreline clearance and ocean
+The 192 × 192 wave-exposure field is derived from shoreline clearance and ocean
 distance. CPU buoyancy and GPU water use the same bilinear interpolation. Narrow
 canals are calmer, the river is intermediate and the ocean is choppier.
 
@@ -53,8 +53,8 @@ canals are calmer, the river is intermediate and the ocean is choppier.
 The same hashed XML inputs now retain building kind, any mapped roof shape,
 and height provenance (`mapped height`, `mapped levels`, or `estimate`). Road
 name/class, 60 clipped residential areas and the `Rock Wall Mooloolaba`
-breakwater alignment are retained. Counts are 422 building footprints, 828
-road segments, 166 piers and nine road bridges. No satellite imagery or Google
+breakwater alignment are retained. The original pass contained 422 building footprints, 828
+road segments, 166 piers and nine road bridges. Current counts are below. No satellite imagery or Google
 Earth geometry was used. Additional waterfront houses, facade/roof details,
 rock dressing and moored boats remain artistic additions; the physical
 headland heights are estimated.
@@ -65,3 +65,36 @@ spray-target and advisory-sign placements derived from named channel centrelines
 They are not a surveyed list of actual signs. Estimated entrance sandbanks are
 separate authored constants in `src/ocean.js`; no bathymetry was present in the
 retained extracts. Neither source is suitable for navigation.
+
+
+## Upstream / western extension — 2026-10-16
+
+The extended build additionally requires:
+
+| Filename | OpenStreetMap API URL |
+| --- | --- |
+| mooloolaba-map-upstream | https://www.openstreetmap.org/api/0.6/map?bbox=153.099,-26.728,153.142,-26.710 |
+| mooloolaba-map-west | https://www.openstreetmap.org/api/0.6/map?bbox=153.099,-26.711,153.108,-26.677 |
+
+All six input SHA-256 hashes are included in the derived database. With these
+inputs, `--extended` regenerates the shipped JSON byte-for-byte. Omitting the
+flag builds the original smaller bounds. The new bounding box is 153.099–153.142°
+E, 26.728–26.677° S. It adds upstream river bends, more Wyuna Canal, western
+Mountain Creek and Hideaway Waters coverage. Channel guides are clipped to
+water with a navigation margin; land and water remain geographic geometry.
+
+Current counts: 759 mapped building footprints, 2,962 road/path segments,
+168 piers, 37 bridge alignments, 26 channel line parts, 83 residential areas
+and 45 mapped pools. Bridge ways can represent parallel lanes or sidewalks
+of one structure. Footways/cycleways and available width, lane and real
+bridge-name tags are retained. Explicit widths have `widthSource: mapped width`;
+others are estimates. `gameDeckTop` is an authored gameplay elevation, including
+shared road/sidewalk levels. It is not a measured clearance or structural survey.
+
+Original façade/roof details and gap-filling houses remain artistic. Building
+outlines do not establish present-day façades or parcel boundaries. No LiDAR,
+Google imagery or Microsoft footprint geometry has been imported in this pass.
+The latter source is pending access to its openly licensed download host.
+
+Generate `public/estuary-map.svg` with `python scripts/build-estuary-map.py`.
+The map and the geographic JSON remain ODbL-derived and retain attribution.

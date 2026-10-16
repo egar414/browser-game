@@ -3,6 +3,8 @@ import mapData from './data/mooloolaba.json' with {type:'json'};
 export const FIXED_STEP = 1 / 60;
 export const WORLD = mapData.world;
 export const SPAWN = mapData.spawn;
+// Clear water on the mapped Wyuna Canal, in the added upstream reach.
+export const UPSTREAM_LAUNCH={x:112.9,z:2502.7,heading:Math.atan2(8.6,-49.8)};
 export const VEHICLES = {
   ski: {
     name: 'Sparkplug', subtitle: 'Freestyle jet ski', description: 'Light, lively and made for mischief. Lift the bow, carve a rooster tail, and spin off the ramps.',

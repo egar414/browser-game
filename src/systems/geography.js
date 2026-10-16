@@ -1,4 +1,5 @@
 import mapData from '../data/mooloolaba.json' with {type:'json'};
+import {bridgeLayout} from './bridge-layout.js';
 export { mapData };
 export const lands=mapData.land;
 export function pointInPoly(x,z,points){
@@ -28,8 +29,10 @@ export function geographicSolids(){
     if(p.area)result.push({name:'Jetty / pontoon',points:p.points,bounds:[Math.min(...p.points.map(q=>q[0])),Math.min(...p.points.map(q=>q[1])),Math.max(...p.points.map(q=>q[0])),Math.max(...p.points.map(q=>q[1]))],height:1.4});
     else for(let i=1;i<p.points.length;i++)result.push({name:'Jetty / pontoon',a:p.points[i-1],b:p.points[i],width:2.1,height:1.4});
   }
-  for(const bridge of mapData.bridges)for(let i=1;i<bridge.points.length;i++)for(const t of [.06,.94]){
-    const a=bridge.points[i-1],b=bridge.points[i];result.push({name:'Bridge support',x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,w:1.4,d:1.4,height:10});
+  for(const bridge of mapData.bridges){
+    const plan=bridgeLayout(bridge,landAt);
+    for(const [x,z]of plan.supports)result.push({name:'Bridge support',x,z,w:1.2,d:1.2,height:plan.clearance});
+    for(const {a,b}of plan.sections)result.push({name:'Bridge deck',a,b,width:plan.width+.8,minY:plan.clearance,height:plan.clearance+plan.thickness});
   }
   for(const wall of mapData.breakwaters||[])for(let i=1;i<wall.points.length;i++)result.push({name:'Entrance rock wall',a:wall.points[i-1],b:wall.points[i],width:3.8,height:3});
   return result;
