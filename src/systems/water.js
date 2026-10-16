@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import{COASTAL_STYLE as ART,glslColour}from'./art-direction.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { WAVES, WORLD, WAVE_FIELD, seaAmplitude } from '../config.js';
 import { WAVE_GLSL } from '../ocean.js';
@@ -77,10 +78,10 @@ export class Water {
           float ndv=max(dot(n,view),0.);float fresnel=.025+.975*pow(1.-ndv,5.);
           float shore=texture2D(uShore,vec2((p.x-uMapBounds.x)/uMapBounds.z,1.-(p.y-uMapBounds.y)/uMapBounds.w)).r;
           float bed=.82+.18*sin(p.x*.13+sin(p.y*.16))*sin(p.y*.18);
-          vec3 deep=mix(vec3(.008,.105,.125),vec3(.045,.35,.265)*bed,smoothstep(.01,.78,shore));
+          vec3 deep=mix(${glslColour(ART.waterDeep)},${glslColour(ART.waterShallow)}*bed,smoothstep(.01,.78,shore));
           float bank=vBank;deep=mix(deep,vec3(.13,.37,.27)*bed,bank*.63);
           vec3 reflected=reflect(-view,n);
-          vec3 sky=mix(vec3(.50,.70,.75),vec3(.055,.245,.44),pow(max(reflected.y,0.),.42));
+          vec3 sky=mix(${glslColour(ART.skyHorizon)},${glslColour(ART.skyZenith)},pow(max(reflected.y,0.),.42));
           vec3 reflection=sky;
           if(uReflect>.5){
             vec2 uv=vReflection.xy/vReflection.w+ripples*.065+vNormal.xz*.028;
@@ -111,7 +112,7 @@ export class Water {
           float shadow=exp(-dot(hullSpace/uHull.zw,hullSpace/uHull.zw)*2.4)*uContact;
           colour*=1.-shadow*.42;
           float fog=1.-exp(-distanceToEye*.00095);
-          colour=mix(colour,vec3(.47,.64,.68),fog);
+          colour=mix(colour,vec3(.33,.56,.76),fog);
           gl_FragColor=vec4(colour,1.);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>

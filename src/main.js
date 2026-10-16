@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createAtmosphere, SUN_DIRECTION } from './systems/atmosphere.js';
 import './style.css';
+import{COASTAL_STYLE as ART}from'./systems/art-direction.js';
 import{configureSunShadow}from'./systems/scenery-lighting.js';
 import { FIXED_STEP, VEHICLES, QUALITY, RIDE_MODES, setSeaState, SEA_STATES, setWeatherClock, oceanReport, waveHeight, SPAWN, UPSTREAM_LAUNCH } from './config.js';
 import { VehiclePhysics } from './vehicles/physics.js';
@@ -24,7 +25,7 @@ import { BarGuide, BAR_LAUNCH } from './systems/bar-guide.js';
 const settings=loadSettings();validLoadout(settings);setSeaState(settings.seaState,0,true);let state='home',controlsFrom='home',ready=false,renderer,model,water,spray,environment,qualityName='Medium',sun;
 let playground,barGuide,locals,garageReturn=null;
 let simulationTime=0,accumulator=0,last=performance.now(),fps=60,frameCount=0,fpsTime=0,uiTime=0,lowFrames=0;
-const scene=new THREE.Scene();scene.background=new THREE.Color('#9bbdc7');scene.fog=new THREE.FogExp2('#a2b9bd',.00082);
+const scene=new THREE.Scene();scene.background=new THREE.Color(ART.haze);scene.fog=new THREE.FogExp2(ART.haze,ART.hazeDensity);
 const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,2200);
 const chase=new ChaseCamera(camera),audio=new GameAudio(settings);
 const vehicle=new VehiclePhysics(settings.vehicle,collision,event=>{
@@ -142,7 +143,7 @@ try {
   renderer=new THREE.WebGLRenderer({canvas:document.querySelector('#game'),antialias:true,powerPreference:'high-performance'});
   renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   const atmosphere=createAtmosphere(scene,renderer);
-  scene.add(new THREE.HemisphereLight('#c4dfef','#475a43',.58));
+  scene.add(new THREE.HemisphereLight('#c1dcff','#4c6950',.62));
   sun=new THREE.DirectionalLight('#ffe4bc',3.05);sun.castShadow=true;scene.add(sun);scene.add(sun.target);
   applyQuality();environment=buildEnvironment(scene,QUALITY[qualityName]);environment.userData.moorings.onEvent=e=>{if(e.points)activities.event({type:'score',label:e.label,points:e.points});ui.toast(e.label,e.detail);};playground=new CanalPlayground(scene,solids,e=>activities.event(e));barGuide=new BarGuide(scene,solids);water=new Water(scene,QUALITY[qualityName]);spray=new Spray(scene,QUALITY[qualityName]);locals=new LocalBoaters(scene,collision,e=>ui.toast(e.label,e.detail));solids.push(...locals.colliders);replaceModel();
   document.getElementById('loading').textContent='Preparing watercraft…';

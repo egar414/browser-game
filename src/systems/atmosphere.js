@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import{COASTAL_STYLE as ART,glslColour}from'./art-direction.js';
 
 export const SUN_DIRECTION = new THREE.Vector3(-0.36, 0.48, -0.8).normalize();
 
@@ -16,15 +17,15 @@ export function createAtmosphere(scene, renderer) {
       float fbm(vec2 p){return noise(p)*.53+noise(p*2.03+7.1)*.27+noise(p*4.07+3.8)*.13+noise(p*8.13)*.07;}
       void main(){
         vec3 d=normalize(vDirection);float elevation=max(d.y,0.);
-        vec3 colour=mix(vec3(.54,.72,.77),vec3(.045,.22,.43),pow(elevation,.42));
+        vec3 colour=mix(${glslColour(ART.skyHorizon)},${glslColour(ART.skyZenith)},pow(elevation,.42));
         float towardSun=max(dot(d,uSun),0.);
         colour+=vec3(.52,.32,.14)*pow(towardSun,24.)*.23;
         colour+=vec3(7.,4.9,2.6)*pow(towardSun,9000.);
         vec2 p=d.xz/max(d.y+.12,.13)*1.9+vec2(uTime*.0015,0.);
         float cloud=fbm(p+fbm(p*.7)*.8);
-        float density=smoothstep(.49,.70,cloud)*smoothstep(.035,.18,d.y);
+        float density=smoothstep(.47,.65,cloud)*smoothstep(.035,.18,d.y);
         float sunlight=clamp(.55+(fbm(p+uSun.xz*.3)-cloud)*3.5,0.,1.);
-        vec3 cloudColour=mix(vec3(.38,.49,.57),vec3(1.08,1.02,.91),sunlight);
+        vec3 cloudColour=mix(vec3(.40,.49,.69),vec3(1.12,1.10,1.03),sunlight);
         colour=mix(colour,cloudColour,density*.94);
         float highCloud=smoothstep(.60,.75,fbm(p*vec2(.55,3.)+22.))*smoothstep(.15,.5,d.y);
         colour=mix(colour,vec3(.84,.88,.86),highCloud*.17);

@@ -566,3 +566,17 @@ physics steps. This limits extra scene passes on capable GPUs without reducing
 simulation frequency. Desktop Auto begins conservatively at Medium; the existing
 measured-frame-rate downgrade remains active. There is no dependency on Blender
 or an external graphics plugin.
+
+## Sculpted coastal style
+
+This pass adopts broad stylistic qualities requested by the player: saturated
+coastal colour, readable masses, soft building edges, blue atmospheric distance
+and solid, lobed tree silhouettes. It does not reproduce Fortnite assets or
+claim parity with that game's renderer. Original canopy geometry combines one
+80-triangle centre lobe and four 20-triangle side lobes. Vertex-colour height
+ramps suggest cooler undergrowth and sunlit tips, with per-instance tint variation.
+This replaces the previous crossed alpha-card crowns. Solid foliage adds geometry
+but removes alpha-card overdraw; laptop gains depend on the actual GPU and view.
+The existing tile instancing and quality density limits are retained. Painted
+walls, roofs, ground, sky and water share a small editable art-direction module.
+The same wave equations and boat physics continue to drive the simulation.

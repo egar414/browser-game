@@ -18,6 +18,22 @@ spread mainly sideways from the pontoons; its propeller has a separate wash.
 Powered steering is now quicker on both craft, with less excessive yaw damping
 and separate effective inertias. The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
+## Sculpted coastal art direction
+
+The current look uses original, Fortnite-inspired coastal styling: bright painted
+houses, softened corners, bold green tree crowns, warm sand, blue skies and
+clean teal water. It uses no Fortnite assets, models or textures. Map geometry,
+vehicle controls and activities retain their existing behavior.
+
+Trees use solid overlapping crowns with painted vertex colours. Their silhouettes
+remain readable when viewed from the water and participate in the existing sun
+shadows. Each source canopy is 160 triangles and reuses the existing instanced
+foliage tiles. Terrain micro-grain is reduced so large shapes and colours read
+more cleanly. Low/Medium/High and the laptop Auto fallback remain available.
+
+Tune the palette in `src/systems/art-direction.js`, tree forms in `foliage.js`,
+and lighting/shadows in `scenery-lighting.js` and `main.js`.
+
 ## Laptop lighting and scenery pass
 
 Warm sunlight and cooler ambient light give hulls and shore buildings more depth.

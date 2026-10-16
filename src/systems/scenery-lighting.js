@@ -15,10 +15,10 @@ export function finishGroundMaterial(material){
    float groundMacro=groundNoise(groundP*.034)*.7+groundNoise(groundP*.13+51.)*.3;
    float groundNear=1.-smoothstep(18.,95.,length(cameraPosition-vGroundWorld));
    float groundGrain=groundNoise(groundP*6.7);
-   diffuseColor.rgb*=mix(.76,1.15,groundMacro)*(1.+(groundGrain-.5)*.16*groundNear);
+   diffuseColor.rgb*=mix(.90,1.12,groundMacro)*(1.+(groundGrain-.5)*.055*groundNear);
   `);
  };
- material.customProgramCacheKey=()=> 'coastal-ground-detail-v1';
+ material.customProgramCacheKey=()=> 'sculpted-coastal-ground-v2';
 }
 
 // One instanced, feathered contact-shadow draw anchors houses and trees even

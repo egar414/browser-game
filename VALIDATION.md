@@ -389,3 +389,24 @@ included). This is software-renderer inspection, not a hardware-GPU FPS claim.
   Low, drives the Thundercat at ~9.2 m/s and steers using simultaneous touches
   alongside free-roam AI. Neither run logged runtime/console errors or wiped
   out. Garage, waterfront and driving screenshots were visually inspected.
+
+## Sculpted coast / Fortnite-inspired direction — 17 October 2026
+
+- 91 Node tests pass and the production build passes for the art pass. Vehicle
+  physics, wave heights, routes and scoring were not edited.
+- Low, Medium and High render and switch through the real settings menu with
+  no shader-console or page errors. Visible-scene samples at the Wharf were
+  about 1.06–1.42 million triangles and 451–562 draw calls. Solid crowns and
+  bevels add geometry; no hardware frame-rate improvement is claimed.
+- A source crown has 160 triangles, a 1.3623 m bounding radius, finite positions/
+  normals/colours and an opaque material. Existing tile instancing is retained.
+- Desktop Auto starts at Medium and a normal keyboard carve reaches ~11.0 m/s;
+  phone landscape touch emulation starts at Low and drives/steers the Thundercat
+  at ~8.8 m/s alongside AI. Both runs finish with no errors or wipeouts.
+- Garage and canal screenshots were inspected. Inspection caught wall bevels
+  covering the 0.09 m offset window panes; bevel width was reduced to 0.045 m.
+  Final Low-quality waterfront inspection confirms the windows are visible
+  again; the verification run logged no runtime or console errors.
+- Checks use Linux Chromium/SwiftShader software rendering. Cold profile samples
+  around 0.4–0.54 fps are not physical-laptop measurements. Real laptop/phone
+  GPU performance remains untested.
