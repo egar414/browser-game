@@ -18,6 +18,16 @@ spread mainly sideways from the pontoons; its propeller has a separate wash.
 Powered steering is now quicker on both craft, with less excessive yaw damping
 and separate effective inertias. The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
+## Thundercat support in larger waves
+
+The Thundercat now damps motion relative to its supporting water and has bounded
+reserve buoyancy as immersion increases. This reduces the complete tube-crown
+submergence seen when a fast-rising bar crest overtook the hull. It changes the
+physics response rather than lifting only the rendered model. Four bow/stern,
+port/starboard water samples, bow rides and powered turns remain in use.
+Tune `waterFollow`, `reserveBuoyancy`, `reserveDepth` and `maxReserve` in
+`HYDRODYNAMICS.cat` in `src/config.js`. These are arcade simulation values.
+
 ## Sculpted coastal art direction
 
 The current look uses original, Fortnite-inspired coastal styling: bright painted

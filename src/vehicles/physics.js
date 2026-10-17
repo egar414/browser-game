@@ -26,7 +26,7 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;
@@ -135,6 +135,10 @@ export class VehiclePhysics {
       this.x + fx * half * end + fz * width * side,
       this.z + fz * half * end - fx * width * side, time)));
     const water = samples.flat().reduce((a, b) => a + b) / 4 + c.rideHeight;
+    // Water-relative damping lets the cat follow a rising crest instead of
+    // damping away the upward motion of its supporting water. Teleports and
+    // recovery clear the history, so they cannot create a heave impulse.
+    const waterVelocity=this.supportWater===null?0:clamp((water-this.supportWater)/dt,-4,4);this.supportWater=water;
     const surfacePitch = Math.atan2((samples[0][1] + samples[1][1] - samples[0][0] - samples[1][0]) / 2, half * 2);
     const surfaceRoll = Math.atan2((samples[1][0] + samples[1][1] - samples[0][0] - samples[0][1]) / 2, width * 2);
     this.airTricks.update(dt,input.pose,this.airborne,this.y-water);
@@ -156,7 +160,12 @@ export class VehiclePhysics {
       // As the bow rises, support moves toward the stern. Raise the body origin
       // around that support instead of submerging the transom a metre deep.
       const sternSupportLift=Math.sin(Math.max(0,this.pitch))*c.length*(handling?.sternSupport??.29)*clamp((this.pitch-.18)/.4,0,1);
-      const supportAcceleration=(water+sternSupportLift+sprayTurn.lift-this.y)*c.spring-this.vy*sprayTurn.damping+verticalReaction;
+      const supportError=water+sternSupportLift+sprayTurn.lift-this.y;
+      const followingWater=waterVelocity*sprayTurn.damping*(hydro.waterFollow||0);
+      // Additional immersed volume supplies bounded reserve buoyancy as a crest
+      // reaches the tube tops. This changes heave forces, not render position.
+      const reserve=clamp(Math.max(0,supportError-(hydro.reserveDepth||Infinity))**2*(hydro.reserveBuoyancy||0),0,hydro.maxReserve||0);
+      const supportAcceleration=supportError*c.spring-this.vy*sprayTurn.damping+verticalReaction+followingWater+reserve;
       this.vy+=supportAcceleration*dt;
       this.y += this.vy * dt;
       if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe('Over the balance point');

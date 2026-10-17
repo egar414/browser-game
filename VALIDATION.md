@@ -410,3 +410,26 @@ included). This is software-renderer inspection, not a hardware-GPU FPS claim.
 - Checks use Linux Chromium/SwiftShader software rendering. Cold profile samples
   around 0.4–0.54 fps are not physical-laptop measurements. Real laptop/phone
   GPU performance remains untested.
+
+## Thundercat bar-wave freeboard fix — 17 October 2026
+
+- Reproduced complete tube-crown submergence in a deterministic strong-swell
+  cruise: all six upper-tube sample points briefly went below the wave surface,
+  with the highest point about 0.15 m underwater. The model's top faces were
+  outward-facing; a vertical support lag was a confirmed cause of hiding it.
+- Water-relative heave damping and bounded reserve buoyancy now keep at least
+  one crown sample over 0.05 m clear in 30-second fixed-step cruise/spray/bow
+  scenarios for calm, chop, swell and deterministic hourly conditions. Tests
+  also require continued average hull-water contact and bounded vertical speed.
+- All 93 Node tests pass, including the new bar-wave regression and a recovery
+  history reset check. Existing bow rides, steering, spray hits, races, buoyancy
+  and recovery checks remain green. Production build passes.
+- Actual desktop Chromium interaction at Medium drives the coral Thundercat
+  through the bar's Rolling swell, reaches ~12.1 m/s in a powered carve, and
+  reports no wipeout or runtime/console errors. Cruise/carve screenshots were
+  visually inspected and show both pontoons above water.
+- These checks use Linux Chromium/SwiftShader, not physical laptop or phone GPU
+  hardware. This is approximate game buoyancy, not validated marine physics.
+- The landscape phone touch-emulation pass at Low also completes a powered
+  Thundercat carve in Rolling swell at ~12.5 m/s with no wipeout or errors.
+  The resulting screenshot was visually inspected before publication.

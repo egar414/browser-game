@@ -580,3 +580,17 @@ but removes alpha-card overdraw; laptop gains depend on the actual GPU and view.
 The existing tile instancing and quality density limits are retained. Painted
 walls, roofs, ground, sky and water share a small editable art-direction module.
 The same wave equations and boat physics continue to drive the simulation.
+
+## Thundercat heave and tube-crown submergence
+
+A deterministic bar run reproduced complete crown submergence in strong swell:
+the highest of six upper-tube samples briefly reached about 0.15 m below the
+visible wave function. World-relative heave damping opposed the motion needed
+to follow a rising crest. The correction adds bounded water-velocity feedforward
+from the existing four support samples and a capped nonlinear reserve term for
+larger immersion error. Recovery clears the sampling history. This approximates
+water-relative damping and increasing displaced volume; it is not a validated
+hydrostatics model. No render-only height offset or change to wave equations is
+used. Tests retain contact with water, exercise calm/chop/swell/hourly conditions
+and cover cruising, powered turns and bow riding. Only the Thundercat opts into
+the new heave terms; the jet ski and tender use their existing tuning.
