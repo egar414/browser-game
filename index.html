@@ -1,17 +1,60 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#102f30" />
-    <meta name="description" content="Estuary Rats — an original Australian coastal boating playground. Cruise, carve, race and send it." />
-    <title>Estuary Rats • Coastal playground</title>
+    <title>Estuary Rats | Free 3D Jet Ski &amp; Boating Game</title>
+    <meta name="description" content="Play Estuary Rats, a free 3D boating browser game around Mooloolaba's canals. Drive jet skis, Thundercats and tinnies, carve sprays and explore." />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="https://egar414.github.io/browser-game/" />
+    <link rel="sitemap" type="application/xml" href="./sitemap.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Estuary Rats" />
+    <meta property="og:locale" content="en_AU" />
+    <meta property="og:title" content="Estuary Rats — Free 3D Boating Game" />
+    <meta property="og:description" content="Choose a jet ski, Thundercat or tinny. Explore Mooloolaba's waterways, carve sprays and cruise with AI boaters. Play free in your browser." />
+    <meta property="og:url" content="https://egar414.github.io/browser-game/" />
+    <meta property="og:image" content="https://egar414.github.io/browser-game/social-preview.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Estuary Rats launch screen showing a blue jet ski on the Mooloolaba waterways." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Estuary Rats — Free 3D Boating Game" />
+    <meta name="twitter:description" content="Free-roam jet skis, Thundercats and tinnies through an Australian coastal boating playground." />
+    <meta name="twitter:image" content="https://egar414.github.io/browser-game/social-preview.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "@id": "https://egar414.github.io/browser-game/#game",
+        "name": "Estuary Rats",
+        "alternateName": "Eastary Rats",
+        "url": "https://egar414.github.io/browser-game/",
+        "image": "https://egar414.github.io/browser-game/social-preview.png",
+        "description": "A free single-player 3D boating browser game inspired by Mooloolaba and the Sunshine Coast. Cruise jet skis, Thundercats and tinnies, throw sprays, ride waves and explore connected waterways.",
+        "genre": ["Boating", "Racing", "Arcade"],
+        "playMode": "https://schema.org/SinglePlayer",
+        "gamePlatform": "Web browser",
+        "inLanguage": "en-AU",
+        "isAccessibleForFree": true
+      }
+    </script>
+    <noscript><style>body{overflow:auto;background:#153d40}#game{display:none}#app{position:static;pointer-events:auto}#app main h1{font-size:clamp(2rem,7vw,3.25rem);line-height:1.1;letter-spacing:-.02em;text-transform:none}</style></noscript>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
   </head>
   <body>
     <canvas id="game" aria-label="Estuary Rats 3D boating game"></canvas>
-    <div id="app"></div>
+    <div id="app">
+      <main style="max-width:40rem;margin:8vh auto;padding:1.5rem;color:#f2efdb;background:#153d40;font:1rem/1.6 Arial,sans-serif;pointer-events:auto">
+        <h1>Estuary Rats — free 3D boating game</h1>
+        <p>Drive a jet ski, Thundercat or tinny through Mooloolaba-inspired canals and the Mooloolah estuary. Explore in free roam, carve sprays, ride waves and cruise alongside AI boaters.</p>
+        <p>The game is loading. No account or installation is needed.</p>
+        <p><a style="color:#edb955" href="./about.html">About Estuary Rats and how to play</a></p>
+        <noscript><p>Enable JavaScript and WebGL to play, or follow the link above to read about the game.</p></noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

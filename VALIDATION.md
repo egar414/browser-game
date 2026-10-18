@@ -433,3 +433,21 @@ included). This is software-renderer inspection, not a hardware-GPU FPS claim.
 - The landscape phone touch-emulation pass at Low also completes a powered
   Thundercat carve in Rolling swell at ~12.5 m/s with no wipeout or errors.
   The resulting screenshot was visually inspected before publication.
+
+## Search discovery and no-JavaScript information — 18 October 2026
+
+- Production build and all 93 existing Node tests pass. The search change does
+  not edit physics, waves, vehicles or activities.
+- Chromium launches the game, loads the detailed jet ski and drives beyond
+  4 m/s with no runtime/console errors. The new About link is visible on launch.
+- With JavaScript disabled, Chromium can read the game introduction, follow
+  the About link, read the complete information page and return to Play.
+  Metadata, canonical URL, index/follow directive, VideoGame JSON-LD, alternate
+  “Eastary Rats” spelling and the 1,200 px preview image were checked from the
+  production server. The About page fits a 390 px phone viewport without
+  horizontal overflow. Desktop and phone screenshots were inspected.
+- Sitemap XML is valid and lists the canonical game and About addresses.
+  The original sharing image is an actual 1,200 × 630 game screenshot.
+- Search Console ownership verification and indexing requests were not
+  performed. No Google verification token was supplied. Published crawlable
+  content and metadata do not establish Google indexing or ranking.

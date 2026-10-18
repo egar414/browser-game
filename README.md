@@ -18,6 +18,27 @@ spread mainly sideways from the pontoons; its propeller has a separate wash.
 Powered steering is now quicker on both craft, with less excessive yaw damping
 and separate effective inertias. The latest handling update adds water-dependent pump/propeller thrust, persistent nozzle trim, nine-position jet-ski trim, Cruise/Sport/Freestyle modes and contact-based spray with droplet drag. Map routes and activities remain available. See [RESEARCH.md](RESEARCH.md) for sources, equations and realism limits.
 
+## Search visibility
+
+The game page includes a descriptive title, canonical URL, social previews and
+VideoGame structured data. A readable no-JavaScript introduction and the linked
+[About Estuary Rats](https://egar414.github.io/browser-game/about.html) page explain
+what the game is and how to play. The About page and structured data also include
+“Eastary Rats” as an alternate spelling. The sitemap lists the game and About page:
+<https://egar414.github.io/browser-game/sitemap.xml>.
+
+These changes help discovery but do not confirm search-engine indexing or a
+ranking. To request a Google crawl, the owner can add the URL-prefix property
+`https://egar414.github.io/browser-game/` in Google Search Console, verify ownership
+using its supplied HTML tag/file, submit the sitemap, and use URL Inspection →
+Request indexing. No verification token has been invented or installed. Supply
+Google's public verification tag/file before adding it to the project. A sitemap
+at a GitHub Pages project path is submitted through Search Console; a robots.txt
+inside that subdirectory does not control the origin's root crawler policy.
+
+Update canonical URLs, social-image URLs, JSON-LD and the sitemap together if the
+public address changes. Do not add fake ratings, keyword lists or indexing pings.
+
 ## Thundercat support in larger waves
 
 The Thundercat now damps motion relative to its supporting water and has bounded
