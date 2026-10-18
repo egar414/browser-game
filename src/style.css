@@ -62,3 +62,20 @@
 
 .home-footer{gap:14px;flex-wrap:wrap}.home-footer .about-game{color:var(--cream);font-size:8px;padding:8px 0;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:680px){.home-footer .about-game{font-size:7px;letter-spacing:.5px}.home-footer{gap:8px}}
+
+/* Optional offshore fishing stays compact and clear of driving controls. */
+#fishing-panel{position:absolute;top:112px;right:24px;width:290px;padding:15px 18px;background:#163d42ed;border:1px solid #83c5b2;border-radius:12px;display:grid;gap:9px;pointer-events:none;color:#f1f2da;box-shadow:0 5px 24px #062b3544}
+#fishing-panel strong{text-transform:uppercase;font-size:14px;color:#92e2ce}
+#fishing-panel span{font-size:14px;line-height:1.4}#fishing-panel small{font-size:11px;opacity:.8}
+#fishing-meters{display:grid;gap:8px}#fishing-meters label{display:grid;gap:4px;font-size:10px;letter-spacing:.1em}#fishing-meters meter,#fishing-meters progress{width:100%;height:12px;accent-color:#80d8ba}
+.touch-fishing{display:none}.touch-device .touch-fishing{display:flex;position:absolute;bottom:195px;right:20px;gap:8px}.touch-fishing button{min-width:62px;min-height:44px;touch-action:none}
+.fishing-active .touch-tricks{display:none}
+@media(max-height:600px){#fishing-panel{top:65px;right:15px;width:250px;padding:10px 13px;gap:5px}#fishing-panel span{font-size:12px}.touch-device .touch-fishing{bottom:155px}}
+#helm-toggle{position:absolute;left:24px;top:110px;pointer-events:auto;font-size:10px;padding:12px;background:#16464be8;border-color:#88c7bb}
+.cruiser-deck-button{display:none}.on-cruiser .cruiser-deck-button{display:block}
+.walking-deck .touch-trim,.walking-deck .touch-tricks{display:none}
+.vehicle-tabs{display:flex}.vehicle-tabs button{flex:1;padding-left:5px;padding-right:5px;font-size:9px}
+@media(max-height:600px){#helm-toggle{top:73px;left:14px;font-size:9px;padding:9px}.touch-device .touch-fishing{right:110px;bottom:142px}}
+.walking-deck .key-strip{display:none}
+
+.on-cruiser .key-strip,.on-cruiser .touch-trim,.on-cruiser .touch-tricks{display:none}

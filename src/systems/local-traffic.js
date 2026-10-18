@@ -40,7 +40,7 @@ export class LocalTraffic{
   this.world=collision;this.onEvent=onEvent;this.enabled=true;this.player=null;this.toastCooldown=0;this.boats=[];
   const wharf=new CruisePath(RACE),canal=canalPath('Kawana Waters Canal',collision),upstream=canalPath('Wyuna Canal',collision),start=wharf.nearest(SPAWN.x,SPAWN.z);
   wharf.cruisingSpeed=T.riverSpeed;canal.cruisingSpeed=upstream.cruisingSpeed=T.canalSpeed;
-  const fleet=[['Gaz','tinny',wharf,start+60],['Nina','cat',wharf,start+150],['Macca','tinny',wharf,start+260],['Sunny','tinny',canal,canal.length*.24],['Jules','cat',canal,canal.length*.63],['Taz','tinny',upstream,upstream.nearest(112.9,2502.7)+60]];
+  const fleet=[['Gaz','tinny',wharf,start+60],['Nina','cat',wharf,start+150],['Macca','tinny',wharf,start+260],['Sunny','tinny',canal,canal.length*.24],['Jules','cat',canal,canal.length*.63],['Taz','tinny',upstream,upstream.nearest(112.9,2502.7)+60],['Ash','cat',canal,canal.length*.08],['Robbo','tinny',canal,canal.length*.85],['Liv','tinny',upstream,upstream.length*.38],['Bill','cat',upstream,upstream.length*.77]];
   for(const [name,type,path,progress]of fleet){
    const b={id:`local-${name}`,name,type,path,progress,stuck:0,reaction:0,lastReset:0,recoveries:0,controls:{throttle:0,steer:0,freestyle:false,trim:0},collider:{name:'Cruising boat',x:0,z:0,r:VEHICLES[type].length*.34,height:2.5,disabled:true}};
    b.v=new VehiclePhysics(type,(x,z,r,y)=>this.obstacle(x,z,r,y,b));this.boats.push(b);this.place(b,progress);

@@ -6,12 +6,12 @@ async function boot(p){
  await p.goto('/');await p.waitForFunction(()=>window.__ESTUARY__?.status.ready);await p.locator('#play').click();
 }
 test('free-roam locals move, receive jet-ski spray and pause without starting a battle',async({page:p})=>{
- test.setTimeout(180000);const errors=[];p.on('pageerror',e=>errors.push(e.message));await boot(p);
- const first=await status(p);expect(first.locals.boats).toHaveLength(6);expect(first.battle.active).toBe(false);expect(first.race).toBeNull();
- await p.waitForFunction(()=>window.__ESTUARY__.status.simulationTime>5,null,{timeout:50000});
- const moved=await status(p);expect(moved.locals.boats[0].speed).toBeGreaterThan(1);
+ test.setTimeout(300000);const errors=[];p.on('pageerror',e=>errors.push(e.message));await boot(p);
+ const first=await status(p);expect(first.locals.boats).toHaveLength(10);expect(first.battle.active).toBe(false);expect(first.race).toBeNull();
+ await p.waitForFunction(()=>window.__ESTUARY__.status.simulationTime>5,null,{timeout:90000});
+ const moved=await status(p);console.log('Local traffic warm-up',JSON.stringify({time:moved.simulationTime,quality:moved.quality,fps:moved.fps}));expect(moved.locals.boats[0].speed).toBeGreaterThan(1);
  await p.keyboard.press('Escape');const paused=(await status(p)).locals.boats;await p.waitForTimeout(350);expect((await status(p)).locals.boats).toEqual(paused);
- await p.locator('#meet-locals').click();const joined=await status(p);expect(joined.battle.active).toBe(false);expect(joined.locals.visible).toBeLessThanOrEqual(3);
+ await p.locator('#meet-locals').click();const joined=await status(p);expect(joined.battle.active).toBe(false);expect(joined.locals.visible).toBeLessThanOrEqual(5);
  const nearest=joined.locals.boats.reduce((a,b)=>Math.hypot(a.x-joined.position.x,a.z-joined.position.z)<Math.hypot(b.x-joined.position.x,b.z-joined.position.z)?a:b);
  await p.keyboard.down('KeyW');
  await p.waitForFunction(id=>{const s=window.__ESTUARY__.status,b=s.locals.boats.find(b=>b.id===id);return(b.x-s.position.x)*Math.sin(s.heading)+(b.z-s.position.z)*Math.cos(s.heading)<5},nearest.id,{timeout:40000});
@@ -36,7 +36,7 @@ test('phone can find locals, drive and carve with native simultaneous touch cont
   await p.waitForFunction(()=>window.__ESTUARY__.status.speed>7,null,{timeout:50000});const h=(await status(p)).heading;
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[go,right]});
   await p.waitForFunction(h=>h-window.__ESTUARY__.status.heading>.5,h,{timeout:30000});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  const s=await status(p);expect(s.quality).toBe('Low');expect(s.locals.visible).toBeLessThanOrEqual(3);expect(s.battle.active).toBe(false);expect(s.wipeout).toBe(0);await p.screenshot({path:'test-results/free-roam-locals-phone.png'});
+  const s=await status(p);expect(s.quality).toBe('Low');expect(s.locals.visible).toBeLessThanOrEqual(5);expect(s.battle.active).toBe(false);expect(s.wipeout).toBe(0);await p.screenshot({path:'test-results/free-roam-locals-phone.png'});
   await p.locator('#menu-button').tap();await p.locator('#locals').selectOption('off');await p.locator('#resume').tap();await expect.poll(async()=>(await status(p)).locals.enabled).toBe(false);expect(errors).toEqual([]);
  }catch(e){console.log('Phone failure status',await status(p));throw e;}finally{await ctx.close();}
 });

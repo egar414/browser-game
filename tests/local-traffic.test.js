@@ -17,7 +17,7 @@ test('open canal patrol follows both directions and wraps without crossing the e
  assert.equal(p.at(25).z,25);assert.equal(p.at(125).z,75);assert.equal(p.at(225).z,25);
  assert.equal(p.follow(0,74,124),126);assert.equal(p.follow(0,26,24),26);
 });
-test('six locals cruise mapped water, pass in canals and do not flood from inactivity',()=>{
+test('ten locals cruise mapped water, pass in canals and do not flood from inactivity',()=>{
  const n=solids.length;try{
   const{traffic:t,player:p,events}=fleet(),initial=t.status.boats;
   for(let i=0;i<120*60;i++)t.update(1/60,p,i/60);

@@ -1,0 +1,22 @@
+import{test,expect}from'@playwright/test';
+const status=p=>p.evaluate(()=>window.__ESTUARY__.status);
+test('offshore fishing casts, hooks, lands, saves and returns to driving',async({page})=>{
+ test.setTimeout(300000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{if(!localStorage.getItem('estuary-rats-v1'))localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true}));});
+ await page.setViewportSize({width:960,height:640});await page.goto('/');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready,null,{timeout:60000});await page.locator('[data-vehicle="cruiser"]').click();await page.locator('#play').click();
+ expect((await status(page)).locals.boats).toHaveLength(10);expect((await status(page)).sportfishers.boats).toHaveLength(4);
+ await page.keyboard.press('Escape');await page.locator('#visit-fishing').click();await expect(page.locator('#fishing-panel')).toBeVisible();await page.keyboard.press('KeyJ');expect((await status(page)).deck.active).toBe(true);const z=(await status(page)).deck.z;await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).deck.z,{timeout:15000}).toBeGreaterThan(z+.3);await page.keyboard.up('KeyW');await page.keyboard.press('KeyJ');expect((await status(page)).deck.active).toBe(false);await page.keyboard.press('KeyJ');
+ await page.keyboard.press('KeyK');await expect.poll(async()=>(await status(page)).fishing.phase,{timeout:45000}).toBe('bite');await page.keyboard.press('KeyK');expect((await status(page)).fishing.phase).toBe('hooked');
+ await page.screenshot({path:'test-results/offshore-fishing-desktop.png'});
+ let reeling=false;const deadline=Date.now()+150000;
+ while(Date.now()<deadline){const s=await status(page);if(!s.fishing.active)break;const f=s.fishing;if(f.tension>.62&&reeling){await page.keyboard.up('Space');reeling=false;}if(f.tension<.22&&!f.running&&!reeling){await page.keyboard.down('Space');reeling=true;}await page.waitForTimeout(180);}
+ await page.keyboard.up('Space');const landed=await status(page);expect(landed.fishing.phase).toBe('landed');expect(landed.settings.fishCaught).toBe(1);expect(landed.settings.bestFishKg).toBeGreaterThan(0);
+ await page.reload();await page.waitForFunction(()=>window.__ESTUARY__?.status.ready,null,{timeout:60000});expect((await status(page)).settings.fishCaught).toBe(1);
+ await page.locator('#play').click();await page.keyboard.down('KeyW');await expect.poll(async()=>(await status(page)).speed,{timeout:25000}).toBeGreaterThan(4);await page.keyboard.up('KeyW');await page.keyboard.down('KeyD');const h=(await status(page)).heading;await expect.poll(async()=>Math.abs((await status(page)).heading-h),{timeout:20000}).toBeGreaterThan(.15);await page.keyboard.up('KeyD');expect(errors).toEqual([]);
+});
+test('landscape phone has working fishing, reel and release controls',async({browser})=>{
+ test.setTimeout(240000);const context=await browser.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true,deviceScaleFactor:1});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true})));await page.goto('/');await page.waitForFunction(()=>window.__ESTUARY__?.status.ready,null,{timeout:60000});await page.locator('#play').tap();await page.locator('#menu-button').tap();await page.locator('#visit-fishing').tap();
+ await page.locator('[data-code="KeyK"]').tap();await expect.poll(async()=>(await status(page)).fishing.phase,{timeout:45000}).toBe('bite');await page.locator('[data-code="KeyK"]').tap();expect((await status(page)).fishing.phase).toBe('hooked');
+ const reel=await page.locator('[data-code="Space"]').boundingBox();expect(reel.x+reel.width).toBeLessThanOrEqual(844);const cdp=await context.newCDPSession(page);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:7,x:reel.x+reel.width/2,y:reel.y+reel.height/2}]});await expect(page.locator('[data-code="Space"]')).toHaveClass(/pressed/);await expect.poll(async()=>(await status(page)).fishing.progress,{timeout:20000}).toBeGreaterThan(.1);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await page.screenshot({path:'test-results/offshore-fishing-phone.png'});await page.locator('[data-code="KeyK"]').tap();expect((await status(page)).fishing.active).toBe(false);expect(errors).toEqual([]);await context.close();
+});

@@ -87,7 +87,7 @@ API keys, third-party plugins or accounts needed.
 
 ## Free-roam local boaters
 
-Six AI drivers cruise the Wharf, Kawana canals and upstream water in original
+Ten AI drivers cruise the Wharf, Kawana canals and upstream water in original
 tinnies and Thundercats. They follow mapped routes, keep passing lanes in canals,
 yield to nearby boats and leave small wakes. They are ambient traffic: no battle
 clock, rivals or spray score. Normal powered turns can throw falling spray into
@@ -98,7 +98,7 @@ Use **Pause → Find local boaters** to join the nearest cruiser, then accelerat
 pull alongside and carve with **W + Shift + A/D**. On phones use **GO**, **LIFT**
 and a steering arrow. Pause → Local boaters offers quiet water and saves that
 choice locally. Race and Spray Battle temporarily hide traffic, then free roam
-restores it. Low quality draws at most three nearby boats, Medium five, High six.
+restores it. Low quality draws at most five nearby small boats, Medium eight, High ten; large cruisers have a separate 950 m draw limit, capped at two on Low and four on Medium/High.
 Tune routes/controller budgets in `src/systems/local-traffic.js` and
 `LOCAL_TRAFFIC` in `src/config.js`; visuals live in `local-boaters.js`.
 
@@ -516,3 +516,15 @@ imagery is bundled. See `src/data/README.md` for provenance and regeneration.
 Tune bridge profiles in `src/systems/bridge-layout.js`; source widths and
 pairing are built by `scripts/build-mooloolaba-map.py --extended`. Generate the
 whole-area guide with `python scripts/build-estuary-map.py`.
+
+### Offshore fishing and sportfishing traffic
+
+Free roam now has ten small local boats plus four original large sportfishing cruisers. The tall cruisers patrol the main river, offshore and the wider Kawana canal. Height checks stop them entering bridge spans without enough clearance; the canal patrol turns back before an obstructing low span. Vertical bridge clearances are gameplay estimates. Pause → **GO FISHING · OFFSHORE** visits the turquoise-flag fishing grounds beyond the bar; the same grounds can be reached by driving east past the entrance.
+
+Slow below 5 km/h, press **K** to cast, then **K** on **BITE** to hook. Hold **Space** to reel; release to cool line tension, especially during a fish's run. A full tension meter breaks the line. Driving away retrieves the tackle. On phones, **FISH** casts/hooks and **REEL** is held. Catches are released; catch count and the heaviest fish save locally. Mackerel, tuna, mahi-mahi and rare small marlin use approximate game weights.
+
+Tune grounds, species and reel balance in `src/systems/fishing.js`; large-boat patrol routes and speed in `sportfishing-traffic.js`; original cruiser geometry, fish schools, wakes and tackle in `offshore-view.js`. Local boat density is capped by `LOCAL_TRAFFIC.visible` in `src/config.js`. Traffic can be switched off with **LOCAL BOATERS → Quiet water** without disabling fishing. The Reef Runner is also selectable as BIG BOAT; the other cruisers remain ambient AI.
+
+Choose **BIG BOAT** to drive the Reef Runner 38. It has slower acceleration, momentum, broad turns, reverse, multi-point wave following and tower clearance checks. **J** (or phone **DECK**) switches between the helm and walking around the rear fishing cockpit when speed is below 5 km/h. **WASD** walks inside the cockpit rails; on phones use arrows sideways and GO/BRAKE forward/back. The boat settles to a stop while you are on deck. Cast from the deck with K / FISH and return to the helm with J. Big boats use free roam and fishing; racing, trick sessions and spray battle use the three smaller craft. Original smooth beachwear characters use procedural matching shirt and boardshort fabrics; no Fortnite assets are used.
+
+Tune the player sportfisher's acceleration, braking, speed, steering and walking speed in `CRUISER_HANDLING` in `src/vehicles/cruiser.js`; wardrobe fabrics and the deck avatar live in `src/vehicles/wardrobe.js`. All new boats, fish and fabric textures are generated locally from original geometry, without downloaded art, accounts or API keys. Browser checks use Linux Chromium with software WebGL at 960 × 640 desktop and 844 × 390 phone emulation; these checks do not establish real laptop/mobile frame rates or replace testing on a physical phone.

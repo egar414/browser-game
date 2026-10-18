@@ -25,7 +25,7 @@ export class LocalBoaters extends LocalTraffic{
   super(collision,onEvent);this.visibleCount=0;
   this.boats.forEach((b,i)=>{
    const colours=['#bdc9cc','#e8a45f','#bfd4ca','#d7cbc1','#79bab7','#c4ced0'];
-   b.model=makeVehicle(b.type,colours[i]);b.model.name=`Local boater ${b.name}`;scene.add(b.model);
+   b.model=makeVehicle(b.type,colours[i%colours.length]);b.model.name=`Local boater ${b.name}`;scene.add(b.model);
    const parts=b.model.userData;batch(b.model,new Set([parts.rider,parts.motor]));batch(parts.motor,new Set([parts.propeller]));
    b.effects=new THREE.Group();scene.add(b.effects);b.spray=new Spray(b.effects,{...QUALITY.Low,particles:80,wakeSamples:40,fanSegments:5,plumeDensity:.3});
    b.water=new THREE.Mesh(new THREE.PlaneGeometry(b.type==='cat'?.85:.72,b.type==='cat'?2.2:1.45),new THREE.MeshStandardMaterial({color:'#579c9d',transparent:true,opacity:.78,roughness:.2,metalness:.15,side:THREE.DoubleSide}));

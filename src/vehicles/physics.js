@@ -1,3 +1,4 @@
+import{updateCruiser}from'./cruiser.js';
 import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, TINNY_HANDLING, CAT_HANDLING, waveHeight, waveChop } from '../config.js';
 import {tenderTurn} from './tender-handling.js';
 import { AirTricks } from './air-tricks.js';
@@ -18,7 +19,7 @@ export class VehiclePhysics {
       for(const radius of [0,8,18,35,70]){
         for(let i=0;i<(radius?16:1);i++){
           const angle=i/16*Math.PI*2,nx=x+Math.sin(angle)*radius,nz=z+Math.cos(angle)*radius;
-          if(nx>WORLD.minX+40&&nx<WORLD.maxX-40&&nz>WORLD.minZ+40&&nz<WORLD.maxZ-40&&!this.collision(nx,nz,4,0)){
+          if(nx>WORLD.minX+40&&nx<WORLD.maxX-40&&nz>WORLD.minZ+40&&nz<WORLD.maxZ-40&&!this.collision(nx,nz,this.type==='cruiser'?7.5:4,0)){
             this.safe={x:nx,z:nz,heading:this.heading};found=true;break;
           }
         }
@@ -58,6 +59,7 @@ export class VehiclePhysics {
     this.airTricks.reset();this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
   }
   update(dt, input, time, ramps = []) {
+    if(this.type==='cruiser')return updateCruiser(this,dt,input,time);
     this.previous = this.snapshot();
     if (this.wipeout > 0) { this.wipeout -= dt; if (this.wipeout <= 0) this.recover(true); return; }
     const c = this.config;

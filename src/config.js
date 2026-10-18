@@ -6,7 +6,7 @@ export const SPAWN = mapData.spawn;
 // Clear water on the mapped Wyuna Canal, in the added upstream reach.
 export const UPSTREAM_LAUNCH={x:112.9,z:2502.7,heading:Math.atan2(8.6,-49.8)};
 export const LOCAL_TRAFFIC={lookAhead:10,avoidDistance:14,stuckSeconds:9,
-  riverSpeed:4.4,canalSpeed:3.0,viewDistance:520,visible:{Low:3,Medium:5,High:6}};
+  riverSpeed:4.4,canalSpeed:3.0,viewDistance:520,visible:{Low:5,Medium:8,High:10}};
 export const VEHICLES = {
   ski: {
     name: 'Sparkplug', subtitle: 'Freestyle jet ski', description: 'Light, lively and made for mischief. Lift the bow, carve a rooster tail, and spin off the ramps.',
@@ -83,3 +83,8 @@ export const PROPULSION = {
     linearResistance:13,quadraticResistance:1.25,reverseEfficiency:.44,trimRate:5,
   },
 };
+
+// Heavy twin-screw sportfisher; gameplay values, not manufacturer performance.
+VEHICLES.cruiser={...VEHICLES.cat,name:'Reef Runner 38',subtitle:'Flybridge sportfisher',description:'Drive a big fishing boat. Slow down, press J to leave the helm, walk the rear cockpit and cast beyond the bar.',length:10.65,width:3.96,maxSpeed:15.5,reverseMax:2.6,rideHeight:.1,colours:['#254761','#2c7e85','#b0bbbe']};
+PROPULSION.cruiser={...PROPULSION.cat,effectiveMass:6500,motorMount:[0,.3,-4.5],propeller:[0,-.8,-.4],maximumRpm:4000};
+HYDRODYNAMICS.cruiser={...HYDRODYNAMICS.cat};
