@@ -8,7 +8,7 @@ import{setSeaState,PROPULSION,VEHICLES,SPORTFISHER_HEIGHT,WORLD}from'../src/conf
 import{collision}from'../src/systems/environment.js';
 import{loadSettings}from'../src/systems/storage.js';
 test('daylight wraps smoothly, fixed presets stay put and dawn/dusk improve bites',()=>{
- const d=new DayCycle('changing');d.hour=23.99;d.update(2);assert(d.hour<.1);d.setMode('sunset');d.update(600);assert.equal(d.hour,18);assert.equal(d.status.label,'SUNSET');assert(dayState(12).sunIntensity>dayState(22).sunIntensity);assert(fishingConditions(6).waitMultiplier<fishingConditions(12).waitMultiplier);assert(fishingConditions(18).rareBonus>fishingConditions(12).rareBonus);
+ const d=new DayCycle('changing');d.hour=23.99;d.update(2);assert(d.hour<.1);d.setMode('sunset');d.update(600);assert.equal(d.hour,18);assert.equal(d.status.label,'SUNSET');assert(dayState(12).sunIntensity>dayState(22).sunIntensity);assert(dayState(6).direction.x>0,'sunrise is east');assert(dayState(18).direction.x<0,'sunset is west');assert(fishingConditions(6).waitMultiplier<fishingConditions(12).waitMultiplier);assert(fishingConditions(18).rareBonus>fishingConditions(12).rareBonus);
  const v={...FISHING_LAUNCH,speed:0},sunrise=new Fishing(()=>{},()=>.93),noon=new Fishing(()=>{},()=>.93);sunrise.hour=6;noon.hour=12;sunrise.action(v);noon.action(v);assert(sunrise.wait<noon.wait);assert.equal(sunrise.fish.name,'Little black marlin');assert.notEqual(noon.fish.name,'Little black marlin');
 });
 test('Seago reaches its 120 km/h game ceiling with a separate long hull and functional trim',()=>{
