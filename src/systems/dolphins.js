@@ -1,10 +1,10 @@
 import * as THREE from'three';
 import{waveHeight}from'../config.js';
 import{FISHING_SPOTS}from'./fishing.js';
-export function dolphinState(index,time){
+export function dolphinState(index,time,breachOffset=0){
  const spot=FISHING_SPOTS[index%3],angle=time*.045+index*1.9,radius=35+(index%3)*14,x=spot.x+Math.sin(angle)*radius,z=spot.z+Math.cos(angle)*radius;
- const phase=((time+index*2.7)%13)/13,leap=phase>.68&&phase<.94?Math.sin((phase-.68)/.26*Math.PI):0;
- return{x,z,y:waveHeight(x,z,time)-.32+leap*2.8,heading:angle+Math.PI/2,pitch:leap?Math.cos((phase-.68)/.26*Math.PI)*.65:Math.sin(time*1.1+index)*.05,leap};
+ const phase=((time+breachOffset+index*2.7)%9)/9,leap=phase>.45&&phase<.82?Math.sin((phase-.45)/.37*Math.PI):0;
+ return{x,z,y:waveHeight(x,z,time)-.08+leap*2.8,heading:angle+Math.PI/2,pitch:leap?Math.cos((phase-.45)/.37*Math.PI)*.65:Math.sin(time*1.1+index)*.05,leap};
 }
 function dolphin(){
  const g=new THREE.Group(),grey=new THREE.MeshStandardMaterial({color:'#658594',roughness:.45,metalness:.1}),belly=new THREE.MeshStandardMaterial({color:'#a7b9b9',roughness:.55});
@@ -15,6 +15,11 @@ function dolphin(){
  g.name='Bottlenose dolphin';return g;
 }
 export class Dolphins{
- constructor(scene){this.models=Array.from({length:6},()=>{const m=dolphin();scene.add(m);return m;});this.visible=0;}
- render(time,player,quality){this.visible=0;this.models.forEach((m,i)=>{const p=dolphinState(i,time);m.visible=(quality!=='Low'||i<3)&&Math.hypot(p.x-player.x,p.z-player.z)<380;if(!m.visible)return;this.visible++;m.position.set(p.x,p.y,p.z);m.rotation.set(-p.pitch,p.heading,0,'YXZ');});}
+ constructor(scene,label=null){this.label=label;this.focusUntil=0;if(label)scene.add(label);this.models=Array.from({length:6},()=>{const m=dolphin();scene.add(m);return m;});this.visible=0;this.breachOffset=0;}
+ approach(time,collision){
+  const p=dolphinState(0,time),h=p.heading;
+  for(const distance of [10,16,24]){const x=p.x-Math.sin(h)*distance,z=p.z-Math.cos(h)*distance;if(!collision(x,z,5,0)){this.breachOffset=9*.46-time;this.focusUntil=time+40;return{x,z,heading:h};}}
+  return null;
+ }
+ render(time,player,quality){if(this.label){const p=dolphinState(0,time,this.breachOffset);this.label.visible=time<this.focusUntil;this.label.position.set(p.x,p.y+3.0,p.z);}this.visible=0;this.models.forEach((m,i)=>{const p=dolphinState(i,time,this.breachOffset);m.visible=(quality!=='Low'||i<3)&&Math.hypot(p.x-player.x,p.z-player.z)<380;if(!m.visible)return;this.visible++;m.position.set(p.x,p.y,p.z);m.rotation.set(-p.pitch,p.heading,0,'YXZ');});}
 }

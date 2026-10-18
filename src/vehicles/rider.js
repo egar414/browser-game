@@ -34,6 +34,7 @@ export function makeRider(parent,type){
   ball(face,[0,.71,.153],[.13,.036,.026],dark);
   const limbs=[-1,1].map(side=>({side,arm:[segment(root,.069,vest),segment(root,.052,skin)],leg:[segment(root,.085,suit),segment(root,.071,skin)],hand:ball(root,[0,0,0],[.064,.065,.065],skin),foot:ball(root,[0,0,0],[.083,.045,.16],dark)}));
   for(const limb of limbs){limb.hand.name=limb.side===1?'right-hand':'left-hand';limb.foot.name=limb.side===1?'right-foot':'left-foot';}
+  root.userData.bodyParts=[...torso.children.filter(o=>o.isMesh),...limbs.flatMap(l=>[...l.leg,l.foot])];
   let aft=0,lean=0,bow=0;
   root.userData.update=(v,dt,parts)=>{
     const target=riderWeightTargets(v),blend=1-Math.exp(-dt*RIDER_WEIGHT.response);aft+=(target.aft-aft)*blend;lean+=(target.lean-lean)*blend;bow+=(target.bow-bow)*blend;

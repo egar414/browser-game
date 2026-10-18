@@ -1,3 +1,4 @@
+import{SHAFTING,updatePassenger,shaftPitch,updateShaftStatus,constrainHullWater}from'./shafting.js';
 import{isJet}from'../config.js';
 import{updateCruiser}from'./cruiser.js';
 import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, TINNY_HANDLING, CAT_HANDLING, waveHeight, waveChop } from '../config.js';
@@ -28,7 +29,7 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      passengerAft:.35,shaftLoad:0,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;
@@ -57,7 +58,7 @@ export class VehiclePhysics {
   }
   wipe(reason) {
     if (this.wipeout) return;
-    this.airTricks.reset();this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
+    this.airTricks.reset();this.shaftLoad=0;if(this.shaft)this.shaft={...this.shaft,active:false,cue:'WIPEOUT',seconds:0};this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
   }
   update(dt, input, time, ramps = []) {
     if(this.type==='cruiser')return updateCruiser(this,dt,input,time);
@@ -83,7 +84,7 @@ export class VehiclePhysics {
     this.slip = this.vx * fz - this.vz * fx;
     const onPlane=clamp((Math.abs(forward)-hydro.planingStart)/(hydro.planingEnd-hydro.planingStart),0,1);
     this.planing=damp(this.planing,onPlane*onPlane*(3-2*onPlane),2.5,dt);
-    this.wettedFraction=1-this.planing*(1-hydro.minimumWetted);
+    this.wettedFraction=1-this.planing*(1-hydro.minimumWetted);updatePassenger(this,dt);
     this.drive=this.propulsion.update(dt,this,input,time);
     const sprayTurn=tenderTurn(this,input,dt);
     if (!this.airborne) {
@@ -154,7 +155,8 @@ export class VehiclePhysics {
       const trim = this.drive.trimAngle*(isJet(this.type)?.45:.65);
       // Angular inertia and damping retain a landing/chop response instead of
       // instantly following a prescribed orientation.
-      const pitchTarget=surfacePitch+lift+plane+trim+sprayTurn.pitch;
+      const shaft=shaftPitch(this,input,surfacePitch,dt);
+      const pitchTarget=shaft===null?surfacePitch+lift+plane+trim+sprayTurn.pitch:shaft+sprayTurn.pitch*.4;
       this.pitchRate+=((pitchTarget-this.pitch)*hydro.pitchSpring-this.pitchRate*hydro.pitchDamping)*dt;
       this.pitch+=this.pitchRate*dt;
       const rollTarget=surfaceRoll-this.yawRate*clamp(this.speed/20,0,1)*(isJet(this.type)?.48:.24)+sprayTurn.roll;
@@ -162,7 +164,7 @@ export class VehiclePhysics {
       const verticalReaction=clamp(this.drive.force.y/driveConfig.effectiveMass,-3,3);
       // As the bow rises, support moves toward the stern. Raise the body origin
       // around that support instead of submerging the transom a metre deep.
-      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*c.length*(handling?.sternSupport??.29)*clamp((this.pitch-.18)/.4,0,1);
+      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*(this.type==='tinny'?c.length*TINNY_HANDLING.sternSupport+(SHAFTING.sternPivot-c.length*TINNY_HANDLING.sternSupport)*(this.shaftLoad||0)*clamp(1-Math.abs(this.steer)/.5,0,1):c.length*(handling?.sternSupport??.29))*clamp((this.pitch-.18)/.4,0,1);
       const supportError=water+sternSupportLift+sprayTurn.lift-this.y;
       const followingWater=waterVelocity*sprayTurn.damping*(hydro.waterFollow||0);
       // Additional immersed volume supplies bounded reserve buoyancy as a crest
@@ -170,7 +172,7 @@ export class VehiclePhysics {
       const reserve=clamp(Math.max(0,supportError-(hydro.reserveDepth||Infinity))**2*(hydro.reserveBuoyancy||0),0,hydro.maxReserve||0);
       const supportAcceleration=supportError*c.spring-this.vy*sprayTurn.damping+verticalReaction+followingWater+reserve;
       this.vy+=supportAcceleration*dt;
-      this.y += this.vy * dt;
+      this.y += this.vy * dt;constrainHullWater(this,time);
       if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe('Over the balance point');
       let onRamp=false;
       for (const ramp of ramps) {
@@ -217,6 +219,7 @@ export class VehiclePhysics {
         this.airTime = 0; this.spin = 0;
       }
     }
+    updateShaftStatus(this,dt);
     const nextForward=this.vx*fx+this.vz*fz;
     this.surgeAcceleration=damp(this.surgeAcceleration,clamp((nextForward-forward)/dt,-12,12),7,dt);
     if (!this.airborne && !hit && this.speed < 12 && Math.abs(this.pitch) < 0.4 && !this.boundary) this.safe = { x: this.x, z: this.z, heading: this.heading };

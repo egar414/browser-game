@@ -1,3 +1,4 @@
+import{makeTinnyPassenger}from'./tinny-passenger.js';
 import{makeSportfisher}from'../systems/offshore-view.js';
 import{makeDeckCharacter}from'./wardrobe.js';
 import * as THREE from 'three';
@@ -56,7 +57,7 @@ export function makeVehicle(type, colour, design='classic') {
   const accent = new THREE.MeshPhysicalMaterial({color:colour,roughness:.3,metalness:.08,clearcoat:.8,clearcoatRoughness:.24});
   const pale = mat('#e0e9d7'), blue = new THREE.MeshPhysicalMaterial({color:'#344b61',roughness:.24,metalness:.25,clearcoat:.65});
   const silver = new THREE.MeshStandardMaterial({color:'#a8b9bd',roughness:.26,metalness:.8});
-  let motor, person, nozzle, propeller, bucket, handlebars;
+  let motor, person, passenger, nozzle, propeller, bucket, handlebars;
   if (type === 'ski') {
     // Closed outward-facing V hull, sculpted shoulders and recessed footwells.
     hull(body,[[-1.45,.44,.16,-.18],[-1.18,.57,.24,-.28],[-.55,.61,.3,-.3],[.24,.58,.35,-.26],[.85,.46,.38,-.18],[1.28,.25,.29,-.08],[1.49,.015,.17,.08]],dark);
@@ -124,7 +125,7 @@ export function makeVehicle(type, colour, design='classic') {
   } else if(type==='tinny') {
     const tender=buildTender(colour,design);body.add(tender);({motor,propeller}=tender.userData);
     // Keep the motor attachment in body coordinates for the shared rider IK.
-    body.attach(motor);person=makeRider(body,type);
+    body.attach(motor);person=makeRider(body,type);passenger=makeTinnyPassenger(body);
   } else {
     for (const side of [-1, 1]) {
       const x = side * 0.73;
@@ -169,7 +170,7 @@ export function makeVehicle(type, colour, design='classic') {
     if(type==='ski')for(const side of [-1,1])tube(body,[[side*.49,.33,-.83],[side*.51,.39,-.1],[side*.38,.54,.56],[side*.22,.41,1.04]],design==='race'?.018:.032,stripe,16);
     else if(type==='cat')for(const side of [-1,1])tube(body,[[side*.94,.35,-1.5],[side*1.01,.4,0],[side*.92,.52,1.3]],design==='race'?.025:.045,stripe,16);
   }
-  root.userData = { blenderShell:type==='ski'&&!!skiShell, body, motor, nozzle, propeller, bucket, handlebars, rider: person };
+  root.userData = { blenderShell:type==='ski'&&!!skiShell, body, motor, nozzle, propeller, bucket, handlebars, passenger, rider: person };
   person.userData.update({riderAft:0,steer:0,surgeAcceleration:0},1,root.userData);
   return root;
 }

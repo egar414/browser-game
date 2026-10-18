@@ -26,7 +26,7 @@ export class LocalBoaters extends LocalTraffic{
   this.boats.forEach((b,i)=>{
    const colours=['#bdc9cc','#e8a45f','#bfd4ca','#d7cbc1','#79bab7','#c4ced0'];
    b.model=makeVehicle(b.type,colours[i%colours.length]);b.model.name=`Local boater ${b.name}`;scene.add(b.model);
-   const parts=b.model.userData;batch(b.model,new Set([parts.rider,parts.motor]));batch(parts.motor,new Set([parts.propeller]));
+   const parts=b.model.userData;batch(b.model,new Set([parts.rider,parts.motor,parts.passenger]));batch(parts.motor,new Set([parts.propeller]));
    b.effects=new THREE.Group();scene.add(b.effects);b.spray=new Spray(b.effects,{...QUALITY.Low,particles:80,wakeSamples:40,fanSegments:5,plumeDensity:.3});
    b.water=new THREE.Mesh(new THREE.PlaneGeometry(b.type==='cat'?.85:.72,b.type==='cat'?2.2:1.45),new THREE.MeshStandardMaterial({color:'#579c9d',transparent:true,opacity:.78,roughness:.2,metalness:.15,side:THREE.DoubleSide}));
    b.water.rotation.x=-Math.PI/2;b.water.position.z=-.08;parts.body.add(b.water);b.visible=false;
@@ -41,7 +41,7 @@ export class LocalBoaters extends LocalTraffic{
    const v=b.v,p=v.previous,a=playing?alpha:1,render={...v,x:THREE.MathUtils.lerp(p.x,v.x,a),y:THREE.MathUtils.lerp(p.y,v.y,a),z:THREE.MathUtils.lerp(p.z,v.z,a),heading:THREE.MathUtils.lerp(p.heading,v.heading,a),pitch:THREE.MathUtils.lerp(p.pitch,v.pitch,a),roll:THREE.MathUtils.lerp(p.roll,v.roll,a)};
    b.model.position.set(render.x,render.y-b.flood.sinking*2.8,render.z);b.model.rotation.set(-render.pitch,render.heading,render.roll+b.flood.sinking*.35,'YXZ');
    const parts=b.model.userData;parts.motor.rotation.set(v.drive.trimAngle,-v.drive.steeringAngle,0,'YXZ');if(parts.propeller)parts.propeller.rotation.z+=v.drive.rpm/60*Math.PI*2*dt;
-   parts.rider.userData.update(v,dt,parts);const fill=b.flood.water/55;b.water.visible=fill>.015;b.water.position.y=b.type==='cat'?.30+fill*.12:-.14+fill*.48;
+   parts.rider.userData.update(v,dt,parts);parts.passenger?.userData.update(v,dt);const fill=b.flood.water/55;b.water.visible=fill>.015;b.water.position.y=b.type==='cat'?.30+fill*.12:-.14+fill*.48;
    b.spray.update(playing?dt:0,render,time,playing&&!b.flood.resetIn,b.controls);b.spray.resize(height,fov,pixelRatio);
   }
  }

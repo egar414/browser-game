@@ -19,6 +19,12 @@ function advance(v,seconds,keys={},start=0){for(let i=0;i<seconds*60;i++)v.updat
 function attacker(type='tinny'){
  return{type,config:VEHICLES[type],x:0,y:.14,z:0,heading:0,speed:13,vx:0,vz:13,vy:0,throttle:1,slip:-8,yawRate:1,lateralAcceleration:-6,pitch:0,roll:0,planing:.8,drive:{flow:.16,reverse:0,trimAngle:0,steeringAngle:.4,exitSpeed:25,wetness:1},airborne:false};
 }
+function balancedBow(v,seconds,start=0,steer=0){
+ let power=v.throttle>.5?1:0;for(let i=0;i<seconds*60;i++){
+  if(v.shaft?.cue==='EASE THROTTLE')power=0;else if(v.shaft?.cue==='MORE THROTTLE'||!v.shaft?.active)power=1;
+  v.update(1/60,{...input,throttle:power,steer,freestyle:true},start+i/60);
+ }
+}
 test('25 hp tender has its own bounded planing, powered slide, braking and reverse',()=>{
  setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;
  assert.equal(v.config.length,2.25);assert.equal(PROPULSION.tinny.shaftPower,18640);
@@ -30,7 +36,7 @@ test('25 hp tender has its own bounded planing, powered slide, braking and rever
 });
 test('tender trim, stern-supported bow riding and four-point buoyancy stay stable',()=>{
  const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;
- advance(v,5,{throttle:1,freestyle:true});assert(v.pitch>.65&&v.pitch<v.config.wipeoutAngle);assert.equal(v.wipeout,0);
+ balancedBow(v,5);assert(v.pitch>.65&&v.pitch<v.config.wipeoutAngle);assert.equal(v.wipeout,0);
  advance(v,3,{throttle:1,trim:1},5);assert.equal(v.trimDegrees,8);assert(Number.isFinite(v.roll));
  v.recover();let error=0;for(let i=0;i<600;i++){v.update(1/60,input,i/60);if(i>300)error+=Math.abs(v.y-waveHeight(v.x,v.z,i/60)-v.config.rideHeight);}assert(error/299<.15);
  const saved=loadSettings({getItem:()=>JSON.stringify({vehicle:'tinny',trimTinny:6})});assert.equal(saved.vehicle,'tinny');assert.equal(saved.trimTinny,6);
@@ -121,13 +127,13 @@ test('clip-inspired outboards lift early, hold a stern-supported bow and retain 
  setSeaState('calm',0,true);
  for(const type of ['tinny','cat']){
   const v=new VehiclePhysics(type);v.x=-200;v.z=-1000;v.heading=0;
-  advance(v,3,{throttle:1,freestyle:true});assert(v.pitch>(type==='tinny'?1.05:.90),`${type}: early bow lift`);
+  if(type==='tinny')balancedBow(v,3);else advance(v,3,{throttle:1,freestyle:true});assert(v.pitch>(type==='tinny'?1.05:.90),`${type}: early bow lift`);
   for(let i=0;i<900;i++){
-   v.update(1/60,{...input,throttle:1,freestyle:true},3+i/60);
+   if(type==='tinny')balancedBow(v,1/60,3+i/60);else v.update(1/60,{...input,throttle:1,freestyle:true},3+i/60);
    assert(!v.airborne&&!v.wipeout);assert(v.pitch>.65&&v.pitch<v.config.wipeoutAngle);
    const deck=bodyPoint(v,[0,type==='cat'?.5:.38,type==='cat'?-1.38:-.90]);assert(deck.y>waveHeight(deck.x,deck.z,3+i/60),`${type}: stern remains supported`);
   }
-  const heading=v.heading;advance(v,2,{throttle:1,steer:.4,freestyle:true},18);
+  const heading=v.heading;if(type==='tinny')balancedBow(v,2,18,.4);else advance(v,2,{throttle:1,steer:.4,freestyle:true},18);
   assert(v.heading-heading>.5);assert(v.pitch>.4);assert(!v.airborne&&!v.wipeout);
   advance(v,3,{throttle:1},20);assert(Math.abs(v.pitch)<.25);assert(Math.abs(v.slip)<1);assert(!v.wipeout);
  }

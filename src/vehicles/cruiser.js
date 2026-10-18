@@ -1,3 +1,4 @@
+import{constrainHullWater}from'./shafting.js';
 import{SPORTFISHER_HEIGHT}from'../config.js';
 import{waveHeight,WORLD,RIDE_MODES}from'../config.js';
 import{bridgeObstruction}from'../systems/sportfishing-traffic.js';
@@ -17,7 +18,7 @@ export function updateCruiser(v,dt,input,time){
  v.vx=sx*forward;v.vz=cz*forward;v.speed=Math.abs(forward);v.slip=0;v.surgeAcceleration=(forward-oldSpeed)/dt;v.lateralAcceleration=v.yawRate*forward;
  const front=waveHeight(v.x+sx*4,v.z+cz*4,time),rear=waveHeight(v.x-sx*4,v.z-cz*4,time),left=waveHeight(v.x-cz*1.5,v.z+sx*1.5,time),right=waveHeight(v.x+cz*1.5,v.z-sx*1.5,time);
  v.y=damp(v.y,(front+rear+left+right)/4+.1,T.waterResponse,dt);v.pitch=damp(v.pitch,Math.atan2(front-rear,8)+Math.min(.06,v.speed*.003),3,dt);v.roll=damp(v.roll,Math.atan2(right-left,3)-v.yawRate*v.speed*.012,3,dt);
- v.airborne=false;v.planing=Math.min(1,v.speed/12);v.wettedFraction=1-v.planing*.2;v.riderAft=0;
+ constrainHullWater(v,time);v.airborne=false;v.planing=Math.min(1,v.speed/12);v.wettedFraction=1-v.planing*.2;v.riderAft=0;
  v.drive={...v.propulsion.empty(),rpm:700+Math.abs(v.throttle)*3300,rpmFraction:.15+Math.abs(v.throttle)*.75,wetness:1,flow:Math.abs(v.throttle)*2.5,neutral:Math.abs(v.throttle)<.05,braking,reverse:forward<0?1:0,exitSpeed:8,trimAngle:0,steeringAngle:v.steer*.3};
  v.boundary=v.x<WORLD.minX+35||v.x>WORLD.maxX-35||v.z<WORLD.minZ+35||v.z>WORLD.maxZ-35;
  if(v.x<WORLD.minX||v.x>WORLD.maxX||v.z<WORLD.minZ||v.z>WORLD.maxZ){v.recover(true);v.onEvent({type:'boundary',label:'Back inside the charts'});}

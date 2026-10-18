@@ -27,7 +27,7 @@ export const VEHICLES = {
     description:'Open aluminium tender, bench seats and a lively 25 hp outboard. Carve, shift your weight aft and throw water off the chines.',
     length:2.25,width:1.22,maxSpeed:15.5,reverseMax:2.8,
     lateralGrip:3.05,slideGrip:.54,spring:46,damping:12,rideHeight:.12,airSteer:1.15,
-    wheelieAngle:1.10,wipeoutAngle:1.40,colours:['#bdc9cc','#c7d8ca','#d8d0b9'],
+    wheelieAngle:1.10,wipeoutAngle:1.55,colours:['#bdc9cc','#c7d8ca','#d8d0b9'],
   },
 };
 export { WAVES,WAVE_FIELD,SEA_STATES,OCEAN_SWELL,OCEAN_TUNING,waveChop,waveHeight,seaAmplitude,setSeaState,setWeatherClock,hourlyForecast,oceanReport,oceanExposure } from './ocean.js';
@@ -50,13 +50,13 @@ export const SKI_TRIM_POSITIONS = [-10,-7.5,-5,-2.5,0,4,8,13,19];
 export const HYDRODYNAMICS = {
   ski:{coastDrag:1,planingStart:4,planingEnd:13,minimumWetted:.56,pitchSpring:17,pitchDamping:6.8,rollSpring:24,rollDamping:8.2,yawInertia:340,yawDamping:2.7,yawSpeedDamping:.09},
   cat:{bowPloughDrag:.32,coastDrag:3.5,planingStart:5,planingEnd:15,minimumWetted:.62,pitchSpring:12,pitchDamping:5.4,rollSpring:19,rollDamping:7,yawInertia:550,yawDamping:2.2,yawSpeedDamping:.04,waterFollow:.65,reserveBuoyancy:80,reserveDepth:.20,maxReserve:18},
-  tinny:{bowPloughDrag:.48,coastDrag:2.8,planingStart:3.5,planingEnd:9,minimumWetted:.58,pitchSpring:16,pitchDamping:6.5,rollSpring:23,rollDamping:8,yawInertia:125,yawDamping:2.8,yawSpeedDamping:.065},
+  tinny:{bowPloughDrag:.48,waterFollow:.85,reserveBuoyancy:95,reserveDepth:.13,maxReserve:20,coastDrag:2.8,planingStart:3.5,planingEnd:9,minimumWetted:.58,pitchSpring:16,pitchDamping:6.5,rollSpring:23,rollDamping:8,yawInertia:125,yawDamping:2.8,yawSpeedDamping:.065},
 };
 // Arcade chine catch/release during a powered tender spray turn. All reactions
 // require speed, wet contact and steering load; they never trigger a jump.
 export const TINNY_HANDLING={steerResponse:10,slideYawGain:.48,slideYawLimit:2.25,
   bowStart:1.3,bowRange:2.6,bowSteeringLoss:.38,surgePitch:.035,sternSupport:.33,
-  bounceHz:1.12,chineLift:.24,pitchBounce:.23,rollBounce:.09,loadedDamping:7.8};
+  bounceHz:1.25,chineLift:.32,pitchBounce:.29,rollBounce:.12,loadedDamping:7.2};
 // Broader twin-pontoon support: slower catch/release and less pitch authority
 // than the short tender. Clip-inspired arcade values, not real craft limits.
 export const CAT_HANDLING={steerResponse:7.8,slideYawGain:.24,slideYawLimit:1.75,

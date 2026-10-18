@@ -533,10 +533,30 @@ Tune the player sportfisher's acceleration, braking, speed, steering and walking
 
 Select **SEAGO** for an original longer black performance PWC inspired by the supplied silhouette, with separate mass/handling and a **120 km/h gameplay ceiling**. It retains a waterjet, nine Q/E trim positions, brake/reverse bucket and Shift weight shift; settle trim to reach full speed. The existing Sparkplug remains available. The large sportfisher now has a tall braced tuna tower, ladder, radar, long outriggers and teak-style cockpit/transom based on the supplied reference. Its 10.8 m game air draft is included in bridge clearance checks for player and AI craft.
 
-**C / VIEW** cycles wide chase, close chase and **first person**, including the big boat's helm and walking/fishing cockpit. Drag to look around; the camera follows the rider's actual eye position with the face hidden while preserving hands/body. On deck, J / DECK still returns to the helm.
+**C / VIEW** cycles wide chase, close chase and **first person**, including the big boat's helm and walking/fishing cockpit. Drag to look around; the camera follows the rider's actual eye position with the camera 42 cm ahead of the eye, the own face/torso/legs hidden and hands retained. On deck, J / DECK still returns to the helm.
 
 **Pause → TIME OF DAY** selects sunrise, daylight, sunset, night or a 24-minute passing-day cycle. Passing time pauses with gameplay. Presets and camera choice save locally. Dawn/dusk give shorter bite waits and a better chance of a small marlin; night bites are slower. These are game rules, not forecasts. Sky, sun direction/colour, ambient lighting, fog and water respond to the clock. A small pod of original bottlenose dolphins surfaces and leaps beyond the bar near the fishing grounds; they cannot be hooked.
 
 **Pause → VISIT WATERFRONT WALKERS** joins people walking on mapped solid jetties. Carve alongside and aim a side fan toward them. Actual swept spray droplets must intersect a person's approximate body volume; proximity alone does nothing. They take a harmless tumble, recover and continue walking. There are no points or injury mechanics. Six nearby walkers draw on Low, ten on Medium and sixteen on High, using four instanced material batches.
 
 Tune daylight and bite periods in `src/systems/day-cycle.js`, Seago's drive/hull values in `src/config.js`, the sportfisher geometry in `src/systems/offshore-view.js`, dolphins in `src/systems/dolphins.js`, and walkers/capture in `pedestrians.js`, `pedestrian-view.js` and `spray-capture.js`. New geometry and textures are original/procedural, with no added API keys or external art downloads. The small environment-lighting capture stays fixed to keep laptop costs low; direct lighting, sky and water change with time.
+
+
+### Tinny shaft balance and finding wildlife
+
+Hold Shift / phone LIFT once moving, then pulse W / GO using the top-right
+SPEED UP / SLOW DOWN meter. Full throttle can loop the boat. Release LIFT to
+settle; steering transitions to a lower spray slide. Two crew ride the tender:
+the passenger moves forward during takeoff and aft when planing. Dry-hull bow
+rides emit their smaller falling spray near the immersed motor, not the dry bow.
+This is a deliberately difficult arcade stance, not a validated real-world model.
+
+P / phone EYES directly toggles first person; C / VIEW still cycles three views.
+O or Pause → DOLPHIN WATCH places you behind the offshore pod. Dolphins show
+more of their back and breach periodically. L or Pause → VISIT WATERFRONT
+WALKERS finds the jetty walkers; a gold ring and label highlight the selected person for
+40 seconds. Wildlife and walkers are local to those areas, not everywhere.
+
+Tune balance, passenger response and hull contact in `src/vehicles/shafting.js`,
+bounce in `TINNY_HANDLING` and flotation in `HYDRODYNAMICS` (`src/config.js`),
+and motor wash in `TINNY_SPRAY` (`src/systems/spray-model.js`).
