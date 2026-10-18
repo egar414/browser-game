@@ -1,3 +1,4 @@
+import{isJet}from'../config.js';
 import * as THREE from 'three';
 import { VehiclePhysics } from '../vehicles/physics.js';
 import { makeVehicle } from '../vehicles/models.js';
@@ -16,7 +17,7 @@ export function sprayExposure(attacker,target,time){
     const power=side<0?s.left:s.right,range=2+power*3.2,d=right*side;
     if(power>.35&&d>.35&&d<range&&aft>-2&&aft<10)exposure+=power*clamp(1-d/range)*clamp(1-Math.abs(aft-3)/9);
   }
-  if(attacker.type==='ski'&&attacker.drive?.flow>.03&&attacker.drive.reverse<.08&&aft>1.5&&aft<13&&Math.abs(right)<1.6)exposure+=clamp(attacker.drive.flow/.15)*.9;
+  if(isJet(attacker.type)&&attacker.drive?.flow>.03&&attacker.drive.reverse<.08&&aft>1.5&&aft<13&&Math.abs(right)<1.6)exposure+=clamp(attacker.drive.flow/.15)*.9;
   return clamp(exposure,0,2.5);
 }
 export function floodStep(water,incoming,dt){return clamp(water+dt*(incoming*24-(incoming>.05?0:2.3)),0,100);}

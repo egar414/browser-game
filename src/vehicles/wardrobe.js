@@ -23,6 +23,7 @@ export function makeDeckCharacter(){
   shape('arm'+side,[.075,.25,.075],[side*.32,.99,.01],beachWear.skin);
   shape('hand'+side,[.08,.09,.075],[side*.32,.75,.01],beachWear.skin);
  }
+ const eye=new THREE.Object3D();eye.position.set(0,1.74,.15);root.add(eye);root.userData.eye=eye;root.userData.faceParts=[parts.head,parts.hair,parts['eye1'],parts['eye-1']];
  root.userData.animate=(time,moving,fishing,seated=false)=>{for(const side of [-1,1]){const swing=Math.sin(time*9+side*Math.PI/2)*.22*moving;parts['shorts'+side].position.y=seated?.93:.69;parts['shorts'+side].rotation.x=seated?-1:0;parts['leg'+side].position.set(side*.14,seated?.7:.29,seated?.27:0);parts['leg'+side].scale.y=seated?.17:.25;parts['foot'+side].position.y=seated?.55:.055;parts['foot'+side].position.z=seated?.35:.07+swing;parts['leg'+side].rotation.x=swing;parts['arm'+side].rotation.x=fishing?-.75:-swing;parts['hand'+side].position.set(side*.32,fishing?1.07:.75,fishing?.38:.01-swing*.2);}parts.shirt.position.y=1.12+Math.sin(time*3)*.012;};
  return root;
 }

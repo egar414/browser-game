@@ -1,3 +1,4 @@
+import{fishingConditions}from'./day-cycle.js';
 // Approximate game fishing grounds, east of the entrance bank; catch and release.
 export const FISHING_SPOTS=[
  {name:'Outer bank',x:1040,z:-1800,radius:85},
@@ -12,18 +13,18 @@ export const SPECIES=[
  {name:'Little black marlin',min:12,max:35,colour:'#527cc1'},
 ];
 export class Fishing{
- constructor(onCatch=()=>{},random=Math.random){this.onCatch=onCatch;this.random=random;this.phase='idle';this.time=0;this.progress=0;this.tension=0;this.message='';this.catch=null;}
+ constructor(onCatch=()=>{},random=Math.random){this.onCatch=onCatch;this.random=random;this.hour=14.8;this.phase='idle';this.time=0;this.progress=0;this.tension=0;this.message='';this.catch=null;}
  nearest(v){return FISHING_SPOTS.find(s=>Math.hypot(v.x-s.x,v.z-s.z)<s.radius)||null;}
  get active(){return ['casting','waiting','bite','hooked'].includes(this.phase);}
  cancel(message='Line retrieved'){if(this.active){this.phase='idle';this.message=message;}this.tension=0;}
- action(v){
+ action(v,castFrom=null){
   if(this.phase==='bite'){this.phase='hooked';this.time=0;this.progress=0;this.tension=.2;this.message='Hooked! Hold REEL; release when tension rises.';return true;}
   if(this.active){this.cancel();return false;}
   if(!this.nearest(v)){this.message='Find the fishing grounds beyond the bar · Pause → GO FISHING';return false;}
   if(v.speed>1.5||v.airborne||v.wipeout){this.message='Slow below 5 km/h to cast';return false;}
-  this.origin={x:v.x,z:v.z,heading:v.heading};this.phase='casting';this.time=0;this.catch=null;this.progress=0;this.tension=0;
-  const roll=this.random(),index=roll>.95?3:roll>.7?2:roll>.35?1:0,s=SPECIES[index];
-  this.fish={...s,kg:Math.round((s.min+(s.max-s.min)*this.random())*10)/10};this.wait=3+this.random()*3;this.message='Casting…';return true;
+  this.origin={x:v.x,z:v.z,heading:v.heading};this.castOrigin=castFrom?{x:castFrom.x,z:castFrom.z,heading:castFrom.heading}:{...this.origin};this.phase='casting';this.time=0;this.catch=null;this.progress=0;this.tension=0;
+  const conditions=fishingConditions(this.hour),roll=this.random(),index=roll>.95-conditions.rareBonus?3:roll>.7?2:roll>.35?1:0,s=SPECIES[index];
+  this.fish={...s,kg:Math.round((s.min+(s.max-s.min)*this.random())*10)/10};this.biteConditions=conditions.label;this.wait=(3+this.random()*3)*conditions.waitMultiplier;this.message='Casting…';return true;
  }
  update(dt,v,reeling){
   if(!this.active)return;
@@ -41,5 +42,5 @@ export class Fishing{
    else if(this.progress>=1){this.progress=1;this.phase='landed';this.catch={...this.fish};this.message=`${this.fish.name} · ${this.fish.kg} kg · released!`;this.onCatch(this.catch);}
   }
  }
- status(v){return{phase:this.phase,active:this.active,near:this.nearest(v)?.name||'',message:this.message,progress:this.progress,tension:this.tension,running:!!this.running,catch:this.catch,time:this.time};}
+ status(v){return{phase:this.phase,active:this.active,castOrigin:this.castOrigin?{...this.castOrigin}:null,conditions:fishingConditions(this.hour).label,near:this.nearest(v)?.name||'',message:this.message,progress:this.progress,tension:this.tension,running:!!this.running,catch:this.catch,time:this.time};}
 }

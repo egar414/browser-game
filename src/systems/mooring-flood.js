@@ -44,6 +44,7 @@ export class MooringFlood {
     }else this.emission=0;
     for(const p of this.packets){
       if(p.life<=0)continue;const before={x:p.x,y:p.y,z:p.z};p.life-=dt;stepDroplet(p,dt);
+      if(this.onPacket?.(before,p)){p.life=0;continue;}
       // Swept crossing of an open gunwale. An underside or nearby splash is
       // not water aboard. Spatial hashing bounds work independently of houses.
       const cx=Math.floor(p.x/8),cz=Math.floor(p.z/8);

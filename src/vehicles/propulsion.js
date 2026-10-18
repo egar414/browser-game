@@ -1,3 +1,4 @@
+import{isJet}from'../config.js';
 import { PROPULSION, RIDE_MODES, SKI_TRIM_POSITIONS, waveHeight } from '../config.js';
 const rad=degrees=>degrees*Math.PI/180;
 const clamp=(value,min=0,max=1)=>Math.max(min,Math.min(max,value));
@@ -35,7 +36,7 @@ export function nozzleVector(trim,steering) {
 
 export function propulsionPose(v,trimAngle=0,steeringAngle=0){
   const c=PROPULSION[v.type],localDirection=nozzleVector(trimAngle,steeringAngle),direction=bodyVector(v,localDirection);
-  if(v.type==='ski'){
+  if(isJet(v.type)){
     return {direction,origin:bodyPoint(v,localDirection.map((p,i)=>c.nozzleMount[i]+p*c.nozzleLength)),intake:bodyPoint(v,c.intake)};
   }
   const p=c.propeller,ct=Math.cos(trimAngle),st=Math.sin(trimAngle),cs=Math.cos(-steeringAngle),ss=Math.sin(-steeringAngle);
@@ -75,14 +76,14 @@ export class Propulsion {
     const demand=clamp(Math.abs(v.throttle));
     const braking=reversing&&forward>2.78;
     if(!reversing)this.reverseReady=false;else if(forward<=2.2)this.reverseReady=true;
-    const shifting=this.type!=='ski'&&reversing&&!this.reverseReady;
+    const shifting=!isJet(this.type)&&reversing&&!this.reverseReady;
     const reversePower=reversing?(braking?mode.brakePower:mode.reversePower):1;
     const targetRpm=c.idleFraction+(1-c.idleFraction)*Math.sqrt(shifting?0:demand)*Math.cbrt(mode.power*reversePower);
     this.rpmFraction=damp(this.rpmFraction,targetRpm,dt>0?8:0,dt);
     this.reverse=damp(this.reverse,reversing&&!shifting?1:0,mode.gateResponse,dt);
-    const selectedTrim=rad(clamp(v.trimDegrees||0,this.type==='ski'?SKI_TRIM_POSITIONS[0]:-7,this.type==='ski'?SKI_TRIM_POSITIONS.at(-1):8));
+    const selectedTrim=rad(clamp(v.trimDegrees||0,isJet(this.type)?SKI_TRIM_POSITIONS[0]:-7,isJet(this.type)?SKI_TRIM_POSITIONS.at(-1):8));
     // The selected VTS position may change at idle; the physical nozzle moves in forward thrust.
-    if(this.type!=='ski'||(!reversing&&demand>.025))this.trimAngle=damp(this.trimAngle,selectedTrim,5,dt);
+    if(!isJet(this.type)||(!reversing&&demand>.025))this.trimAngle=damp(this.trimAngle,selectedTrim,5,dt);
     const trimAngle=this.trimAngle;
     const steeringAngle=v.steer*c.steeringAngle;
     const {origin,intake,direction}=propulsionPose(v,trimAngle,steeringAngle);
@@ -94,7 +95,7 @@ export class Propulsion {
     const wet=available===0?0:this.wetness;
     const powerFraction=this.rpmFraction**3;
     let exitSpeed,flow,massFlow,thrust;
-    if(this.type==='ski'){
+    if(isJet(this.type)){
       const solution=waterjetSolution(c.hydraulicPower*powerFraction,c.nozzleArea,Math.hypot(v.vx,v.vz,v.vy||0));
       exitSpeed=solution.exitSpeed;
       // Approximate inlet admission losses at low pump RPM. Without this term,
@@ -107,20 +108,20 @@ export class Propulsion {
       exitSpeed=solution.slipstreamSpeed;flow=c.propellerArea*(Math.abs(forward)+solution.inducedSpeed)*wet;
       massFlow=flow*WATER_DENSITY;thrust=solution.thrust*wet;
     }
-    const neutral=shifting||(this.type!=='ski'&&reversing&&this.reverse<.55)||(demand<.025&&Math.abs(forward)<.4);
+    const neutral=shifting||(!isJet(this.type)&&reversing&&this.reverse<.55)||(demand<.025&&Math.abs(forward)<.4);
     // Smooth bucket routing in the body frame. Unlike a reversing propeller,
     // the impeller keeps rotating the same way while the bucket redirects water.
     // The bucket bends the fore/aft stream; it retains its lateral component.
     // This gives the guide-described opposite stern direction when backing.
     const local=nozzleVector(trimAngle,steeringAngle),reverse=this.reverse;
-    const routed=this.type==='ski'
+    const routed=isJet(this.type)
       ? [local[0],local[1]*(1-reverse)-.38*reverse,local[2]*(1-2*reverse)]
       : local.map(n=>n*(1-2*reverse));
     const norm=Math.hypot(...routed)||1,dischargeLocal=routed.map(n=>n/norm),dischargeDirection=bodyVector(v,dischargeLocal);
     const dischargeScale=1-reverse*(1-c.reverseEfficiency);
     const force={x:0,y:0,z:0};
     if(!neutral){
-      if(this.type==='ski'){
+      if(isJet(this.type)){
         // F = mdot (v_in - v_out), including inlet momentum in ALL axes.
         force.x=-massFlow*(dischargeDirection.x*exitSpeed*dischargeScale+v.vx);
         force.y=-massFlow*(dischargeDirection.y*exitSpeed*dischargeScale+(v.vy||0));

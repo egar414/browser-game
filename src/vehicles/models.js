@@ -96,6 +96,31 @@ export function makeVehicle(type, colour, design='classic') {
     box(body, 0.65, 0.035, 0.3, 0, 0.17, -1.2, rubber);
     for(const side of [-1,1])label(body,'ER',.23,.105,side*.555,.28,-.08,side*Math.PI/2);
     person = makeRider(body, type);
+  } else if(type==='seago') {
+    const graphite=new THREE.MeshPhysicalMaterial({color:'#232a2e',roughness:.28,metalness:.18,clearcoat:.8}),saddle=mat('#454b4e',.85);
+    hull(body,[[-1.82,.40,.14,-.23],[-1.55,.58,.25,-.36],[-.8,.66,.32,-.4],[.3,.66,.43,-.34],[1.05,.55,.43,-.24],[1.6,.27,.33,-.10],[1.85,.01,.24,.02]],rubber);
+    hull(body,[[-1.65,.40,.34,.18],[-.85,.49,.46,.24],[.15,.55,.55,.31],[.9,.50,.63,.34],[1.55,.28,.43,.24],[1.8,.01,.25,.15]],graphite);
+    hull(body,[[-1.47,.23,.53,.32],[-1.13,.27,.71,.37],[-.48,.23,.73,.38],[.03,.22,.65,.35],[.38,.16,.6,.42]],saddle);
+    hull(body,[[.12,.17,.67,.43],[.53,.32,.85,.43],[.95,.36,.76,.42],[1.45,.17,.49,.31],[1.74,.01,.28,.2]],graphite);
+    for(const side of [-1,1]){
+      box(body,.24,.06,1.6,side*.5,.32,-.56,rubber,true);
+      for(let i=0;i<12;i++)box(body,.2,.014,.03,side*.5,.355,-1.28+i*.115,dark);
+      tube(body,[[side*.4,.35,-1.64],[side*.61,.39,-.85],[side*.63,.43,.28],[side*.51,.45,1.04],[side*.25,.34,1.61]],.026,accent,22);
+      const shoulder=box(body,.14,.10,.68,side*.42,.64,.63,graphite,true);shoulder.rotation.y=-side*.3;
+      for(let i=0;i<3;i++)box(body,.06,.045,.16,side*.44,.64-i*.035,.27+i*.11,rubber,true);
+      label(body,'SEAGO',.75,.17,side*.675,.3,-.66,side*Math.PI/2);
+      tube(body,[[side*.18,.53,-1.43],[side*.23,.64,-1.33],[side*.25,.57,-1.15]],.035,rubber,8);
+    }
+    box(body,.89,.06,.38,0,.22,-1.59,rubber,true);box(body,.55,.09,.11,0,.44,-1.51,accent,true);
+    tube(body,[[0,.59,.55],[0,1.2,.39]],.06,graphite,8);
+    handlebars=new THREE.Group();handlebars.position.set(0,1.2,.39);body.add(handlebars);
+    tube(handlebars,[[-.4,0,-.12],[-.19,.02,-.01],[0,.02,.02],[.19,.02,-.01],[.4,0,-.12]],.032,dark,14);
+    for(const side of [-1,1])box(handlebars,.19,.075,.085,side*.34,0,-.12,rubber,true);
+    box(handlebars,.17,.06,.14,0,.04,.09,rubber,true);box(handlebars,.12,.009,.07,0,.074,.09,blue,true);
+    nozzle=new THREE.Group();nozzle.position.set(0,-.06,-1.8);body.add(nozzle);
+    const outlet=new THREE.Mesh(new THREE.CylinderGeometry(.14,.18,.24,18),dark);outlet.rotation.x=Math.PI/2;outlet.position.z=-.06;nozzle.add(outlet);
+    bucket=new THREE.Group();bucket.position.set(0,.1,-1.81);body.add(bucket);box(bucket,.4,.15,.18,0,0,-.09,graphite,true);
+    person=makeRider(body,type);
   } else if(type==='tinny') {
     const tender=buildTender(colour,design);body.add(tender);({motor,propeller}=tender.userData);
     // Keep the motor attachment in body coordinates for the shared rider IK.

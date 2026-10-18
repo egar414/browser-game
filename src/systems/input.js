@@ -1,6 +1,6 @@
 export class Input {
   constructor(onAction) {
-    this.keys = new Set();this.trimQueue=[];this.touchPointers=new Map();this.touchToggles=new Set(); this.onAction = onAction; this.orbit = 0; this.dragging = false;
+    this.keys = new Set();this.trimQueue=[];this.touchPointers=new Map();this.touchToggles=new Set(); this.onAction = onAction; this.orbit = 0;this.lookPitch=0; this.dragging = false;
     const captured = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'];
     window.addEventListener('keydown', e => {
       if (/INPUT|SELECT/.test(e.target.tagName)) return;
@@ -12,8 +12,8 @@ export class Input {
     window.addEventListener('blur', () => { this.clear(); onAction('Blur'); });
     document.addEventListener('visibilitychange', () => { if (document.hidden) { this.clear(); onAction('Blur'); } });
     const canvas = document.querySelector('#game');
-    canvas.addEventListener('pointerdown', e => { this.dragging = true; this.lastX = e.clientX; canvas.setPointerCapture(e.pointerId); });
-    canvas.addEventListener('pointermove', e => { if (this.dragging) { this.orbit -= (e.clientX - this.lastX) * 0.006; this.lastX = e.clientX; } });
+    canvas.addEventListener('pointerdown', e => { this.dragging = true; this.lastX = e.clientX;this.lastY=e.clientY; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener('pointermove', e => { if (this.dragging) { this.orbit -= (e.clientX - this.lastX) * 0.006;this.lookPitch=Math.max(-.7,Math.min(.55,this.lookPitch-(e.clientY-this.lastY)*.004)); this.lastX = e.clientX;this.lastY=e.clientY; } });
     canvas.addEventListener('pointerup', () => { this.dragging = false; });
     canvas.addEventListener('lostpointercapture', () => { this.dragging = false; });
   }

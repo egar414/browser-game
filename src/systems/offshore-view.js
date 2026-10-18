@@ -5,9 +5,9 @@ import{waveHeight}from'../config.js';
 import{FISHING_SPOTS}from'./fishing.js';
 const mat=(colour,roughness=.5)=>new THREE.MeshStandardMaterial({color:colour,roughness});
 function rod(group,a,b,material,r=.025){const d=new THREE.Vector3().subVectors(b,a),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),6),material);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());group.add(m);return m;}
-function label(text){const c=document.createElement('canvas');c.width=512;c.height=128;const x=c.getContext('2d');x.fillStyle='#e5ece7';x.fillRect(0,0,512,128);x.fillStyle='#173e54';x.font='bold 48px sans-serif';x.textAlign='center';x.fillText(text.toUpperCase(),256,84);const t=new THREE.CanvasTexture(c);return new THREE.MeshBasicMaterial({map:t});}
+function label(text){const c=document.createElement('canvas');c.width=512;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,512,128);x.fillStyle='#f3e6cf';x.font='bold 48px sans-serif';x.textAlign='center';x.fillText(text.toUpperCase(),256,84);const t=new THREE.CanvasTexture(c);return new THREE.MeshBasicMaterial({map:t,transparent:true});}
 export function makeSportfisher(name,colour,crew=true){
- const g=new THREE.Group(),white=mat('#e5ece7'),navy=mat(colour),glass=mat('#183f51',.15),chrome=mat('#bacbd0',.22),wood=mat('#b99567'),dark=mat('#1e303a'),skin=mat('#c99872'),shirt=mat('#edb05b');
+ const g=new THREE.Group(),white=mat('#e5ece7'),navy=mat(colour),glass=mat('#183f51',.15),chrome=mat('#bacbd0',.22),wood=mat('#a96736'),dark=mat('#1e303a'),skin=mat('#c99872'),shirt=mat('#edb05b');
  const box=(w,h,d,x,y,z,m)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);g.add(o);return o;};
  // Cross-sections taper into a pointed flared bow and a deep V keel.
  const sections=[[-5,1.72,.55],[-3.7,1.98,.72],[0,1.95,.95],[2.9,1.65,1.30],[4.7,.75,1.6],[5.65,.02,1.72]],positions=[],indices=[];
@@ -16,19 +16,44 @@ export function makeSportfisher(name,colour,crew=true){
  indices.push(0,1,2,0,2,4,2,3,4);
  // The section ring winds inward along +Z; reverse triangles for outward faces.
  for(let i=0;i<indices.length;i+=3)[indices[i+1],indices[i+2]]=[indices[i+2],indices[i+1]];
- const hull=new THREE.BufferGeometry();hull.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));hull.setIndex(indices);hull.computeVertexNormals();g.add(new THREE.Mesh(hull,navy));
+ const hull=new THREE.BufferGeometry();hull.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));hull.setIndex(indices);hull.computeVertexNormals();g.add(new THREE.Mesh(hull,white));
+ const stripePositions=[];
+ for(const side of [-1,1])for(let i=0;i<sections.length-1;i++){
+  const point=(section,y)=>{const[z,w,h]=section;return[side*(w*(.82+.18*(y+.22)/(h+.22))+.009),y,z];};
+  const a=point(sections[i],.05),b=point(sections[i+1],.05),c=point(sections[i],.2),d=point(sections[i+1],.2);stripePositions.push(...a,...b,...c,...c,...b,...d);
+ }
+ const stripeGeo=new THREE.BufferGeometry();stripeGeo.setAttribute('position',new THREE.Float32BufferAttribute(stripePositions,3));stripeGeo.computeVertexNormals();navy.side=THREE.DoubleSide;g.add(new THREE.Mesh(stripeGeo,navy));
  const deck=new THREE.Shape();deck.moveTo(-1.65,2);deck.lineTo(-1.65,2.9);deck.lineTo(-.75,4.7);deck.lineTo(0,5.65);deck.lineTo(.75,4.7);deck.lineTo(1.65,2.9);deck.lineTo(1.65,2);deck.closePath();const bow=new THREE.Mesh(new THREE.ShapeGeometry(deck),white);bow.rotation.x=Math.PI/2;bow.position.y=1.5;bow.material=white.clone();bow.material.side=THREE.DoubleSide;g.add(bow);
  box(3.35,.16,6.8,0,.83,-1.5,white);box(3.35,.09,3.0,0,.94,-3.2,wood);
- box(3.35,.7,.15,0,1.15,-4.95,white);box(.15,.5,4.6,-1.75,1.1,-2.65,white);box(.15,.5,4.6,1.75,1.1,-2.65,white);
+ box(3.35,.7,.15,0,1.15,-4.95,wood);
+ for(let z=-4.65;z<-1.85;z+=.16)box(3.18,.008,.012,0,.992,z,dark);
+ box(2.9,1.65,.09,0,1.8,-1.80,wood);box(.68,1.45,.06,0,1.73,-1.86,wood);for(const side of [-1,1])box(.95,.9,.025,side*.91,2.03,-1.865,glass);
+ rod(g,new THREE.Vector3(.26,1.5,-1.91),new THREE.Vector3(.26,1.74,-1.91),chrome,.018);box(.15,.5,4.6,-1.75,1.1,-2.65,white);box(.15,.5,4.6,1.75,1.1,-2.65,white);
  box(2.9,1.75,3.8,0,1.78,.15,white);box(3.25,.18,4.25,0,2.75,.15,white);
- box(2.6,.82,.07,0,2.2,2.08,glass);for(const side of [-1,1])box(.07,.83,2.8,side*1.47,2.2,.4,glass);
+ const screen=box(2.6,.82,.07,0,2.2,2.08,glass);screen.rotation.x=-.25;for(const side of [-1,1])box(.07,.83,2.8,side*1.47,2.2,.4,glass);
  box(2.5,.8,2.6,0,3.22,.2,white);box(2.7,.12,2.9,0,3.68,.2,white);box(1.6,.6,.5,0,3.95,.8,white);
  // Shaded flybridge, tower, fighting chair, visible crew and outriggers.
  for(const x of [-1.2,1.2])for(const z of [-.9,1.3])rod(g,new THREE.Vector3(x,3.65,z),new THREE.Vector3(x,5.25,z),chrome);
- box(3,.13,3,0,5.3,.2,white);rod(g,new THREE.Vector3(0,5.3,.2),new THREE.Vector3(0,6.5,.2),chrome,.035);
- box(1.4,.12,.15,0,5.8,.2,white);
+ box(3,.13,3,0,5.3,.2,white);
+ // Reference-inspired aluminium tuna tower: braces, ladder, upper controls and radar.
  for(const side of [-1,1]){
-  rod(g,new THREE.Vector3(side*1.3,3.4,-.6),new THREE.Vector3(side*3.7,6.0,-4.7),chrome,.035);
+  rod(g,new THREE.Vector3(side*1.65,1.2,-2.1),new THREE.Vector3(side*.9,8.6,.1),chrome,.045);
+  rod(g,new THREE.Vector3(side*1.45,2.7,1.9),new THREE.Vector3(side*.9,8.6,1.2),chrome,.04);
+  rod(g,new THREE.Vector3(side*1.4,3.1,-1.4),new THREE.Vector3(side*.95,6.8,1.1),chrome,.025);
+  rod(g,new THREE.Vector3(side*1.45,3.1,1.7),new THREE.Vector3(side*.95,6.8,-.1),chrome,.025);
+ }
+ box(2.15,.1,1.75,0,7.3,.6,white);box(2.05,.08,1.65,0,8.6,.6,dark);
+ for(const x of [-.95,.95])for(const z of [-.15,1.3])rod(g,new THREE.Vector3(x,7.3,z),new THREE.Vector3(x,8.6,z),chrome,.025);
+ box(1.0,.4,.3,0,7.62,.98,white);
+ for(let y=1.5;y<7.25;y+=.31){const t=(y-1.2)/7.4,z=-2.1+(2.2*t);rod(g,new THREE.Vector3(.95,y,z),new THREE.Vector3(1.35,y,z),chrome,.021);}
+ for(const x of [.95,1.35])rod(g,new THREE.Vector3(x,1.2,-2.1),new THREE.Vector3(x,7.3,-.25),chrome,.026);
+ const radar=new THREE.Mesh(new THREE.SphereGeometry(.35,16,12),white);radar.scale.y=1.5;radar.position.set(0,9.0,.6);g.add(radar);
+ rod(g,new THREE.Vector3(-.65,7.4,.7),new THREE.Vector3(-.65,10.8,.7),chrome,.016);
+ rod(g,new THREE.Vector3(.65,7.4,.7),new THREE.Vector3(.65,10.1,.7),chrome,.016);
+ const roofRadar=new THREE.Mesh(new THREE.SphereGeometry(.28,12,10),white);roofRadar.position.set(.4,5.55,.75);g.add(roofRadar);
+
+ for(const side of [-1,1]){
+  rod(g,new THREE.Vector3(side*1.3,3.4,-.6),new THREE.Vector3(side*4.5,10.1,-6.3),chrome,.035);
   rod(g,new THREE.Vector3(side*1.55,1.2,-3.3),new THREE.Vector3(side*2.0,3.0,-5.3),dark,.018);
   for(let z=2.5;z<=4.5;z+=1)rod(g,new THREE.Vector3(side*(z>4?.7:1.4),1.2,z),new THREE.Vector3(side*(z>4?.7:1.4),1.85,z),chrome,.02);
   rod(g,new THREE.Vector3(side*1.4,1.85,2.5),new THREE.Vector3(side*.7,1.85,4.5),chrome,.02);
@@ -76,7 +101,8 @@ export class OffshoreView{
   const rodPoints=this.rod.geometry.attributes.position;
   for(let i=0;i<9;i++){const t=i/8,p=origin.clone().lerp(tip,t);p.y+=Math.sin(t*Math.PI)*.25;rodPoints.setXYZ(i,p.x,p.y,p.z);}rodPoints.needsUpdate=true;this.rod.geometry.computeBoundingSphere();
   const cast=f.phase==='casting'?Math.min(1,f.time/.8):1,distance=(4+14*(1-f.progress))*cast;
-  const lx=f.origin.x+(Math.cos(f.origin.heading)*.4+Math.sin(f.origin.heading)*.8)*distance,lz=f.origin.z+(-Math.sin(f.origin.heading)*.4+Math.cos(f.origin.heading)*.8)*distance;
+  const castOrigin=f.castOrigin||f.origin;
+  const lx=castOrigin.x+(Math.cos(castOrigin.heading)*.4+Math.sin(castOrigin.heading)*.8)*distance,lz=castOrigin.z+(-Math.sin(castOrigin.heading)*.4+Math.cos(castOrigin.heading)*.8)*distance;
   const ly=waveHeight(lx,lz,time)+.14+(f.phase==='bite'?Math.sin(time*18)*.15:0);this.float.position.set(lx,ly,lz);
   const line=this.line.geometry.attributes.position;for(let i=0;i<20;i++){const t=i/19,p=tip.clone().lerp(this.float.position,t);p.y-=Math.sin(t*Math.PI)*.35*(1-f.tension);line.setXYZ(i,p.x,p.y,p.z);}line.needsUpdate=true;this.line.geometry.computeBoundingSphere();
   this.hooked.visible=f.phase==='hooked';this.hooked.position.set(lx,ly-.2+Math.max(0,Math.sin(f.time*2.6)-.8)*5,lz);this.hooked.rotation.set(Math.sin(time*7)*.25,h+Math.sin(time*5)*.4,0);this.hooked.material.color.set(f.fish.colour);

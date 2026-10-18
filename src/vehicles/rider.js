@@ -27,10 +27,11 @@ export function makeRider(parent,type){
   ball(torso,[0,.27,0],[.215,.29,.145],suit);
   ball(torso,[0,.29,.025],[.235,.245,.17],vest);
   for(const side of [-1,1])ball(torso,[side*.16,.32,.155],[.025,.21,.017],dark);
-  ball(torso,[0,.69,.015],[.15,.19,.15],skin);
-  ball(torso,[0,.8,.005],[.158,.083,.16],dark);
-  ball(torso,[0,.79,.14],[.16,.022,.1],dark);
-  ball(torso,[0,.71,.153],[.13,.036,.026],dark);
+  const face=new THREE.Group();torso.add(face);root.userData.face=face;const eye=new THREE.Object3D();eye.position.set(0,.73,.14);torso.add(eye);root.userData.eye=eye;
+  ball(face,[0,.69,.015],[.15,.19,.15],skin);
+  ball(face,[0,.8,.005],[.158,.083,.16],dark);
+  ball(face,[0,.79,.14],[.16,.022,.1],dark);
+  ball(face,[0,.71,.153],[.13,.036,.026],dark);
   const limbs=[-1,1].map(side=>({side,arm:[segment(root,.069,vest),segment(root,.052,skin)],leg:[segment(root,.085,suit),segment(root,.071,skin)],hand:ball(root,[0,0,0],[.064,.065,.065],skin),foot:ball(root,[0,0,0],[.083,.045,.16],dark)}));
   for(const limb of limbs){limb.hand.name=limb.side===1?'right-hand':'left-hand';limb.foot.name=limb.side===1?'right-foot':'left-foot';}
   let aft=0,lean=0,bow=0;

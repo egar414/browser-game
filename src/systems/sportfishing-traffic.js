@@ -1,3 +1,4 @@
+import{SPORTFISHER_HEIGHT}from'../config.js';
 import{CruisePath}from'./local-traffic.js';
 import{mapData,edgeDistance}from'./geography.js';
 import{waveHeight}from'../config.js';
@@ -21,7 +22,7 @@ export class SportfishingTraffic{
   this.world=collision;this.enabled=true;
   this.boats=[['Reef Runner','river',90],['Blue Marlin','offshore',250],['Wide Line','offshore',940],['Saltwater','canal',150]].map(([name,route,progress])=>{
    const path=new CruisePath(SPORTFISHER_ROUTES[route],route!=='canal'),p=path.at(progress);
-   return{name,route,path,progress,...p,y:waveHeight(p.x,p.z,0),pitch:0,roll:0,speed:0,bridgeHold:0,collider:{name:'Sportfishing cruiser',a:[p.x,p.z-4],b:[p.x,p.z+4],width:3.7,height:7,disabled:true}};
+   return{name,route,path,progress,...p,y:waveHeight(p.x,p.z,0),pitch:0,roll:0,speed:0,bridgeHold:0,collider:{name:'Sportfishing cruiser',a:[p.x,p.z-4],b:[p.x,p.z+4],width:3.7,height:SPORTFISHER_HEIGHT,disabled:true}};
   });
  }
  get colliders(){return this.boats.map(b=>b.collider);}
@@ -34,7 +35,7 @@ export class SportfishingTraffic{
    b.heading+=Math.max(-.28*dt,Math.min(.28*dt,error));
    const sx=Math.sin(b.heading),cz=Math.cos(b.heading);
    const nearby=[player,...this.boats.filter(o=>o!==b)].some(p=>{const dx=p.x-b.x,dz=p.z-b.z;return dx*sx+dz*cz>-6&&dx*sx+dz*cz<32&&Math.abs(dx*cz-dz*sx)<8;});
-   const top=Math.max(b.y,waveHeight(b.x+sx*20,b.z+cz*20,time))+6.5;
+   const top=Math.max(b.y,waveHeight(b.x+sx*20,b.z+cz*20,time))+SPORTFISHER_HEIGHT;
    const lowBridge=bridgeObstruction(b.x+sx*20,b.z+cz*20,top,6);
    b.bridgeHold=Math.max(0,b.bridgeHold-dt);
    if(lowBridge&&b.route==='canal'&&!b.bridgeHold){b.progress=b.path.length-b.progress;b.bridgeHold=15;}
@@ -42,10 +43,10 @@ export class SportfishingTraffic{
    const desired=nearby||blocked?0:(b.route==='river'?3.5:b.route==='canal'?2.5:6)*(1-Math.min(.7,Math.abs(error)*.45));
    b.speed+=(desired-b.speed)*(1-Math.exp(-dt*(desired<b.speed?2:.4)));
    const nx=b.x+sx*b.speed*dt,nz=b.z+cz*b.speed*dt;
-   if(!bridgeObstruction(nx,nz,Math.max(b.y,waveHeight(nx,nz,time))+6.5,7)&&!this.world(nx,nz,5,0,b.collider)){b.x=nx;b.z=nz;}else b.speed=0;
+   if(!bridgeObstruction(nx,nz,Math.max(b.y,waveHeight(nx,nz,time))+SPORTFISHER_HEIGHT,7)&&!this.world(nx,nz,5,0,b.collider)){b.x=nx;b.z=nz;}else b.speed=0;
    const front=waveHeight(b.x+sx*4,b.z+cz*4,time),rear=waveHeight(b.x-sx*4,b.z-cz*4,time),left=waveHeight(b.x-cz*1.5,b.z+sx*1.5,time),right=waveHeight(b.x+cz*1.5,b.z-sx*1.5,time),k=1-Math.exp(-dt*3);
    b.y+=((front+rear+left+right)/4-b.y)*k;b.pitch+=(Math.atan2(front-rear,8)-b.pitch)*k;b.roll+=(Math.atan2(right-left,3)-b.roll)*k;
-   b.collider.a[0]=b.x-sx*3.8;b.collider.a[1]=b.z-cz*3.8;b.collider.b[0]=b.x+sx*3.8;b.collider.b[1]=b.z+cz*3.8;b.collider.height=b.y+7;
+   b.collider.a[0]=b.x-sx*3.8;b.collider.a[1]=b.z-cz*3.8;b.collider.b[0]=b.x+sx*3.8;b.collider.b[1]=b.z+cz*3.8;b.collider.height=b.y+SPORTFISHER_HEIGHT+.2;
   }
  }
 }

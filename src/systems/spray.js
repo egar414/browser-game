@@ -1,3 +1,4 @@
+import{isJet}from'../config.js';
 import * as THREE from 'three';
 import { JetPlume } from './jet-plume.js';
 import { waveHeight } from '../config.js';
@@ -213,7 +214,7 @@ export class Spray {
     }
     const discharge=active?pumpDischarge(v,time):null;this.stream.update(v,discharge);
     const plume=jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
-    this.jetAccumulator+=dt*this.state.jet*(v.type==='ski'?200:90);
+    this.jetAccumulator+=dt*this.state.jet*(isJet(v.type)?200:90);
     const jetCount=Math.min(30,Math.floor(this.jetAccumulator));this.jetAccumulator-=jetCount;
     for(let i=0;i<jetCount&&discharge;i++){
       const {origin,velocity,aerial}=discharge;
@@ -229,7 +230,7 @@ export class Spray {
         this.emit({x:x+(Math.random()-.5)*.35,y:waveHeight(x,z,time)+.025,z,vx:velocity.x*.12,vy:.25+Math.random()*.7,vz:velocity.z*.12,diameter:.004});
       }
     }
-    if(active&&v.drive?.braking&&v.type==='ski'&&v.drive.wetness>.2){
+    if(active&&v.drive?.braking&&isJet(v.type)&&v.drive.wetness>.2){
       // The official guide describes a transient plume behind an applied brake gate.
       this.brakeAccumulator=(this.brakeAccumulator||0)+dt*clamp(v.speed/18)*65*v.drive.reverse;
       const n=Math.min(15,Math.floor(this.brakeAccumulator));this.brakeAccumulator-=n;

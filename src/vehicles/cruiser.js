@@ -1,3 +1,4 @@
+import{SPORTFISHER_HEIGHT}from'../config.js';
 import{waveHeight,WORLD,RIDE_MODES}from'../config.js';
 import{bridgeObstruction}from'../systems/sportfishing-traffic.js';
 export const CRUISER_HANDLING={forwardSpeed:15.5,reverseSpeed:2.6,powerResponse:.27,brakeResponse:.65,coastResponse:.14,turnRate:.37,waterResponse:3,deckWalkSpeed:1.6};
@@ -8,7 +9,7 @@ export function updateCruiser(v,dt,input,time){
  const target=v.deckMode||braking?0:v.throttle*(v.throttle>=0?T.forwardSpeed*(RIDE_MODES[v.rideMode]?.power||1):T.reverseSpeed),k=v.deckMode?1.8:braking?T.brakeResponse:Math.abs(input.throttle)>.05?T.powerResponse:T.coastResponse;
  let forward=damp(oldSpeed,target,k,dt);v.yawRate=damp(v.yawRate,v.steer*T.turnRate*Math.min(1,Math.abs(forward)/4)*Math.sign(forward||1),2.5,dt);v.heading+=v.yawRate*dt;
  const sx=Math.sin(v.heading),cz=Math.cos(v.heading),nx=v.x+sx*forward*dt,nz=v.z+cz*forward*dt;
- let hit=null;const top=Math.max(v.y,waveHeight(nx,nz,time))+6.5;
+ let hit=null;const top=Math.max(v.y,waveHeight(nx,nz,time))+SPORTFISHER_HEIGHT;
  for(const d of [-4,0,4])hit ||= bridgeObstruction(nx+sx*d,nz+cz*d,top,2.1)||v.collision(nx+sx*d,nz+cz*d,2.05,0);
  v.bumpCooldown=Math.max(0,(v.bumpCooldown||0)-dt);
  if(hit){forward=0;v.yawRate*=.8;if(!v.bumpCooldown&&Math.abs(oldSpeed)>.6){v.onEvent({type:'bump',label:String(hit).includes('Bridge')?'Bridge too low for this boat':`Blocked · ${hit}`});v.bumpCooldown=3;}}

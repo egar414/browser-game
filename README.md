@@ -180,7 +180,7 @@ Asset URLs are relative, including for subdirectory hosting.
 | Shift | Shift weight aft for jet-ski/Thundercat bow rides; powered sliding turns |
 | Q / E | Select jet-ski trim positions (tap/hold), outboard trim; aerial pitch |
 | T | Cycle Cruise / Sport / Freestyle riding modes |
-| C | Close or wide chase camera |
+| C | Wide chase / close chase / first-person camera |
 | Mouse drag | Orbit camera; automatically recentres |
 | R | Recover in nearby clear water |
 | F | Start or restart the checkpoint race |
@@ -525,6 +525,18 @@ Slow below 5 km/h, press **K** to cast, then **K** on **BITE** to hook. Hold **S
 
 Tune grounds, species and reel balance in `src/systems/fishing.js`; large-boat patrol routes and speed in `sportfishing-traffic.js`; original cruiser geometry, fish schools, wakes and tackle in `offshore-view.js`. Local boat density is capped by `LOCAL_TRAFFIC.visible` in `src/config.js`. Traffic can be switched off with **LOCAL BOATERS → Quiet water** without disabling fishing. The Reef Runner is also selectable as BIG BOAT; the other cruisers remain ambient AI.
 
-Choose **BIG BOAT** to drive the Reef Runner 38. It has slower acceleration, momentum, broad turns, reverse, multi-point wave following and tower clearance checks. **J** (or phone **DECK**) switches between the helm and walking around the rear fishing cockpit when speed is below 5 km/h. **WASD** walks inside the cockpit rails; on phones use arrows sideways and GO/BRAKE forward/back. The boat settles to a stop while you are on deck. Cast from the deck with K / FISH and return to the helm with J. Big boats use free roam and fishing; racing, trick sessions and spray battle use the three smaller craft. Original smooth beachwear characters use procedural matching shirt and boardshort fabrics; no Fortnite assets are used.
+Choose **BIG BOAT** to drive the Reef Runner 38. It has slower acceleration, momentum, broad turns, reverse, multi-point wave following and tower clearance checks. **J** (or phone **DECK**) switches between the helm and walking around the rear fishing cockpit when speed is below 5 km/h. **WASD** walks inside the cockpit rails; on phones use arrows sideways and GO/BRAKE forward/back. The boat settles to a stop while you are on deck. Cast from the deck with K / FISH and return to the helm with J. Big boats use free roam and fishing; racing, trick sessions and spray battle use one of the smaller craft. Original smooth beachwear characters use procedural matching shirt and boardshort fabrics; no Fortnite assets are used.
 
 Tune the player sportfisher's acceleration, braking, speed, steering and walking speed in `CRUISER_HANDLING` in `src/vehicles/cruiser.js`; wardrobe fabrics and the deck avatar live in `src/vehicles/wardrobe.js`. All new boats, fish and fabric textures are generated locally from original geometry, without downloaded art, accounts or API keys. Browser checks use Linux Chromium with software WebGL at 960 × 640 desktop and 844 × 390 phone emulation; these checks do not establish real laptop/mobile frame rates or replace testing on a physical phone.
+
+## Seago, daylight and waterfront update
+
+Select **SEAGO** for an original longer black performance PWC inspired by the supplied silhouette, with separate mass/handling and a **120 km/h gameplay ceiling**. It retains a waterjet, nine Q/E trim positions, brake/reverse bucket and Shift weight shift; settle trim to reach full speed. The existing Sparkplug remains available. The large sportfisher now has a tall braced tuna tower, ladder, radar, long outriggers and teak-style cockpit/transom based on the supplied reference. Its 10.8 m game air draft is included in bridge clearance checks for player and AI craft.
+
+**C / VIEW** cycles wide chase, close chase and **first person**, including the big boat's helm and walking/fishing cockpit. Drag to look around; the camera follows the rider's actual eye position with the face hidden while preserving hands/body. On deck, J / DECK still returns to the helm.
+
+**Pause → TIME OF DAY** selects sunrise, daylight, sunset, night or a 24-minute passing-day cycle. Passing time pauses with gameplay. Presets and camera choice save locally. Dawn/dusk give shorter bite waits and a better chance of a small marlin; night bites are slower. These are game rules, not forecasts. Sky, sun direction/colour, ambient lighting, fog and water respond to the clock. A small pod of original bottlenose dolphins surfaces and leaps beyond the bar near the fishing grounds; they cannot be hooked.
+
+**Pause → VISIT WATERFRONT WALKERS** joins people walking on mapped solid jetties. Carve alongside and aim a side fan toward them. Actual swept spray droplets must intersect a person's approximate body volume; proximity alone does nothing. They take a harmless tumble, recover and continue walking. There are no points or injury mechanics. Six nearby walkers draw on Low, ten on Medium and sixteen on High, using four instanced material batches.
+
+Tune daylight and bite periods in `src/systems/day-cycle.js`, Seago's drive/hull values in `src/config.js`, the sportfisher geometry in `src/systems/offshore-view.js`, dolphins in `src/systems/dolphins.js`, and walkers/capture in `pedestrians.js`, `pedestrian-view.js` and `spray-capture.js`. New geometry and textures are original/procedural, with no added API keys or external art downloads. The small environment-lighting capture stays fixed to keep laptop costs low; direct lighting, sky and water change with time.

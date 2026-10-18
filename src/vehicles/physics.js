@@ -1,3 +1,4 @@
+import{isJet}from'../config.js';
 import{updateCruiser}from'./cruiser.js';
 import { VEHICLES, SPAWN, WORLD, RIDE_MODES, PROPULSION, HYDRODYNAMICS, SKI_TRIM_POSITIONS, TINNY_HANDLING, CAT_HANDLING, waveHeight, waveChop } from '../config.js';
 import {tenderTurn} from './tender-handling.js';
@@ -36,11 +37,11 @@ export class VehiclePhysics {
   setMode(mode){if(!RIDE_MODES[mode])return;this.rideMode=mode;this.setTrim(this.trimDegrees);}
   setTrim(degrees){
     const value=Number.isFinite(degrees)?degrees:0;
-    this.trimDegrees=this.type==='ski'?SKI_TRIM_POSITIONS.reduce((best,n)=>Math.abs(n-value)<Math.abs(best-value)?n:best):clamp(value,-7,8);
+    this.trimDegrees=isJet(this.type)?SKI_TRIM_POSITIONS.reduce((best,n)=>Math.abs(n-value)<Math.abs(best-value)?n:best):clamp(value,-7,8);
   }
-  get trimIndex(){return this.type==='ski'?SKI_TRIM_POSITIONS.indexOf(this.trimDegrees):null;}
+  get trimIndex(){return isJet(this.type)?SKI_TRIM_POSITIONS.indexOf(this.trimDegrees):null;}
   updateTrim(dt,direction){
-    if(this.type!=='ski'){this.setTrim(this.trimDegrees+direction*PROPULSION[this.type].trimRate*dt);return;}
+    if(!isJet(this.type)){this.setTrim(this.trimDegrees+direction*PROPULSION[this.type].trimRate*dt);return;}
     if(!direction){this.trimHeld=0;this.trimRepeat=0;return;}
     this.trimRepeat+=dt;
     if(direction!==this.trimHeld||this.trimRepeat>=.2){
@@ -70,7 +71,7 @@ export class VehiclePhysics {
     this.steer = damp(this.steer, input.steer, handling?.steerResponse||6, dt);
     if(!this.airborne){
       if(input.trimStep){
-        if(this.type==='ski')this.trimDegrees=SKI_TRIM_POSITIONS[clamp(this.trimIndex+input.trimStep,0,8)];
+        if(isJet(this.type))this.trimDegrees=SKI_TRIM_POSITIONS[clamp(this.trimIndex+input.trimStep,0,8)];
         else this.setTrim(this.trimDegrees+input.trimStep);
         this.trimHeld=input.trim||0;this.trimRepeat=0;
       }else this.updateTrim(dt,input.trim||0);
@@ -97,7 +98,7 @@ export class VehiclePhysics {
       const immersed=hullImmersion(this,time);
       const trimDrag=1+Math.max(0,-this.pitch)*.7+Math.max(0,this.pitch-.3)*.25;
       const planeDrag=1+.26*(1-this.planing)*clamp(this.speed/6,0,1);
-      const coastDrag=this.type!=='ski'&&(this.drive.shifting||Math.abs(this.throttle)<.05)?hydro.coastDrag:1;
+      const coastDrag=!isJet(this.type)&&(this.drive.shifting||Math.abs(this.throttle)<.05)?hydro.coastDrag:1;
       // At high bow angle the stern pushes a larger wetted face through water.
       // A small gameplay drag penalty allows a sustained powered bow ride all
       // the way to its speed ceiling; releasing the aft stance settles the hull.
@@ -112,9 +113,9 @@ export class VehiclePhysics {
       this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-sprayTurn.yawLimit,sprayTurn.yawLimit);
     } else {
       this.lateralAcceleration=damp(this.lateralAcceleration,0,6,dt);
-      this.yawRate = damp(this.yawRate, this.steer * c.airSteer, this.type==='ski'?3.2:2.5, dt);
+      this.yawRate = damp(this.yawRate, this.steer * c.airSteer, isJet(this.type)?3.2:2.5, dt);
       this.spin += this.yawRate * dt; this.airTime += dt;
-      this.pitch = clamp(this.pitch + input.trim * dt * (this.type === 'ski' ? 0.9 : 0.45), -0.9, 1.1);
+      this.pitch = clamp(this.pitch + input.trim * dt * (isJet(this.type) ? 0.9 : 0.45), -0.9, 1.1);
       this.vy -= 9.81 * dt;
     }
     this.heading += this.yawRate * dt;
@@ -149,14 +150,14 @@ export class VehiclePhysics {
       const bowWindow=handling?clamp((forward-handling.bowStart)/handling.bowRange,0,1):(forward>5?1:0);
       const bowSpeed=handling?.bowSpeedRange?1-handling.bowSpeedLoss*clamp((forward-handling.bowSpeedStart)/handling.bowSpeedRange,0,1):1;
       const lift=input.freestyle?c.wheelieAngle*balanceMoment*this.riderAft*bowWindow*bowSpeed*clamp(this.throttle,0,1)*clamp(1-Math.abs(this.steer)*(handling?.bowSteeringLoss??.85),0,1):0;
-      const plane = this.type !== 'ski' ? Math.max(0, this.throttle) * (this.type==='tinny'?.30:.24) * Math.sin(this.planing*Math.PI)*(1-this.riderAft*.7) : 0.035 * this.throttle;
-      const trim = this.drive.trimAngle*(this.type==='ski'?.45:.65);
+      const plane = !isJet(this.type) ? Math.max(0, this.throttle) * (this.type==='tinny'?.30:.24) * Math.sin(this.planing*Math.PI)*(1-this.riderAft*.7) : 0.035 * this.throttle;
+      const trim = this.drive.trimAngle*(isJet(this.type)?.45:.65);
       // Angular inertia and damping retain a landing/chop response instead of
       // instantly following a prescribed orientation.
       const pitchTarget=surfacePitch+lift+plane+trim+sprayTurn.pitch;
       this.pitchRate+=((pitchTarget-this.pitch)*hydro.pitchSpring-this.pitchRate*hydro.pitchDamping)*dt;
       this.pitch+=this.pitchRate*dt;
-      const rollTarget=surfaceRoll-this.yawRate*clamp(this.speed/20,0,1)*(this.type==='ski'?.48:.24)+sprayTurn.roll;
+      const rollTarget=surfaceRoll-this.yawRate*clamp(this.speed/20,0,1)*(isJet(this.type)?.48:.24)+sprayTurn.roll;
       this.rollRate+=((rollTarget-this.roll)*hydro.rollSpring-this.rollRate*hydro.rollDamping)*dt;this.roll+=this.rollRate*dt;
       const verticalReaction=clamp(this.drive.force.y/driveConfig.effectiveMass,-3,3);
       // As the bow rises, support moves toward the stern. Raise the body origin

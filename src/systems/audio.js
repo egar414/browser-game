@@ -1,3 +1,4 @@
+import{isJet}from'../config.js';
 export class GameAudio {
   constructor(settings) { this.settings=settings;this.context=null; }
   start() {
@@ -23,12 +24,12 @@ export class GameAudio {
     this.engineGain.gain.setTargetAtTime(playing?s.engine*(.07+Math.abs(v.throttle)*.10):0,now,.12);
     if(this.engineType!==v.type){
       this.engineType=v.type;const real=new Float32Array(16),imag=new Float32Array(16);
-      for(let n=1;n<16;n++)imag[n]=(v.type==='ski'?1/Math.pow(n,1.7):Math.exp(-n*.16)/n)*(n%2===0?.65:1);
+      for(let n=1;n<16;n++)imag[n]=(isJet(v.type)?1/Math.pow(n,1.7):Math.exp(-n*.16)/n)*(n%2===0?.65:1);
       this.osc.setPeriodicWave(this.context.createPeriodicWave(real,imag));
     }
-    const rpm=Math.max(v.type==='ski'?1000:750,v.drive?.rpm||0),load=(v.drive?.wetness||0)*Math.abs(v.throttle);
+    const rpm=Math.max(isJet(v.type)?1000:750,v.drive?.rpm||0),load=(v.drive?.wetness||0)*Math.abs(v.throttle);
     // Three-cylinder four-stroke PWC versus an original two-stroke outboard timbre.
-    const firing=rpm/60*(v.type==='ski'?1.5:v.type==='tinny'?2:3);
+    const firing=rpm/60*(isJet(v.type)?1.5:v.type==='tinny'?2:3);
     this.osc.frequency.setTargetAtTime(firing,now,.12);
     this.sub.frequency.setTargetAtTime(rpm/60,now,.15);
     this.engineFilter.frequency.setTargetAtTime(450+load*1600+(v.drive?.ventilation||0)*450,now,.16);

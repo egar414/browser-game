@@ -3,8 +3,16 @@ import { collision } from './environment.js';
 export class ChaseCamera {
   constructor(camera) { this.camera=camera;this.look=new THREE.Vector3();this.initialized=false; }
   reset() { this.initialized=false; }
-  update(dt,v,input,mode=0,menu=false) {
+  update(dt,v,input,mode=0,menu=false,eye=null,aim=null) {
     if(!input.dragging)input.orbit*=Math.exp(-dt*.9);
+    if(mode===2&&!menu){
+      if(!input.dragging)input.lookPitch=(input.lookPitch||0)*Math.exp(-dt*.65);
+      const heading=(aim?Math.atan2(aim.x-v.x,aim.z-v.z):v.heading)+input.orbit,pitch=input.lookPitch||-.03;
+      const target=eye?eye.clone():new THREE.Vector3(v.x,v.y+1.5,v.z),look=aim?new THREE.Vector3(aim.x,aim.y,aim.z):target.clone().add(new THREE.Vector3(Math.sin(heading)*25,pitch*25,Math.cos(heading)*25));
+      if(aim){look.x+=Math.sin(input.orbit)*8;look.y+=pitch*8;}
+      if(!this.initialized){this.camera.position.copy(target);this.look.copy(look);this.initialized=true;}
+      this.camera.position.lerp(target,1-Math.exp(-dt*14));this.look.lerp(look,1-Math.exp(-dt*10));this.camera.lookAt(this.look);this.camera.fov=76;this.camera.updateProjectionMatrix();return;
+    }
     const heading=v.heading+input.orbit+(menu?Math.PI+.65:0);
     const big=v.type==='cruiser';
     const distance=big?(menu?19:mode?12:23):menu?8.5:mode?5.3:13.5+Math.min(2.5,v.speed*.10);

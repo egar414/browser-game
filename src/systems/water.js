@@ -45,7 +45,7 @@ export class Water {
     field.minFilter=field.magFilter=THREE.LinearFilter;field.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({
       uniforms:{
-        uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
+        uDaylight:{value:1},uSkyHorizon:{value:new THREE.Color(ART.skyHorizon)},uSkyZenith:{value:new THREE.Color(ART.skyZenith)},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
         uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
         uReflection:{value:null},uReflectionMatrix:{value:new THREE.Matrix4()},uReflect:{value:0},
         uHull:{value:new THREE.Vector4(0,0,1,2)},uHeading:{value:0},uContact:{value:1},
@@ -64,7 +64,7 @@ export class Water {
           gl_Position=projectionMatrix*viewMatrix*vec4(p,1.);
         }`,
       fragmentShader:`
-        uniform float uTime;uniform vec4 uMapBounds;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
+        uniform float uDaylight;uniform vec3 uSkyHorizon;uniform vec3 uSkyZenith;uniform float uTime;uniform vec4 uMapBounds;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
         uniform sampler2D uReflection;uniform float uReflect;uniform vec4 uHull;uniform float uHeading;uniform float uContact;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;
         void main(){
@@ -81,20 +81,20 @@ export class Water {
           vec3 deep=mix(${glslColour(ART.waterDeep)},${glslColour(ART.waterShallow)}*bed,smoothstep(.01,.78,shore));
           float bank=vBank;deep=mix(deep,vec3(.13,.37,.27)*bed,bank*.63);
           vec3 reflected=reflect(-view,n);
-          vec3 sky=mix(${glslColour(ART.skyHorizon)},${glslColour(ART.skyZenith)},pow(max(reflected.y,0.),.42));
+          vec3 sky=mix(uSkyHorizon,uSkyZenith,pow(max(reflected.y,0.),.42));
           vec3 reflection=sky;
           if(uReflect>.5){
             vec2 uv=vReflection.xy/vReflection.w+ripples*.065+vNormal.xz*.028;
             vec3 planar=texture2D(uReflection,clamp(uv,vec2(.002),vec2(.998))).rgb;
             reflection=mix(sky,planar,.78);
           }
-          vec3 colour=mix(deep,reflection,.12+fresnel*.77);
+          vec3 colour=mix(deep*(.2+uDaylight*.8),reflection,.12+fresnel*.77);
           float crest=smoothstep(.15,.9,vWorld.y)*.07;
           colour+=vec3(.08,.31,.26)*crest;
           vec3 halfVector=normalize(view+uSun);
           float spec=pow(max(dot(n,halfVector),0.),350.);
           float sheen=pow(max(dot(n,halfVector),0.),45.);
-          colour+=vec3(1.55,1.25,.76)*(spec*.72+sheen*.035);
+          colour+=vec3(1.55,1.25,.76)*(spec*.72+sheen*.035)*smoothstep(-.05,.12,uSun.y);
           float caustic=pow(max(0.,sin(p.x*1.7+r1.b*3.)*sin(p.y*1.3-r2.b*2.)),7.);
           colour+=vec3(.12,.22,.13)*caustic*shore*micro*.35;
           float foam=smoothstep(.23,.43,shore)*(1.-smoothstep(.53,.82,shore));
@@ -112,7 +112,7 @@ export class Water {
           float shadow=exp(-dot(hullSpace/uHull.zw,hullSpace/uHull.zw)*2.4)*uContact;
           colour*=1.-shadow*.42;
           float fog=1.-exp(-distanceToEye*.00095);
-          colour=mix(colour,vec3(.33,.56,.76),fog);
+          colour=mix(colour,uSkyHorizon,fog);
           gl_FragColor=vec4(colour,1.);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
@@ -140,6 +140,7 @@ export class Water {
     const u=this.material.uniforms;u.uTime.value=t;u.uSea.value=seaAmplitude(t);u.uCenter.value.set(x,z);
     if(v){u.uHull.value.set(x,z,v.config.width*.72,v.config.length*.62);u.uHeading.value=v.heading;u.uContact.value=v.airborne?Math.max(0,1-v.y/4):1;}
   }
+  setDay(day){const u=this.material.uniforms;u.uDaylight.value=day.daylight;u.uSkyHorizon.value.set(day.horizon);u.uSkyZenith.value.set(day.zenith);}
   reflect(renderer,camera) {
     if(!this.reflector)return;
     const now=performance.now()/1000;if(now-this.lastReflection<1/Math.max(1,this.reflectionHz))return;this.lastReflection=now;

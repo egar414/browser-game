@@ -1,3 +1,4 @@
+import{isJet}from'../config.js';
 import { waveHeight } from '../config.js';
 import { bodyPoint, bodyVector, propulsionPose, hullImmersion } from '../vehicles/propulsion.js';
 export const SPRAY_TUNING = { minimumSpeed:.7, maximumSpeed:32, gravity:9.81, wakeLifetime:7, wakeSpread:.16, sampleSpacing:.48 };
@@ -22,7 +23,7 @@ export function chineContact(v,side,time=0) {
 }
 export function sprayState(v,_freestyle=false,time=0) {
   const speed=clamp(v.speed,0,32),contacts=[chineContact(v,-1,time),chineContact(v,1,time)];
-  const drive=v.drive,jet=v.airborne||v.wipeout||drive?.neutral?0:clamp((drive?.flow||0)/(v.type==='ski'?.11:1.2));
+  const drive=v.drive,jet=v.airborne||v.wipeout||drive?.neutral?0:clamp((drive?.flow||0)/(isJet(v.type)?.11:1.2));
   if(v.airborne||v.wipeout||speed<.7)return {speed,rate:0,left:0,right:0,jet,outside:0,contacts};
   // The stern's cross-flow includes hull slip and yaw around its centre.
   // A setup carve leaves momentum behind when the rider reverses the bars;
@@ -54,13 +55,13 @@ export function pumpDischarge(v,time=0) {
   const norm=Math.hypot(direction.x,direction.y,direction.z);for(const k of ['x','y','z'])direction[k]/=norm;
   const velocity={x:(v.vx||0)+direction.x*d.exitSpeed,y:(v.vy||0)+direction.y*d.exitSpeed,z:(v.vz||0)+direction.z*d.exitSpeed};
   let aerial=origin.y>=waveHeight(origin.x,origin.z,time)-.01;
-  if(!aerial&&v.type==='ski'&&velocity.y>0){
+  if(!aerial&&isJet(v.type)&&velocity.y>0){
     for(let t=.005;t<.15;t+=.005){
       const p={x:origin.x+velocity.x*t,y:origin.y+velocity.y*t-4.905*t*t,z:origin.z+velocity.z*t};
       if(p.y>=waveHeight(p.x,p.z,time)+.01){Object.assign(origin,p);velocity.y-=9.81*t;aerial=true;break;}
     }
   }
-  return {origin,velocity,aerial:aerial&&v.type==='ski',flow:d.flow,reverse:d.reverse};
+  return {origin,velocity,aerial:aerial&&isJet(v.type),flow:d.flow,reverse:d.reverse};
 }
 export function stepDroplet(p,dt) {
   // Quadratic aerodynamic drag, rho_air=1.225 kg/m³; spherical millimetre droplets.
@@ -75,7 +76,7 @@ export function stepDroplet(p,dt) {
 // from the unchanged chine spray and hydraulic reaction-force calculation.
 export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:12, spread:.78, drag:.32, baseRate:260, poweredRate:330, coreOpacity:1.1, mistOpacity:.10, coreGrowth:.62, coreRadius:1.25, mistRadius:1.35, fineFraction:.14, streakThreshold:.84, bowLift:1.8, bowReach:.28 };
 export function jetPlumeSource(v,discharge,time=0,state=null){
-  if(v.type!=='ski'||!discharge||v.airborne||v.wipeout||discharge.reverse>.08||discharge.flow<JET_PLUME.minimumFlow||v.throttle<.08)return null;
+  if(!isJet(v.type)||!discharge||v.airborne||v.wipeout||discharge.reverse>.08||discharge.flow<JET_PLUME.minimumFlow||v.throttle<.08)return null;
   const power=clamp(discharge.flow/.16)*clamp(v.throttle),trim=clamp((v.drive?.trimAngle||0)/.33),bow=bowSprayLoad(v);
   const dx=discharge.velocity.x-(v.vx||0),dz=discharge.velocity.z-(v.vz||0),len=Math.hypot(dx,dz)||1;
   const loaded=state?clamp((Math.max(state.left,state.right)-.8)/2.5):0;

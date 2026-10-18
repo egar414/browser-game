@@ -88,3 +88,10 @@ export const PROPULSION = {
 VEHICLES.cruiser={...VEHICLES.cat,name:'Reef Runner 38',subtitle:'Flybridge sportfisher',description:'Drive a big fishing boat. Slow down, press J to leave the helm, walk the rear cockpit and cast beyond the bar.',length:10.65,width:3.96,maxSpeed:15.5,reverseMax:2.6,rideHeight:.1,colours:['#254761','#2c7e85','#b0bbbe']};
 PROPULSION.cruiser={...PROPULSION.cat,effectiveMass:6500,motorMount:[0,.3,-4.5],propeller:[0,-.8,-.4],maximumRpm:4000};
 HYDRODYNAMICS.cruiser={...HYDRODYNAMICS.cat};
+
+export const isJet=type=>type==='ski'||type==='seago';
+export const SPORTFISHER_HEIGHT=10.8;
+// Original long-hull performance PWC; 120 km/h is a game speed ceiling.
+VEHICLES.seago={...VEHICLES.ski,name:'Seago 120',subtitle:'Performance touring jet ski',description:'A longer, black performance hull with a 120 km/h game speed ceiling. Nine trim settings, powerful carving and a balanced bow ride.',length:3.65,width:1.32,maxSpeed:120/3.6,reverseMax:4,lateralGrip:4.1,slideGrip:1.2,spring:45,damping:12,airSteer:2.8,wheelieAngle:.82,wipeoutAngle:1.27,colours:['#b83836','#3a91ba','#b2bfc4']};
+PROPULSION.seago={...PROPULSION.ski,effectiveMass:420,hydraulicPower:128000,nozzleArea:.0065,nozzleMount:[0,-.06,-1.8],intake:[0,-.29,-1.2],linearResistance:23,quadraticResistance:2.15,steeringAngle:.39};
+HYDRODYNAMICS.seago={...HYDRODYNAMICS.ski,planingStart:5,planingEnd:16,yawInertia:500,pitchSpring:21,pitchDamping:8};

@@ -1,0 +1,29 @@
+import{test,expect}from'@playwright/test';
+const status=p=>p.evaluate(()=>window.__ESTUARY__.status);
+async function boot(p,type='seago'){
+ await p.addInitScript(()=>{if(!localStorage.getItem('estuary-rats-v1'))localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true,seaState:'calm'}));});await p.goto('/');await p.waitForFunction(()=>window.__ESTUARY__?.status.ready,null,{timeout:60000});await p.locator(`[data-vehicle="${type}"]`).click();await p.locator('#play').click();
+}
+test('Seago drives, trims, switches first person and saves sunrise settings',async({page:p})=>{
+ test.setTimeout(300000);const errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});await p.setViewportSize({width:960,height:640});await boot(p);
+ expect((await status(p)).vehicle).toBe('seago');await p.keyboard.down('KeyW');await expect.poll(async()=>(await status(p)).speed,{timeout:45000}).toBeGreaterThan(18);await p.keyboard.up('KeyW');await p.keyboard.press('KeyR');
+ await p.keyboard.down('KeyQ');await expect.poll(async()=>(await status(p)).trim,{timeout:15000}).toBe(19);await p.keyboard.up('KeyQ');await p.keyboard.press('KeyC');await p.keyboard.press('KeyC');await expect.poll(async()=>(await status(p)).camera.mode).toBe(2);await p.screenshot({path:'test-results/seago-first-person.png'});
+ await p.keyboard.press('Escape');await p.locator('#day-mode').selectOption('sunrise');await p.locator('#resume').click();await expect.poll(async()=>(await status(p)).day.label).toBe('SUNRISE');await p.screenshot({path:'test-results/sunrise-seago.png'});
+ await p.keyboard.press('Escape');await p.locator('#day-mode').selectOption('night');await p.locator('#resume').click();await expect.poll(async()=>(await status(p)).day.label).toBe('NIGHT');await p.screenshot({path:'test-results/night-water.png'});
+ await p.keyboard.press('Escape');await p.locator('#day-mode').selectOption('sunset');await p.locator('#visit-fishing').click();await expect.poll(async()=>(await status(p)).dolphins.visible,{timeout:15000}).toBeGreaterThan(0);await p.keyboard.press('KeyC');await p.screenshot({path:'test-results/dolphins-sunset.png'});expect((await status(p)).fishing.conditions).toContain('Prime');
+ await p.reload();await p.waitForFunction(()=>window.__ESTUARY__?.status.ready,null,{timeout:60000});const saved=await status(p);expect(saved.settings.vehicle).toBe('seago');expect(saved.settings.dayMode).toBe('sunset');expect(errors).toEqual([]);
+});
+test('a carving jet-ski spray hits waterfront walkers without a battle',async({page:p})=>{
+ test.setTimeout(300000);const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.setViewportSize({width:960,height:640});await boot(p,'ski');await p.keyboard.press('Escape');await p.locator('#visit-waterfront').click();const joined=await status(p),id=joined.pedestrians.focus;expect(id).toBeTruthy();
+ await p.keyboard.down('KeyW');await p.waitForFunction(id=>{const s=window.__ESTUARY__.status,b=s.pedestrians.people.find(b=>b.id===id);return(b.x-s.position.x)*Math.sin(s.heading)+(b.z-s.position.z)*Math.cos(s.heading)<12;},id,{timeout:60000});
+ const heading=(await status(p)).heading;await p.keyboard.down('ShiftLeft');await p.keyboard.down('KeyD');await p.waitForFunction(h=>h-window.__ESTUARY__.status.heading>1,heading,{timeout:30000});await p.keyboard.up('KeyW');await p.keyboard.up('KeyD');await p.keyboard.up('ShiftLeft');
+ await p.waitForFunction(()=>window.__ESTUARY__.status.pedestrians.people.some(p=>p.fall>0),null,{timeout:30000});await p.screenshot({path:'test-results/waterfront-spray-tumble.png'});const s=await status(p);expect(s.battle.active).toBe(false);expect(s.wipeout).toBe(0);expect(errors).toEqual([]);
+});
+test('phone can select Seago, use first-person view and visit sunset fishing',async({browser})=>{
+ test.setTimeout(240000);const ctx=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:1,isMobile:true,hasTouch:true}),p=await ctx.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));try{await boot(p);await p.locator('[data-code="KeyC"]').tap();await p.locator('[data-code="KeyC"]').tap();expect((await status(p)).camera.mode).toBe(2);await p.locator('#menu-button').tap();await p.locator('#day-mode').selectOption('sunset');await p.locator('#visit-fishing').tap();await expect.poll(async()=>(await status(p)).dolphins.visible,{timeout:20000}).toBeGreaterThan(0);await p.screenshot({path:'test-results/seago-phone-sunset.png'});expect((await status(p)).day.fishing.prime).toBe(true);expect(errors).toEqual([]);}finally{await ctx.close();}
+});
+
+test('reference-style sportfisher has first-person helm and stern-facing deck fishing',async({page:p})=>{
+ test.setTimeout(240000);const errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});await p.setViewportSize({width:960,height:640});await boot(p,'cruiser');await p.screenshot({path:'test-results/updated-sportfisher.png'});await p.keyboard.press('KeyC');await p.keyboard.press('KeyC');expect((await status(p)).camera.mode).toBe(2);await p.screenshot({path:'test-results/sportfisher-first-person-helm.png'});
+ await p.keyboard.press('Escape');await p.locator('#day-mode').selectOption('sunset');await p.locator('#visit-fishing').click();await p.keyboard.press('KeyJ');await p.keyboard.press('KeyK');const s=await status(p);expect(s.deck.active).toBe(true);expect(s.fishing.active).toBe(true);expect(Math.cos(s.fishing.castOrigin.heading-s.heading)).toBeLessThan(-.9);
+ await p.waitForFunction(()=>window.__ESTUARY__.status.fishing.phase==='bite',null,{timeout:45000});await p.keyboard.press('KeyK');expect((await status(p)).fishing.phase).toBe('hooked');await p.screenshot({path:'test-results/stern-first-person-fishing.png'});await p.keyboard.press('KeyJ');expect((await status(p)).fishing.active).toBe(false);expect(errors).toEqual([]);
+});
