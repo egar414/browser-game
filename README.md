@@ -1028,3 +1028,20 @@ fixture to verify shared spray, room isolation, reconnects and driving. Database
 checks cover actual descending hits, shields, automatic sinking/relaunch and
 rejected forged damage. Production PvP is unavailable until the owner runs the
 SQL update; basic online driving continues with the previous backend.
+
+### Seago-like Apex steering (separate handling update)
+
+Apex's high-speed steering response is now 10/s (was 7/s), yaw authority scale
+.75 (was .58), and high-speed lateral grip multiplier 2.3 (was 1.8). At 60 Hz,
+a two-second 60% steering input at each craft's top speed changes Apex heading
+about 1.01 radians versus Seago's 1.05. Apex retains its 300 km/h arcade ceiling,
+Creator restriction, extended trim and existing freestyle controls. Full-key
+turns remain bounded and steering release settles without sustained fishtailing.
+Tune these values together in `APEX_HANDLING` in `src/config.js`.
+
+Validation for this update: 172 Node checks passed, along with Chromium browser
+flows for two-account shared spray/private-room isolation, police pursuit and
+recovery, and Apex's 300 km/h drive/turn/brake/reverse/trim/camera/reload sequence.
+The cloud runner uses Chromium with SwiftShader software rendering, not a laptop
+GPU; one offshore Low-quality sample was 3.2 fps / 60 draw calls. This is test-runner
+evidence, not a claim about player-device frame rates.
