@@ -32,3 +32,33 @@ triangles and sensible 1K/2K textures; test actual performance in the game.
 Verify modification/redistribution rights, avoid baked-in logos in the original
 game designs, and retain separate handlebars, steering nozzle, reverse bucket
 and rider attachments for animation.
+
+
+## Compact Sparkplug rebuild
+
+The supplied blue/black ski is the primary visual reference. The official side
+image above provides a second proportion check; the result is an original
+approximation, not an exact manufacturer replica. Four rendered views (front,
+side, top and rear) were compared with the previous craft and reference images.
+
+The rebuild adds a closed multi-chine hull, angular split fairings, open low
+footwells, a contoured vinyl saddle with a tiny procedural weave, raised bars,
+hand guards, levers/cables, a ribbed rear deck and a compact pump/reverse gate.
+Each rigid assembly is batched by material; steering, trim, reverse and rider IK
+remain separate. The existing propulsion and physics tuning is retained.
+
+A neutral studio review without the rider measured 12,582 triangles / 20 draw
+calls, against 17,190 triangles / 15 calls for the previous model (about 27%
+fewer triangles, five more calls). The complete new craft including rider is
+19,206 triangles / 40 meshes. These are model costs, not frame-rate promises.
+The old 530 KB GLB and its loader are no longer requested or bundled. Original
+geometry and procedural materials are generated locally; no manufacturer image
+or third-party mesh is shipped. Width/length and attachment locations live in
+`src/vehicles/spark-model.js`; handling stays in `src/config.js`.
+
+Validation: the Node suite passed 157 checks. A Chromium driving flow exercised
+launch, acceleration, steering, extended trim/bow ride, reverse, recovery,
+close/first-person/rear cameras, and verified no GLB request or page error.
+Screenshots were visually inspected. This runner uses Linux Chromium with
+SwiftShader software rendering at Low quality; it is not a laptop GPU benchmark.
+The rebuild targets Sparkplug only; Seago and Apex retain their existing models.

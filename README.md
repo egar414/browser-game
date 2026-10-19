@@ -296,7 +296,8 @@ The supplied 22.8-second video informed denser, taller loaded-turn sheets,
 broader Thundercat pontoon spray and finer falling droplets. Straight-line rear
 wash stays lower; trim and turn loading raise the plume. This is a visual
 approximation, not reconstructed or measured real fluid flow. The video is not
-bundled. The jet-ski body is an original Blender asset; its source is editable.
+bundled. The Sparkplug body is an original procedural model in
+`src/vehicles/spark-model.js`; it needs no Blender installation or model download.
 
 On touch devices, rotate sideways for the preferred riding view. FULL requests
 full screen and a landscape lock where the browser supports it. A rotate prompt
@@ -393,7 +394,8 @@ fictional course are cleared while other preferences remain. Storage failures fa
 | `src/vehicles/physics.js` | Fixed-step movement, four-point buoyancy, planing, slides, air control, scoring events |
 | `src/vehicles/propulsion.js` | Pump/propeller momentum, intake immersion, nozzle poses and reaction force |
 | `src/vehicles/rider.js` | Articulated rider with fixed hand/foot contacts and posture response |
-| `src/vehicles/models.js` | Blender shell loading, procedural fallback, moving parts, rider and outboard |
+| `src/vehicles/models.js` | Craft factory, moving parts, rider and outboard |
+| `src/vehicles/spark-model.js` | Reference-shaped compact PWC, materials, rigid batching and attachment dimensions |
 | `src/systems/water.js` | Adaptive water mesh, ripples, shallow colour, sun highlights and planar reflections |
 | `src/systems/atmosphere.js` | Sky/cloud lighting, shared sun direction and filtered material reflections |
 | `src/systems/spray.js` | Pooled droplets, turn fans, jet stream, foam wake ribbons and landing rings |
