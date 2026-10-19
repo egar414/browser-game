@@ -10,7 +10,7 @@ import { createAtmosphere, SUN_DIRECTION } from './systems/atmosphere.js';
 import './style.css';
 import{COASTAL_STYLE as ART}from'./systems/art-direction.js';
 import{configureSunShadow}from'./systems/scenery-lighting.js';
-import { FIXED_STEP, VEHICLES, QUALITY, RIDE_MODES, setSeaState, SEA_STATES, setWeatherClock, oceanReport, waveHeight, SPAWN, UPSTREAM_LAUNCH } from './config.js';
+import { isJet, FIXED_STEP, VEHICLES, QUALITY, RIDE_MODES, setSeaState, SEA_STATES, setWeatherClock, oceanReport, waveHeight, SPAWN, UPSTREAM_LAUNCH } from './config.js';
 import { VehiclePhysics } from './vehicles/physics.js';
 import { makeVehicle, loadCraftAssets } from './vehicles/models.js';
 import { buildEnvironment, collision, ramps, solids } from './systems/environment.js';
@@ -20,7 +20,7 @@ import { Water, Spray } from './systems/water.js';
 import {loadSurfaceTextures,surfaceTextureStatus} from './systems/surface-textures.js';
 import { Input } from './systems/input.js';
 import { TouchControls, isTouchDevice } from './systems/touch-controls.js';
-import { ChaseCamera } from './systems/camera.js';
+import { ChaseCamera, jetRidingEye } from './systems/camera.js';
 import { GameAudio } from './systems/audio.js';
 import { UI } from './systems/ui.js';
 import { loadSettings, saveSettings } from './systems/storage.js';
@@ -264,9 +264,10 @@ try {
     offshore.render(dt,simulationTime,deckPoint?{...view,y:view.y+.45,heading:render.heading+deck.heading}:render,qualityName,state==='playing');
     const firstPerson=settings.camera===2&&state!=='home',rider=model.userData.rider;
     if(rider.userData.face)rider.userData.face.visible=!firstPerson;for(const part of [...(rider.userData.faceParts||[]),...(rider.userData.bodyParts||[])])part.visible=!firstPerson;
-    model.updateWorldMatrix(true,true);const eye=rider.userData.eye?.getWorldPosition(new THREE.Vector3());
+    model.updateWorldMatrix(true,true);let eye=rider.userData.eye?.getWorldPosition(new THREE.Vector3());
     const cameraView=deckPoint?{...view,heading:render.heading+deck.heading,hullHeading:render.heading}:view;
-    if(firstPerson&&eye){eye.x+=Math.sin(cameraView.heading)*.42;eye.z+=Math.cos(cameraView.heading)*.42;}
+    if(firstPerson&&isJet(vehicle.type))eye=jetRidingEye(render);
+    else if(firstPerson&&eye){eye.x+=Math.sin(cameraView.heading)*.42;eye.z+=Math.cos(cameraView.heading)*.42;}
     chase.update(dt,cameraView,input,firstPerson?2:deckPoint?1:settings.camera,state==='home',eye,firstPerson&&fishing.active?offshore.float.position:null);
     const day=dayClock.status;atmosphere.update(simulationTime,camera.position,day);sun.color.set(day.sunColour);sun.intensity=day.sunIntensity;hemi.intensity=day.ambient;scene.fog.color.set(day.fog);water.setDay(day);
     onlineWorld.update(dt,now,render,camera,{playing:state==='playing',firstPerson,eye});

@@ -14,8 +14,8 @@ export const VEHICLES = {
   ski: {
     name: 'Sparkplug', subtitle: 'Freestyle jet ski', description: 'Light, lively and made for mischief. Lift the bow, carve a rooster tail, and spin off the ramps.',
     length: 3.0, width: 1.18, maxSpeed: 25.5,
-    reverseMax: 4, lateralGrip: 3.7,
-    slideGrip: 1.05, spring: 42, damping: 11, rideHeight: 0.14, airSteer: 4.9,
+    reverseMax: 4, lateralGrip: 4.6, steerResponse: 8,
+    slideGrip: 1.15, spring: 42, damping: 11, rideHeight: 0.14, airSteer: 4.9,
     wheelieAngle: 0.92, wipeoutAngle: 1.22, colours: ['#1679e8', '#ff613d', '#86df9c'],
   },
   cat: {
@@ -51,7 +51,7 @@ export const RIDE_MODES = {
 // Nine VTS selections are documented by BRP; these angles are original game tuning.
 export const SKI_TRIM_POSITIONS = [-10,-7.5,-5,-2.5,0,4,8,13,19];
 export const HYDRODYNAMICS = {
-  ski:{coastDrag:1,planingStart:4,planingEnd:13,minimumWetted:.56,pitchSpring:17,pitchDamping:6.8,rollSpring:24,rollDamping:8.2,yawInertia:340,yawDamping:2.7,yawSpeedDamping:.09},
+  ski:{coastDrag:1,planingStart:4,planingEnd:13,minimumWetted:.56,pitchSpring:17,pitchDamping:6.8,rollSpring:24,rollDamping:8.2,yawInertia:275,yawDamping:2.9,yawSpeedDamping:.075},
   cat:{bowPloughDrag:.32,coastDrag:3.5,planingStart:5,planingEnd:15,minimumWetted:.62,pitchSpring:12,pitchDamping:5.4,rollSpring:19,rollDamping:7,yawInertia:550,yawDamping:2.2,yawSpeedDamping:.04,waterFollow:.65,reserveBuoyancy:80,reserveDepth:.20,maxReserve:18},
   tinny:{bowPloughDrag:.48,waterFollow:.85,reserveBuoyancy:95,reserveDepth:.13,maxReserve:20,coastDrag:2.8,planingStart:3.5,planingEnd:9,minimumWetted:.58,pitchSpring:16,pitchDamping:6.5,rollSpring:23,rollDamping:8,yawInertia:125,yawDamping:2.8,yawSpeedDamping:.065},
 };

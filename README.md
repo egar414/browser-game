@@ -898,3 +898,19 @@ meshes. Coastline data is OpenStreetMap, distributed under ODbL with exact sourc
 XML and rebuild instructions in `src/data/sources/README.md`. Facades, missing
 heights and relief are game approximations, not replicas of each real property.
 The coastline does not change the tinny's shaft-only bounce or spray tuning.
+
+## Sparkplug steering and riding view
+
+The compact jet ski responds faster to steering input, carries more lateral grip
+and carves a tighter powered turn while preserving momentum and coasting steering
+loss. In the calm-water simulation, a two-second full powered turn at roughly
+83 km/h changed heading by 100° rather than 82°; ordinary cruising still uses
+the same engine and top-speed values. Shift keeps the deliberate slide/bow ride.
+Handling is tuned in `src/config.js` (`VEHICLES.ski`, `HYDRODYNAMICS.ski`).
+
+P (or C twice from wide chase) enters first person. Jet skis now use a fixed
+riding eye behind the bars, a slight downward view, a wider field of view and
+vertical smoothing. Horizontal position stays with the interpolated craft, so
+acceleration cannot pull the camera backwards through the rider. Mouse drag
+looks around; U looks behind. Tune the eye and view in `JET_RIDING_VIEW` in
+`src/systems/camera.js`. Other boat cockpit views retain their existing anchors.

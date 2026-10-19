@@ -72,7 +72,7 @@ export class VehiclePhysics {
     this.trickCooldown = Math.max(0, this.trickCooldown - dt);
     this.throttle = damp(this.throttle, input.throttle, mode.throttleResponse, dt);
     const handling=this.type==='tinny'?TINNY_HANDLING:this.type==='cat'?CAT_HANDLING:null;
-    this.steer = damp(this.steer, input.steer, this.type==='hyper'?APEX_HANDLING.steerResponse:handling?.steerResponse||6, dt);
+    this.steer = damp(this.steer, input.steer, this.type==='hyper'?APEX_HANDLING.steerResponse:handling?.steerResponse||c.steerResponse||6, dt);
     if(!this.airborne){
       if(input.trimStep){
         if(isJet(this.type))this.trimDegrees=jetTrimPositions(this.type)[clamp(this.trimIndex+input.trimStep,0,jetTrimPositions(this.type).length-1)];
