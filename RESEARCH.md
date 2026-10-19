@@ -594,3 +594,28 @@ hydrostatics model. No render-only height offset or change to wave equations is
 used. Tests retain contact with water, exercise calm/chop/swell/hourly conditions
 and cover cruising, powered turns and bow riding. Only the Thundercat opts into
 the new heave terms; the jet ski and tender use their existing tuning.
+
+## Offshore racing-cat reference and limits — 2026-10-19
+
+The user supplied a Maritimo #12 racing-cat photograph and a general table:
+approximately 40 ft / 12 m, twin high-performance inboards, Number Six stern
+or surface-drive examples, composite construction and hydraulic steering.
+Those are layout references supplied by the user, not independently verified
+specifications for the exact pictured boat. Attempts to retrieve manufacturer
+racing pages in this environment returned HTTP/tunnel 403, including a retry
+outside the sandbox. Exact model year, engine identity and output remain unknown.
+
+The original Riptide 500 therefore uses two vented inboard bays, two shafts and
+surface propellers, an open forward tunnel and an enclosed two-person cockpit.
+It does not copy Maritimo graphics or claim a licensed manufacturer model.
+Two wet aft chines produce planing fans; each surface drive produces a separate
+ballistic rooster tail. Packets retain world-space momentum, drag and gravity,
+then create surface impacts when they fall. It is not a jet-pump-powered craft.
+
+The requested 500 km/h is explicitly fictional arcade performance. Its thrust,
+steering response, surface-drive wash, mass and RPM are effective game values;
+the implementation does not infer or validate that speed from horsepower.
+Its wave response samples both hulls and constrains immersion; high-speed
+handling is intentionally stable rather than a validated offshore hydrodynamic
+or safety simulator. The added offshore run is authored sea, not a new surveyed
+bathymetric or coastal dataset. Tuning is documented in README.md.

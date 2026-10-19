@@ -1,3 +1,4 @@
+import{makeRacingCat}from'./racing-cat.js';
 import{makeTinnyPassenger}from'./tinny-passenger.js';
 import{makeSportfisher}from'../systems/offshore-view.js';
 import{makeDeckCharacter}from'./wardrobe.js';
@@ -52,6 +53,7 @@ function inflatable(parent,material){
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.castShadow=m.receiveShadow=true;parent.add(m);
 }
 export function makeVehicle(type, colour, design='classic') {
+  if(type==='racer')return makeRacingCat(colour);
   if(type==='cruiser'){const root=makeSportfisher('Reef Runner',colour,false),rider=makeDeckCharacter();rider.position.set(0,3.25,-.25);root.add(rider);rider.userData.update=(v,dt)=>rider.userData.animate(v.animationTime||0,0,false);root.userData={body:root,rider};return root;}
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   const accent = new THREE.MeshPhysicalMaterial({color:colour,roughness:.3,metalness:.08,clearcoat:.8,clearcoatRoughness:.24});

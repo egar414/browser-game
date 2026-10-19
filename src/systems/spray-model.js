@@ -5,6 +5,8 @@ import { bodyPoint, bodyVector, propulsionPose, hullImmersion } from '../vehicle
 export const SPRAY_TUNING = { minimumSpeed:.7, maximumSpeed:32, gravity:9.81, wakeLifetime:7, wakeSpread:.16, sampleSpacing:.48 };
 export const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 export const SIDE_SPRAY = { catWidth:1.72, catLift:1.12, bowReach:.32, bowLift:1.8, sheetLife:3.2, historyHz:30, dropletLife:3.4 };
+// Surface-piercing prop wash and wet aft chines, independent of jet-pump spray.
+export const RACER_SPRAY={sideStrength:2.5,sideSpeed:12,sideLift:7,rearSpeed:34,rearLift:10,packetScale:1.65};
 export const TINNY_SPRAY={width:1.10,lift:1.20,loadScale:.88,shaftWidth:1.08,shaftLift:.72,shaftRear:6.5,shaftRise:1.6,shaftSpread:1.1};
 // Actual powered, aft-weighted bow attitude; pressing Shift alone adds no spray.
 export function bowSprayLoad(v){return v.airborne||v.wipeout?0:clamp(((v.pitch||0)-.25)/.6)*clamp(v.riderAft||0)*clamp(v.throttle||0);}
@@ -35,6 +37,12 @@ export function sharpTurnLoad(v){
  return steer*waterLoad*clamp((v.speed-3)/4)*clamp(v.throttle*2);
 }
 export function sprayState(v,_freestyle=false,time=0) {
+  if(v.type==='racer'){
+    const speed=clamp(v.speed,0,140),load=!v.airborne&&!v.wipeout&&v.throttle>.12?clamp((speed-7)/13)*clamp(v.planing||0)*clamp(v.throttle):0;
+    const contacts=[-1,1].map(side=>{const p=bodyPoint(v,[side*1.95,-.12,-3.8]);return{...p,y:waveHeight(p.x,p.z,time)+.045,wet:load?1:0};});
+    const outside=-Math.sign(v.yawRate||0),turn=clamp(Math.abs(v.yawRate||0)*2),left=load*(RACER_SPRAY.sideStrength+(outside===-1?turn:0)),right=load*(RACER_SPRAY.sideStrength+(outside===1?turn:0));
+    return{speed,left,right,rate:clamp((left+right)*140,0,750),jet:load,outside,contacts,turnGate:sharpTurnLoad(v)};
+  }
   const speed=clamp(v.speed,0,32),turnGate=sharpTurnLoad(v),contacts=turnGate>0?[chineContact(v,-1,time),chineContact(v,1,time)]:[];
   const drive=v.drive,jet=v.airborne||v.wipeout||drive?.neutral?0:clamp((drive?.flow||0)/(isJet(v.type)?.11:1.2));
   if(v.airborne||v.wipeout||speed<.7)return {speed,rate:0,left:0,right:0,jet,outside:0,contacts,turnGate};
@@ -53,6 +61,10 @@ export function sprayState(v,_freestyle=false,time=0) {
 }
 export function launchSpray(v,state,side,random=Math.random) {
   const strength=side===-1?state.left:state.right,p=state.contacts[side===-1?0:1]||chineContact(v,side);
+  if(v.type==='racer'){
+    const spread=random(),flow=RACER_SPRAY.sideSpeed*(.7+spread*.6),f=bodyVector({heading:v.heading},[side*flow,RACER_SPRAY.sideLift*(.65+Math.sin(spread*Math.PI)*.45),-Math.min(30,state.speed*.45)-flow*spread*.4]);
+    return{x:p.x,y:p.y,z:p.z,vx:(v.vx||0)+f.x,vy:f.y,vz:(v.vz||0)+f.z,strength,diameter:.005,lifetime:2.8};
+  }
   if(v.type==='tinny'&&p.motor){
     // Low, dense prop wash travels aft and falls back, as in the supplied photo.
     const spread=random(),power=clamp(v.throttle||0)*clamp(v.drive?.wetness||0),rear=state.speed*.85+power*TINNY_SPRAY.shaftRear;
@@ -97,6 +109,11 @@ export function stepDroplet(p,dt) {
 // from the unchanged chine spray and hydraulic reaction-force calculation.
 export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:12, spread:.78, drag:.32, baseRate:260, poweredRate:330, coreOpacity:1.1, mistOpacity:.10, coreGrowth:.62, coreRadius:1.25, mistRadius:1.35, fineFraction:.14, streakThreshold:.84, bowLift:1.8, bowReach:.28 };
 export function jetPlumeSource(v,discharge,time=0,state=null){
+  if(v.type==='racer'){
+    if(!discharge||v.airborne||v.wipeout||v.throttle<.12||discharge.reverse>.08||v.speed<8||v.planing<.2)return null;
+    const power=clamp((v.speed-7)/13)*clamp(v.throttle),fx=Math.sin(v.heading),fz=Math.cos(v.heading),origins=[-1,1].map(side=>{const p=bodyPoint(v,[side*1.27,-.19,-6.28]);return{...p,y:Math.max(p.y,waveHeight(p.x,p.z,time)+.055)};});
+    return{origin:origins[0],origins,velocity:{x:(v.vx||0)-fx*RACER_SPRAY.rearSpeed,y:3+power*RACER_SPRAY.rearLift,z:(v.vz||0)-fz*RACER_SPRAY.rearSpeed},power:power*1.35,loaded:.8,packetScale:RACER_SPRAY.packetScale};
+  }
   if(!isJet(v.type)||!discharge||v.airborne||v.wipeout||discharge.reverse>.08||discharge.flow<JET_PLUME.minimumFlow||v.throttle<.08)return null;
   const power=clamp(discharge.flow/.16)*clamp(v.throttle),trim=clamp((v.drive?.trimAngle||0)/.33),bow=bowSprayLoad(v);
   const dx=discharge.velocity.x-(v.vx||0),dz=discharge.velocity.z-(v.vz||0),len=Math.hypot(dx,dz)||1;

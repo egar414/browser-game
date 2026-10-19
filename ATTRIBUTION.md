@@ -54,3 +54,9 @@ https://www.openstreetmap.org/api/0.6/map?bbox=153.099,-26.6775,153.142,-26.653 
 Same ODbL 1.0 attribution applies. Exact source is retained compressed under
 `src/data/sources`, with its SHA-256 in the editable map database. The coast,
 roads and footprint plan derive from OSM; terrain and facade detail are authored.
+
+Riptide 500 (2026-10-19): original procedural offshore racing-cat geometry,
+cockpit crew and invented livery. The user-supplied Maritimo #12 photograph and
+specification table were used as visual/layout references only; no photograph,
+brand logo or manufacturer model is bundled. The 500 km/h setting is fictional
+arcade tuning. Exact reference engine identity and performance are unverified.

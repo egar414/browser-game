@@ -3,9 +3,39 @@
 **Play:** https://egar414.github.io/browser-game/
 
 A playable single-player 3D coastal boating playground. Free roam is the default:
-pick a compact freestyle jet ski, twin-pontoon racing inflatable, or 2.25 m alloy tender and launch
-into a Mooloolah River estuary based on actual OpenStreetMap shorelines. No account, API key, or external asset
-service is required to play.
+pick a freestyle jet ski, racing inflatable, alloy tender, sportfisher or
+performance offshore racing cat. Cruise the Mooloolah estuary and its connected
+northern coast based on OpenStreetMap shorelines. No account, API key or external
+asset service is required to play.
+
+## Riptide 500 offshore racing cat
+
+Select **RIPTIDE 500** and press Play to launch into the extended offshore run.
+The original 12 m twin-hull model has an enclosed two-person cockpit, engine-bay
+hatches, twin visible shafts and counter-rotating surface propellers. It uses
+inboard/surface-drive styling rather than jet-ski pump propulsion. Its **500 km/h
+speed ceiling is fictional arcade tuning**, not validated real-world performance.
+The supplied Maritimo #12 photograph and specification table are visual/layout
+references; no exact engine identity, horsepower or construction is asserted.
+
+W/GO accelerates; S/BRAKE brakes, then reverses; A/D turns; Q/E adjusts trim;
+U/REAR looks behind; C cycles views, P opens first person, and R recovers.
+Steering builds progressively and loses authority as speed rises. Ease off before
+turning. This craft is for offshore free roam; choose smaller craft for canal
+races and trick sessions. Broad side fans and twin falling rooster tails appear
+under power on the plane, including straight-line running. Existing smaller craft
+keep their sharp-turn side-spray gates and normal jet-ski rear plumes.
+
+The clear speed run is 6.2 km long, with navigation buoys and end markers, plus
+1 km of further water before the eastern world limit. Pause → **OFFSHORE SPEED
+RUN** returns any craft to its start. The minimap zooms out offshore and the HUD
+shows distance to the end markers. Braking from maximum speed takes space.
+The ocean extension is authored play space; mapped coastal geography is unchanged.
+
+Tune `VEHICLES.racer`, `PROPULSION.racer` and `OFFSHORE_RUN` in `src/config.js`,
+`RACER_HANDLING` in `src/vehicles/racing-physics.js`, and `RACER_SPRAY` in
+`src/systems/spray-model.js`. The editable model is `src/vehicles/racing-cat.js`.
+The existing Low/Medium/High particle limits also bound the new craft's effects.
 
 The graphics upgrade adds textured sand/grass, waterfront homes with verandas
 and gardens, branching mangroves, headland relief, and a moving cloud sky, reflected scenery on Medium/High,

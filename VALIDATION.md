@@ -548,3 +548,36 @@ was kept separate from the pending northern coastline map changes.
   triangles. This is headless Linux Chromium/SwiftShader, not real hardware or
   an average benchmark. Low/Auto beachfront facades use repeated atlas quads
   to bound added geometry; frame rates on a real laptop/phone remain unverified.
+
+## Riptide 500 offshore racing-cat release — 2026-10-19
+
+- 138 Node checks pass; production build and `git diff --check` pass. Seven new
+  checks exercise 500 km/h acceleration and wave support at 30/60/120 Hz,
+  braking/reverse, speed-dependent steering, swept hull collision, clear offshore
+  run/recovery, twin-bow tunnel geometry and moving props, bounded falling spray,
+  persisted racer choice/trim and high-speed chase/rear camera tracking.
+- Actual Chromium browser flow passes: sixth craft selection, offshore launch,
+  acceleration to 500 km/h, both planing side fans, rear plume with descending
+  packets, braking into reverse, manual recovery, first-person/rear views, pause,
+  return to speed-run start, steering, trim and persisted choice/trim on reload.
+  Landscape 844×390 phone emulation also selects the sixth craft, uses native
+  touch acceleration and recovers. No critical shader/page errors in desktop flow.
+- Inspected garage, full-speed chase, rear, cockpit and phone screenshots.
+  Fixed crowded selector labels with a two-row grid, removed irrelevant activity
+  shortcuts for the racer, and reduced offshore minimap text crowding. Initial
+  full-speed chase was obscured by spray: three-quarter placement plus racing
+  velocity feed-forward now keeps the model visible and prevents rear view from
+  dropping behind it. The strengthened actual desktop flow was rerun and passed.
+- Final full-speed sample: Linux headless Chromium with SwiftShader, Low,
+  1000×650 viewport, approximately 2.54 FPS at that moment, 45 draw calls,
+  1,526,439 triangles, 565 live plume packets and 303 descending packets.
+  This is software rendering, not a real laptop benchmark or universal FPS claim.
+  Existing particle capacities are unchanged; physical phone performance is untested.
+- Offshore play bounds extend east to x=9500 m. Marked run from x=2300 to x=8500
+  has a further 1000 m before the boundary. Collision tests check the full lane.
+  CPU/GPU exposure and shoreline-colour sampling retain their original mapped
+  bounds so the larger playable ocean does not distort canal wave conditions.
+- Manufacturer source pages were inaccessible (403); supplied photograph/table
+  are user references. Original model/livery; exact engine output unverified.
+  The 500 km/h setting is expressly fictional arcade performance. This release
+  retains both preceding spray refinements and the separate northern coastline.

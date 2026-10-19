@@ -2,7 +2,9 @@ import{SPORTFISHER_LENGTH,sportfisherZ}from'./vehicles/sportfisher-shape.js';
 import mapData from './data/mooloolaba.json' with {type:'json'};
 // All distances are metres; performance is arcade tuning, not manufacturer data.
 export const FIXED_STEP = 1 / 60;
-export const WORLD = mapData.world;
+// The mapped coast stays unchanged; add an authored offshore run to the east.
+export const OFFSHORE_RUN={start:{x:2300,z:-2600,heading:Math.PI/2},finishX:8500,maxX:9500};
+export const WORLD = {...mapData.world,maxX:OFFSHORE_RUN.maxX};
 export const SPAWN = mapData.spawn;
 // Clear water on the mapped Wyuna Canal, in the added upstream reach.
 export const UPSTREAM_LAUNCH={x:112.9,z:2502.7,heading:Math.atan2(8.6,-49.8)};
@@ -96,3 +98,8 @@ export const SPORTFISHER_HEIGHT=10.8;
 VEHICLES.seago={...VEHICLES.ski,name:'Seago 120',subtitle:'Performance touring jet ski',description:'A longer, black performance hull with a 120 km/h game speed ceiling. Nine trim settings, powerful carving and a balanced bow ride.',length:3.65,width:1.32,maxSpeed:120/3.6,reverseMax:4,lateralGrip:4.1,slideGrip:1.2,spring:45,damping:12,airSteer:2.8,wheelieAngle:.82,wipeoutAngle:1.27,colours:['#b83836','#3a91ba','#b2bfc4']};
 PROPULSION.seago={...PROPULSION.ski,effectiveMass:420,hydraulicPower:128000,nozzleArea:.0065,nozzleMount:[0,-.06,-1.8],intake:[0,-.29,-1.2],linearResistance:23,quadraticResistance:2.15,steeringAngle:.39};
 HYDRODYNAMICS.seago={...HYDRODYNAMICS.ski,planingStart:5,planingEnd:16,yawInertia:500,pitchSpring:21,pitchDamping:8};
+
+// Fictional offshore racing cat: the requested 500 km/h is arcade performance.
+VEHICLES.racer={...VEHICLES.cat,name:'Riptide 500',subtitle:'Twin-engine offshore racing cat',description:'A 12 m closed-cockpit racing cat with twin inboard bays and surface drives. Massive planing spray. 500 km/h is fictional arcade tuning. Launches on the offshore speed run.',length:12.4,width:4.4,maxSpeed:500/3.6,reverseMax:4.5,rideHeight:.18,wheelieAngle:.10,wipeoutAngle:1.5,colours:['#28a8c4','#f36545','#8ac9a7']};
+PROPULSION.racer={...PROPULSION.cat,effectiveMass:4000,maximumRpm:7000,motorMount:[0,.1,-5.7],propeller:[0,-.28,-.58],shaftPower:1_200_000};
+HYDRODYNAMICS.racer={...HYDRODYNAMICS.cat};

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {surfaceTexture,SKY_TEXTURE_GLSL} from './surface-textures.js';
 import{COASTAL_STYLE as ART,glslColour}from'./art-direction.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { WAVES, WORLD, WAVE_FIELD, seaAmplitude } from '../config.js';
+import { WAVES, WAVE_FIELD, seaAmplitude } from '../config.js';
 import { WAVE_GLSL } from '../ocean.js';
 import { lands } from './environment.js';
 import { SUN_DIRECTION } from './atmosphere.js';
@@ -40,24 +40,24 @@ export class Water {
     const canvas=document.createElement('canvas');canvas.width=canvas.height=1024;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,1024,1024);
     ctx.fillStyle='#fff';ctx.shadowColor='#fff';ctx.shadowBlur=6;
-    const width=WORLD.maxX-WORLD.minX,depth=WORLD.maxZ-WORLD.minZ;
-    for(const land of lands){ctx.beginPath();for(const ring of [land.points,...(land.holes||[])]){ring.forEach((p,i)=>ctx[i?'lineTo':'moveTo']((p[0]-WORLD.minX)/width*1024,(p[1]-WORLD.minZ)/depth*1024));ctx.closePath();}ctx.fill('evenodd');}
+    const bounds=WAVE_FIELD.bounds,width=bounds.maxX-bounds.minX,depth=bounds.maxZ-bounds.minZ;
+    for(const land of lands){ctx.beginPath();for(const ring of [land.points,...(land.holes||[])]){ring.forEach((p,i)=>ctx[i?'lineTo':'moveTo']((p[0]-bounds.minX)/width*1024,(p[1]-bounds.minZ)/depth*1024));ctx.closePath();}ctx.fill('evenodd');}
     const field=new THREE.DataTexture(new Uint8Array(WAVE_FIELD.values),WAVE_FIELD.size,WAVE_FIELD.size,THREE.RedFormat);
     field.minFilter=field.magFilter=THREE.LinearFilter;field.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({
       uniforms:{
-        uSurface:{value:surfaceTexture('water')},uSkyPhoto:{value:surfaceTexture('sky')},uSurfaceReady:{value:0},uSkyReady:{value:0},uDaylight:{value:1},uSkyHorizon:{value:new THREE.Color(ART.skyHorizon)},uSkyZenith:{value:new THREE.Color(ART.skyZenith)},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
+        uSurface:{value:surfaceTexture('water')},uSkyPhoto:{value:surfaceTexture('sky')},uSurfaceReady:{value:0},uSkyReady:{value:0},uDaylight:{value:1},uSkyHorizon:{value:new THREE.Color(ART.skyHorizon)},uSkyZenith:{value:new THREE.Color(ART.skyZenith)},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(bounds.minX,bounds.minZ,width,depth)},uWaveBounds:{value:new THREE.Vector4(WAVE_FIELD.bounds.minX,WAVE_FIELD.bounds.minZ,WAVE_FIELD.bounds.maxX-WAVE_FIELD.bounds.minX,WAVE_FIELD.bounds.maxZ-WAVE_FIELD.bounds.minZ)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
         uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
         uReflection:{value:null},uReflectionMatrix:{value:new THREE.Matrix4()},uReflect:{value:0},
         uHull:{value:new THREE.Vector4(0,0,1,2)},uHeading:{value:0},uContact:{value:1},
       },
       vertexShader:`
-        uniform float uSea;uniform float uTime;uniform vec4 uMapBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
+        uniform float uSea;uniform float uTime;uniform vec4 uMapBounds;uniform vec4 uWaveBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;
         ${WAVE_GLSL}
         void main(){
           vec3 p=position;p.xz+=uCenter;
-          vec2 uv=(clamp((p.xz-uMapBounds.xy)/uMapBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;
+          vec2 uv=(clamp((p.xz-uWaveBounds.xy)/uWaveBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;
           float chop=texture2D(uWaveField,uv).r;vOcean=smoothstep(.48,.94,chop);
           vec3 w=oceanWave(p.xz,uTime,uSea,chop);vBank=entranceShoal(p.xz);p.y=w.x;
           vWorld=p;vNormal=normalize(vec3(-w.y,1.,-w.z));

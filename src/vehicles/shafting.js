@@ -35,6 +35,7 @@ export function updateShaftStatus(v,dt){
 }
 export function clearancePoints(v){
  if(v.type==='tinny')return[[-1.08,.52,-.23],[-.82,.59,-.27],[.12,.58,-.23],[.68,.42,-.10],[1.09,.14,.08],[1.17,.015,.18]].flatMap(([z,w,bottom])=>[[0,bottom,z],[-w*.76,bottom+.06,z],[w*.76,bottom+.06,z]]);
+ if(v.type==='racer')return[-1,1].flatMap(side=>[-4.6,0,3].map(z=>[side*1.45,-.29,z]));
  if(v.type==='cat')return[-1,1].flatMap(side=>[-1.5,0,1.25].map(z=>[side*.73,-.1,z]));
  if(v.type==='cruiser')return[-1,1].flatMap(side=>[-4,-1,1.5].map(z=>[side*1.5,.83,sportfisherZ(z)]));
  return[];
@@ -45,9 +46,9 @@ export function minimumHullClearance(v,time){
 // A water-contact constraint in physics, shared with visible wave sampling.
 // High bow rides pivot around the transom, leaving the propeller immersed.
 export function constrainHullWater(v,time){
- v.hullCorrection=0;if(v.airborne||!['tinny','cat','cruiser'].includes(v.type))return;
- const bow=clamp((v.pitch-.45)/.7),dry=(v.type==='tinny'?clamp((v.pitch-.40)/.40):bow)*(v.shaftLoad||0)*clamp(1-Math.abs(v.steer||0)/.5),allow=v.type==='cruiser'?.1:v.type==='cat'?.22:.30*(1-dry)-(SHAFTING.hullClearance-.18*(v.bounceCompression||0))*dry;
- if(v.type!=='cruiser'&&bow<.05)return;
+ v.hullCorrection=0;if(v.airborne||!['tinny','cat','cruiser','racer'].includes(v.type))return;
+ const bow=clamp((v.pitch-.45)/.7),dry=(v.type==='tinny'?clamp((v.pitch-.40)/.40):bow)*(v.shaftLoad||0)*clamp(1-Math.abs(v.steer||0)/.5),allow=v.type==='racer'?.27:v.type==='cruiser'?.1:v.type==='cat'?.22:.30*(1-dry)-(SHAFTING.hullClearance-.18*(v.bounceCompression||0))*dry;
+ if(!['cruiser','racer'].includes(v.type)&&bow<.05)return;
  let correction=0;for(const point of clearancePoints(v)){const p=bodyPoint(v,point);correction=Math.max(correction,waveHeight(p.x,p.z,time)-allow-p.y);}
  if(correction>0){v.y+=correction;v.vy=Math.max(0,v.vy||0);v.hullCorrection=correction;}
 }

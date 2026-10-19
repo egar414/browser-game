@@ -1,3 +1,4 @@
+import{updateRacer}from'./racing-physics.js';
 import{tinnyBounce,hullContactSplash}from'./tinny-bounce.js';
 import{SHAFTING,updatePassenger,shaftPitch,shaftRoll,updateShaftStatus,constrainHullWater}from'./shafting.js';
 import{isJet}from'../config.js';
@@ -22,7 +23,7 @@ export class VehiclePhysics {
       for(const radius of [0,8,18,35,70]){
         for(let i=0;i<(radius?16:1);i++){
           const angle=i/16*Math.PI*2,nx=x+Math.sin(angle)*radius,nz=z+Math.cos(angle)*radius;
-          if(nx>WORLD.minX+40&&nx<WORLD.maxX-40&&nz>WORLD.minZ+40&&nz<WORLD.maxZ-40&&!this.collision(nx,nz,this.type==='cruiser'?7.5:4,0)){
+          if(nx>WORLD.minX+40&&nx<WORLD.maxX-40&&nz>WORLD.minZ+40&&nz<WORLD.maxZ-40&&!this.collision(nx,nz,['cruiser','racer'].includes(this.type)?7.5:4,0)){
             this.safe={x:nx,z:nz,heading:this.heading};found=true;break;
           }
         }
@@ -62,6 +63,7 @@ export class VehiclePhysics {
     this.looping=this.type==='tinny'&&reason==='Looped the tinny';this.airTricks.reset();this.shaftLoad=0;if(this.shaft)this.shaft={...this.shaft,active:false,cue:'WIPEOUT',seconds:0};this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
   }
   update(dt, input, time, ramps = []) {
+    if(this.type==='racer')return updateRacer(this,dt,input,time);
     if(this.type==='cruiser')return updateCruiser(this,dt,input,time);
     this.previous = this.snapshot();
     if (this.wipeout > 0) { if(this.looping){this.pitch+=SHAFTING.loopRate*dt;this.y=waveHeight(this.x,this.z,time)+.65;this.roll*=Math.exp(-3*dt);} this.wipeout -= dt; if (this.wipeout <= 0) this.recover(true); return; }

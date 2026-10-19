@@ -1,7 +1,7 @@
 import mapData from './data/mooloolaba.json' with {type:'json'};
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a));return t*t*(3-2*t);};
-export const WAVE_FIELD=mapData.waveField;
+export const WAVE_FIELD={...mapData.waveField,bounds:{...mapData.world}};
 // Broad game shoals left of the outbound entrance, not surveyed depths.
 export const ENTRANCE_SHOALS=[{x:420,z:-1600,rx:170,rz:90},{x:610,z:-1650,rx:195,rz:105},{x:790,z:-1660,rx:140,rz:90}];
 // A short, steep inshore set over the authored banks. Original game tuning;

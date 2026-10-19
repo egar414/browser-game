@@ -17,6 +17,7 @@ export function landAt(x,z){
   return lands.find(l=>x>=l.bounds[0]&&x<=l.bounds[2]&&z>=l.bounds[1]&&z<=l.bounds[3]&&pointInPoly(x,z,l.points)&&!l.holes?.some(h=>pointInPoly(x,z,h)));
 }
 export function areaName(x,z){
+  if(x>mapData.world.maxX+100)return 'OFFSHORE SPEED RUN';
   for(const p of mapData.pois)if(!p.lighthouse&&Math.hypot(x-p.x,z-p.z)<170)return p.name.toUpperCase();
   if(mapData.coastalExtension&&z<mapData.coastalExtension.previousNorth){const place=mapData.coastalExtension.destinations.reduce((a,b)=>Math.hypot(x-a.x,z-a.z)<Math.hypot(x-b.x,z-b.z)?a:b);return Math.hypot(x-place.x,z-place.z)<1100?place.name.toUpperCase():'SUNSHINE COAST';}
   let nearest=80,name='MOOLOOLAH RIVER';

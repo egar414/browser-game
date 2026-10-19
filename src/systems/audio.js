@@ -29,11 +29,11 @@ export class GameAudio {
     }
     const rpm=Math.max(isJet(v.type)?1000:750,v.drive?.rpm||0),load=(v.drive?.wetness||0)*Math.abs(v.throttle);
     // Three-cylinder four-stroke PWC versus an original two-stroke outboard timbre.
-    const firing=rpm/60*(isJet(v.type)?1.5:v.type==='tinny'?2:3);
+    const firing=rpm/60*(isJet(v.type)?1.5:v.type==='racer'?4:v.type==='tinny'?2:3);
     this.osc.frequency.setTargetAtTime(firing,now,.12);
     this.sub.frequency.setTargetAtTime(rpm/60,now,.15);
     this.engineFilter.frequency.setTargetAtTime(450+load*1600+(v.drive?.ventilation||0)*450,now,.16);
-    this.waterGain.gain.setTargetAtTime(playing?s.water*(.025+v.speed*.011+Math.abs(v.slip)*.015):0,now,.2);
+    this.waterGain.gain.setTargetAtTime(playing?s.water*Math.min(.65,.025+v.speed*.011+Math.abs(v.slip)*.015):0,now,.2);
   }
   splash(impact) {
     if(!this.context)return;const ctx=this.context;

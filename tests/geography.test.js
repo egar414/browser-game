@@ -21,9 +21,9 @@ test('every mapped bridge has a clear central passage and connected channel cent
   const pier=solids.find(s=>s.a);const x=(pier.a[0]+pier.b[0])/2,z=(pier.a[1]+pier.b[1])/2;assert(collision(x,z,.2,0));
 });
 test('shared exposure field is bounded, interpolates grid samples and leaves canals calmer than sea',()=>{
-  const n=WAVE_FIELD.size;
+  const n=WAVE_FIELD.size,bounds=WAVE_FIELD.bounds;
   for(const [i,j] of [[0,0],[30,40],[90,15],[n-1,n-1]]){
-    const x=WORLD.minX+i/(n-1)*(WORLD.maxX-WORLD.minX),z=WORLD.minZ+j/(n-1)*(WORLD.maxZ-WORLD.minZ);
+    const x=bounds.minX+i/(n-1)*(bounds.maxX-bounds.minX),z=bounds.minZ+j/(n-1)*(bounds.maxZ-bounds.minZ);
     assert(Math.abs(waveChop(x,z)-WAVE_FIELD.values[j*n+i]/255)<1e-8);
   }
   assert(waveChop(SPAWN.x,SPAWN.z)<waveChop(1650,-1050));
