@@ -524,3 +524,27 @@ sprite scale is now 1.45 (45% above the original scale), with unchanged pool
 capacities. Core fan packets replace large circular point-mist puffs at contact
 splashes; ordinary wave/wipeout landings also use that fan. This spray refinement
 was kept separate from the pending northern coastline map changes.
+
+## Separate northern coastline release — 2026-10-19
+
+- 131 Node checks and production build passed with the current spray refinement.
+  New checks trace a collision-free coastal route from outside the mouth through
+  the full added reach, validate all three safe visit points, test solid land
+  versus sea on mapped shore transects and bound the authored headland relief.
+  Existing canal/bridge passage, race geometry and vehicle checks still pass.
+- Actual Chromium desktop flow passed: selected/driven Seago; visited and drove
+  Mooloolaba Beach, Alexandra Headland and Maroochydore Beach through the pause
+  menu; checked location labels and recovery; inspected coastal screenshots.
+  Landscape phone emulation also selected and visited Alexandra through the
+  new menu and retained visible touch driving controls. No critical shader/page
+  errors occurred in the desktop flow. A minimap label overlap found visually
+  was removed; Alex/Maroochy labels remain, with the Mooloolaba point still marked.
+- Extended map matches a byte-for-byte rebuild from the archived OSM extract
+  and pre-extension base. Exact source/provenance is included under data/sources.
+  North extent grows 2671.7 m, adding 424 footprints, 860 road/path sections,
+  19 parks, three beaches and 73 pools. No Google imagery or measured elevations.
+- Software-renderer sample in the northern coast: 1100×720, Auto → Low,
+  approximately 3.7 FPS at that sampled moment, 97 draw calls and 1,541,499
+  triangles. This is headless Linux Chromium/SwiftShader, not real hardware or
+  an average benchmark. Low/Auto beachfront facades use repeated atlas quads
+  to bound added geometry; frame rates on a real laptop/phone remain unverified.

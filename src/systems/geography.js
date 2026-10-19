@@ -18,6 +18,7 @@ export function landAt(x,z){
 }
 export function areaName(x,z){
   for(const p of mapData.pois)if(!p.lighthouse&&Math.hypot(x-p.x,z-p.z)<170)return p.name.toUpperCase();
+  if(mapData.coastalExtension&&z<mapData.coastalExtension.previousNorth){const place=mapData.coastalExtension.destinations.reduce((a,b)=>Math.hypot(x-a.x,z-a.z)<Math.hypot(x-b.x,z-b.z)?a:b);return Math.hypot(x-place.x,z-place.z)<1100?place.name.toUpperCase():'SUNSHINE COAST';}
   let nearest=80,name='MOOLOOLAH RIVER';
   for(const c of mapData.channels){if(c.name==='Mooloolah River')continue;for(let i=1;i<c.points.length;i++){const d=edgeDistance(x,z,c.points[i-1],c.points[i]);if(d<nearest){nearest=d;name=c.name.toUpperCase();}}}
   return name;

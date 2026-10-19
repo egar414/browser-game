@@ -13,6 +13,7 @@ import { FIXED_STEP, VEHICLES, QUALITY, RIDE_MODES, setSeaState, SEA_STATES, set
 import { VehiclePhysics } from './vehicles/physics.js';
 import { makeVehicle, loadCraftAssets } from './vehicles/models.js';
 import { buildEnvironment, collision, ramps, solids } from './systems/environment.js';
+import {mapData} from './systems/geography.js';
 import { Water, Spray } from './systems/water.js';
 import {loadSurfaceTextures,surfaceTextureStatus} from './systems/surface-textures.js';
 import { Input } from './systems/input.js';
@@ -77,7 +78,7 @@ const ui=new UI(settings,{
   colour(index){settings.colour=index;saveSettings(settings);replaceModel();ui.selectVehicle();},
   loadout(key,value){const options=key==='design'?DESIGNS:TUNING;if(!options[value]||!hasUnlock(settings,options[value]))return;settings[key]=value;vehicle.tuning=settings.tuning;saveSettings(settings);replaceModel();ui.selectVehicle();},
   setting(key,value){if(key==='dayMode'){settings.dayMode=value;dayClock.setMode(value);fishing.hour=dayClock.hour;saveSettings(settings);ui.toast(dayClock.status.label,dayClock.status.fishing.label);return;}if(key==='seaState'){settings.seaState=value;setSeaState(value,simulationTime);saveSettings(settings);ui.toast(SEA_STATES[value].name,'Water conditions change smoothly. Faster crests can launch wave hops.');return;}if(key==='rideMode'){setRideMode(value);return;}settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
-  race(){if(vehicle.type==='cruiser'){ui.toast('Choose a smaller craft for racing');return;}if(state==='playing'){fishing.cancel();battle.cancel();activities.startRace(vehicle);}},challenge(){if(vehicle.type==='cruiser'){ui.toast('Choose a smaller craft for tricks');return;}if(state==='playing'){fishing.cancel();battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,meetLocals,visitFishing,visitWaterfront,visitDolphins,
+  race(){if(vehicle.type==='cruiser'){ui.toast('Choose a smaller craft for racing');return;}if(state==='playing'){fishing.cancel();battle.cancel();activities.startRace(vehicle);}},challenge(){if(vehicle.type==='cruiser'){ui.toast('Choose a smaller craft for tricks');return;}if(state==='playing'){fishing.cancel();battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,meetLocals,visitFishing,visitWaterfront,visitDolphins,visitCoast,
 });
 new TouchControls(input);
 const activities=new Activities(scene,settings,(title,subtitle)=>ui.toast(title,subtitle));
@@ -150,6 +151,10 @@ function updateFishingHud(){
   document.getElementById('fish-tension').value=f.tension;document.getElementById('fish-progress').value=f.progress;
   document.getElementById('fish-record').textContent=`${settings.fishCaught} released · best ${settings.bestFishKg?settings.bestFishKg+' kg '+settings.bestFishSpecies:'—'} · ${dayClock.status.fishing.label}`;
   document.getElementById('fishing-meters').classList.toggle('hidden',f.phase!=='hooked');
+}
+function visitCoast(id){
+ if(!ready)return;const place=mapData.coastalExtension.destinations.find(p=>p.id===id);if(!place||collision(place.x,place.z,9,0))return;
+ deck.reset();fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;vehicle.respawnAt(place,simulationTime);spray.clear();people.flood.clearSpray();locals.flood.clearSpray();chase.reset();input.clear();resume();ui.toast(place.name,'Cruise north along the beach, or head south towards Mooloolaba and the river mouth.');
 }
 function visitDolphins(){
  if(!ready)return;const spawn=dolphins.approach(simulationTime,collision);if(!spawn){ui.toast('Dolphins are beyond the bar','Visit the offshore fishing grounds.');return;}

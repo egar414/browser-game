@@ -1,3 +1,4 @@
+import{coastalTerrainHeight,COASTAL_RELIEF_REGIONS}from'./coastal-terrain.js';
 import * as THREE from 'three';
 import{COASTAL_STYLE as ART}from'./art-direction.js';
 import {addGroundContacts,finishGroundMaterial} from './scenery-lighting.js';
@@ -42,24 +43,28 @@ export function buildEstuaryScenery(scene,quality,solids){
   }
   for(const p of mapData.parks)surface(root,p,.58,park);
   for(const p of mapData.beaches)surface(root,p,.6,sand);
-  const segment=(a,b,w,y,h,mat)=>{const length=Math.hypot(b[0]-a[0],b[1]-a[1]);if(length<.1)return;const mesh=box(root,w,h,length,(a[0]+b[0])/2,y,(a[1]+b[1])/2,mat);mesh.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);return mesh;};
-  const roadMark=material('#d8d7bd');
-  for(const r of mapData.roads)for(let i=1;i<r.points.length;i++){
-    const a=r.points[i-1],b=r.points[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);if(landAt((a[0]+b[0])/2,(a[1]+b[1])/2)){
-      segment(a,b,r.w,.64,.08,road);
-      if(len>5)for(const side of [-1,1]){const nx=dz/len*side,nz=-dx/len*side;segment([a[0]+nx*(r.w/2+.65),a[1]+nz*(r.w/2+.65)],[b[0]+nx*(r.w/2+.65),b[1]+nz*(r.w/2+.65)],1.1,.64,.1,concrete);}
-      if(r.w>7)for(let d=1;d<len-3;d+=12)segment([a[0]+dx*d/len,a[1]+dz*d/len],[a[0]+dx*Math.min(d+4,len)/len,a[1]+dz*Math.min(d+4,len)/len],.12,.69,.012,roadMark);
-    }
-  }
   const shorelineDistance=(x,z)=>{
     let d=Infinity;const l=landAt(x,z);if(!l)return 0;
     for(let i=1;i<l.points.length;i++)d=Math.min(d,edgeDistance(x,z,l.points[i-1],l.points[i]));return d;
   };
-  // Artist-shaped headland relief, not surveyed elevation data.
-  const terrainHeight=(x,z)=>.62+22*Math.exp(-((x-1410)**2+(z+1560)**2)/32000)*THREE.MathUtils.smoothstep(shorelineDistance(x,z),0,28)*THREE.MathUtils.smoothstep(x,1120,1200)*(1-THREE.MathUtils.smoothstep(x,1460,1540))*THREE.MathUtils.smoothstep(z,-1660,-1580)*(1-THREE.MathUtils.smoothstep(z,-1360,-1280));
+  const terrainHeight=(x,z)=>coastalTerrainHeight(x,z,shorelineDistance(x,z));
+  const segment=(a,b,w,y,h,mat)=>{const length=Math.hypot(b[0]-a[0],b[1]-a[1]);if(length<.1)return;const mesh=box(root,w,h,length,(a[0]+b[0])/2,y,(a[1]+b[1])/2,mat);mesh.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);return mesh;};
+  const roadSegment=(a,b,width,y,height,mat)=>{
+    if(Math.min(a[1],b[1])>-1892)return segment(a,b,width,y,height,mat);
+    const ya=y+terrainHeight(...a)-.62,yb=y+terrainHeight(...b)-.62,length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    const mesh=segment(a,b,width,(ya+yb)/2,height,mat);if(mesh){mesh.rotation.order='YXZ';mesh.rotation.x=-Math.atan2(yb-ya,length);mesh.scale.z=Math.hypot(length,yb-ya)/length;}return mesh;
+  };
+  const roadMark=material('#d8d7bd');
+  for(const r of mapData.roads)for(let i=1;i<r.points.length;i++){
+    const a=r.points[i-1],b=r.points[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);if(landAt((a[0]+b[0])/2,(a[1]+b[1])/2)){
+      roadSegment(a,b,r.w,.64,.08,road);
+      if(len>5)for(const side of [-1,1]){const nx=dz/len*side,nz=-dx/len*side;roadSegment([a[0]+nx*(r.w/2+.65),a[1]+nz*(r.w/2+.65)],[b[0]+nx*(r.w/2+.65),b[1]+nz*(r.w/2+.65)],1.1,.64,.1,concrete);}
+      if(r.w>7)for(let d=1;d<len-3;d+=12)roadSegment([a[0]+dx*d/len,a[1]+dz*d/len],[a[0]+dx*Math.min(d+4,len)/len,a[1]+dz*Math.min(d+4,len)/len],.12,.69,.012,roadMark);
+    }
+  }
   const hillVertices=[],hillUV=[],hillEdges=new Map();
-  for(let x=1120;x<1540;x+=16)for(let z=-1660;z<-1280;z+=16){
-    const ps=[[x,z],[x+16,z],[x,z+16],[x+16,z+16]];
+  for(const region of COASTAL_RELIEF_REGIONS)for(let x=region.minX;x<region.maxX;x+=region.step)for(let z=region.minZ;z<region.maxZ;z+=region.step){
+    const step=region.step,ps=[[x,z],[x+step,z],[x,z+step],[x+step,z+step]];
     for(const ids of [[0,2,1],[1,2,3]])if(ids.every(i=>landAt(...ps[i]))){
       for(let j=0;j<3;j++){const a=ps[ids[j]],b=ps[ids[(j+1)%3]],key=[a.join(':'),b.join(':')].sort().join('/');if(hillEdges.has(key))hillEdges.get(key).count++;else hillEdges.set(key,{a,b,count:1});}
       for(const i of ids){const [px,pz]=ps[i];hillVertices.push(px,terrainHeight(px,pz),pz);hillUV.push(px*.14,pz*.14);}
@@ -68,7 +73,7 @@ export function buildEstuaryScenery(scene,quality,solids){
   for(const {a,b,count}of hillEdges.values())if(count===1){const ah=terrainHeight(...a),bh=terrainHeight(...b);for(const [x,y,z]of[[a[0],ah,a[1]],[a[0],.56,a[1]],[b[0],bh,b[1]],[a[0],.56,a[1]],[b[0],.56,b[1]],[b[0],bh,b[1]]]){hillVertices.push(x,y,z);hillUV.push(x*.14,z*.14);}}
   const hill=new THREE.BufferGeometry();hill.setAttribute('position',new THREE.Float32BufferAttribute(hillVertices,3));hill.setAttribute('uv',new THREE.Float32BufferAttribute(hillUV,2));hill.computeVertexNormals();root.add(new THREE.Mesh(hill,grass));
   // Footprints and available levels are geographic data; facade details are original.
-  const architectureStats=buildMappedBuildings(root,mapData.buildings.filter(b=>landAt(...b.points[0])),mapData.roads,surface,segment,{walls,roofs,windows,fence,concrete,heightAt:terrainHeight,contacts});
+  const architectureStats=buildMappedBuildings(root,mapData.buildings.filter(b=>landAt(...b.points[0])),mapData.roads,surface,segment,{walls,roofs,windows,fence,concrete,heightAt:terrainHeight,coastalDetail:quality.trees>.6,contacts});
   for(const p of mapData.piers){
     if(p.area){surface(root,p,1.15,timber,.35);}
     else for(let i=1;i<p.points.length;i++){
@@ -165,7 +170,7 @@ export function buildEstuaryScenery(scene,quality,solids){
     if(!l)continue;const inPark=mapData.parks.some(p=>pointInPoly(x,z,p.points));
     if(!(inPark||z>220)||occupied(x,z))continue;
     if(mapData.roads.some(r=>r.points.some((p,i)=>i&&edgeDistance(x,z,r.points[i-1],p)<r.w/2+2)))continue;
-    const scale=.65+random()*.9,ground=(x>1120&&z<-1280)?terrainHeight(x,z):.6;trunks.push([x,ground+3*scale,z,scale]);crowns.push([x,ground+6*scale,z,scale]);
+    const scale=.65+random()*.9,ground=terrainHeight(x,z);trunks.push([x,ground+3*scale,z,scale]);crowns.push([x,ground+6*scale,z,scale]);
   }
   for(const p of trunks)contacts.push({x:p[0],z:p[2],y:p[1]-3*p[3],w:1.5*p[3],d:1.5*p[3]});
   const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),q=new THREE.Quaternion();
@@ -184,7 +189,7 @@ export function buildEstuaryScenery(scene,quality,solids){
   const leafTexture=new THREE.CanvasTexture(leafCanvas);leafTexture.colorSpace=THREE.SRGBColorSpace;
   const leafMaterial=new THREE.MeshStandardMaterial({color:'#e0e7ca',map:leafTexture,alphaTest:.45,side:THREE.DoubleSide,roughness:.85});
   function palm(x,z,size=1){
-    const base=(x>1120&&z<-1280)?terrainHeight(x,z):.6;
+    const base=terrainHeight(x,z);
     tube(root,[[x,base,z],[x+.5*size,base+5*size,z],[x+size,base+8.5*size,z]],.19*size,timber,6);
     for(let j=0;j<7;j++){
       const angle=j*Math.PI*2/7,v=[],indices=[],uv=[];
@@ -265,7 +270,8 @@ export function buildEstuaryScenery(scene,quality,solids){
     if(p.lighthouse){
       const tower=new THREE.Mesh(new THREE.CylinderGeometry(2.8,3.7,27,5),walls[0]);tower.position.set(p.x,terrainHeight(p.x,p.z)+13.5,p.z);root.add(tower);
       for(const [y,r,h,mat] of [[26,3.9,.4,navy],[27.4,2.7,2.5,windows],[28.8,3.4,.5,walls[0]]]){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),mat);m.position.set(p.x,terrainHeight(p.x,p.z)+y-.6,p.z);root.add(m);}
-    }else if(p.name.includes('Wharf')||p.name.includes('Marina'))sign(p.name.toUpperCase(),p.x,7,p.z,30);
+    }else if(p.coastal){sign(p.name.toUpperCase(),p.x,terrainHeight(p.x,p.z)+7,p.z,40);}
+    else if(p.name.includes('Wharf')||p.name.includes('Marina'))sign(p.name.toUpperCase(),p.x,7,p.z,30);
   }
   for(const r of mapData.ramps){
     const g=new THREE.BufferGeometry(),w=r.width/2,l=r.length/2;
@@ -302,6 +308,6 @@ export function buildEstuaryScenery(scene,quality,solids){
   }
   for(const m of originals){m.removeFromParent();m.geometry.dispose();}
   const contactShadows=addGroundContacts(root,contacts);
-  root.userData.stats={artStyle:ART.name,contactShadows,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
+  root.userData.stats={coastalExtension:mapData.coastalExtension?.added,artStyle:ART.name,contactShadows,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
   return root;
 }

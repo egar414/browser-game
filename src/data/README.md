@@ -98,3 +98,18 @@ The latter source is pending access to its openly licensed download host.
 
 Generate `public/estuary-map.svg` with `python scripts/build-estuary-map.py`.
 The map and the geographic JSON remain ODbL-derived and retain attribution.
+
+## Alexandra Headland / northern coast — 2026-10-19
+
+The separate coastal update extends the northern bound from −1892.4 m to
+−4564.1 m, approximately 2.67 km north, covering Mooloolaba Beach, Alexandra
+Headland and the southern Maroochydore Beach reach. It adds 424 mapped building
+footprints, 860 road/path sections, 19 parks, three beach polygons and 73 pools.
+The main beach coastline joins the existing land/water geometry. New offshore
+visit points and a clear cruising route are authored game aids, not real
+navigation marks. Existing canals and bridges are retained.
+
+Exact XML source, licence and reproducible incremental build instructions are
+in `sources/README.md`. The extension was built separately from the spray
+handling update. Relief around Alexandra's bluff is authored and approximate;
+OSM provides plan geometry, not a complete survey of houses, heights or depths.

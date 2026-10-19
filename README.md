@@ -710,3 +710,19 @@ It emits from all reported hull contacts and retains their falling motion.
 Burst packets use the existing plume pool, have a shorter 2.6 s maximum life,
 and expire on water impact. Normal rear jet packets restore their own lifetime
 when a pooled slot is reused. No flat sheet meshes were reintroduced.
+
+### Mooloolaba Beach, Alexandra Headland and Maroochydore coast
+
+A separate map release adds approximately 2.7 km of connected northern coast,
+424 mapped building footprints, Alexandra Parade/coastal roads, beaches, parks,
+the mapped surf-club footprints and approximate headland relief. Cruise out of
+the river mouth and north along the coast, or pause, choose a **COASTAL
+DESTINATION**, then **VISIT COASTAL DESTINATION**. The whole-area map and minimap
+identify the new reach. The three visit points sit in clear offshore water.
+
+Nearby land collides as before. New beachfront buildings on Low/Auto keep mapped
+footprints and use repeated window atlases instead of many individual window
+meshes. Coastline data is OpenStreetMap, distributed under ODbL with exact source
+XML and rebuild instructions in `src/data/sources/README.md`. Facades, missing
+heights and relief are game approximations, not replicas of each real property.
+The coastline does not change the tinny's shaft-only bounce or spray tuning.

@@ -48,3 +48,9 @@ water, panoramic clouds, sand, grass, rock and timber. These invented images are
 not Mooloolaba aerial/satellite photographs and contain no copied logos or
 external stock art. They are shipped locally as six WebP files; origin and
 asset preparation are recorded in `src/assets/textures/README.md`.
+
+Northern coastline extension (2026-10-19): OpenStreetMap XML retrieved from
+https://www.openstreetmap.org/api/0.6/map?bbox=153.099,-26.6775,153.142,-26.653 .
+Same ODbL 1.0 attribution applies. Exact source is retained compressed under
+`src/data/sources`, with its SHA-256 in the editable map database. The coast,
+roads and footprint plan derive from OSM; terrain and facade detail are authored.

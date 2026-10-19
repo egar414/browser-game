@@ -26,7 +26,7 @@ export function facadeWindowMaterial(){if(facadeMaterial)return facadeMaterial;
  ctx.fillStyle='#142e35';ctx.fillRect(0,0,128,128);ctx.fillStyle='#aebdb6';ctx.fillRect(5,5,118,118);ctx.fillStyle='#274b59';ctx.fillRect(11,11,106,106);
  const gradient=ctx.createLinearGradient(0,0,128,128);gradient.addColorStop(0,'#7d9a9b');gradient.addColorStop(.45,'#38616d');gradient.addColorStop(1,'#1c3842');ctx.fillStyle=gradient;ctx.fillRect(13,13,102,102);
  ctx.fillStyle='#385058';ctx.fillRect(15,21,99,3);ctx.fillRect(15,29,99,2);ctx.fillRect(15,37,99,2);ctx.fillStyle='#adbbb2';ctx.fillRect(61,9,6,110);ctx.fillRect(9,111,110,6);
- const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;
+ const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;map.wrapS=map.wrapT=THREE.RepeatWrapping;
  facadeMaterial=new THREE.MeshStandardMaterial({color:'#ffffff',map,roughness:.34,metalness:.18,side:THREE.DoubleSide});
  return facadeMaterial;
 }
@@ -61,6 +61,17 @@ export function buildMappedBuildings(root,buildings,roads,surface,segment,m){
    if(f.w>6&&f.d>6){const p=f.point(0,0);box(root,1.3,.7,1,p[0],top+.6,p[1],frame);}
   }
   const floors=Math.max(1,Math.min(15,Math.round(b.h/3.1))),floorHeight=b.h/floors;
+  if(b.coastalExtension&&!m.coastalDetail){
+   // Repeated window atlas on one quad per wall keeps new distant beachfront
+   // buildings recognisable without hundreds of individual window meshes.
+   for(let j=0;j<b.points.length-1;j++){
+    const a=b.points[j],c=b.points[j+1],dx=c[0]-a[0],dz=c[1]-a[1],len=Math.hypot(dx,dz);if(len<3)continue;
+    let nx=dz/len,nz=-dx/len;if(nx*((a[0]+c[0])/2-f.cx)+nz*((a[1]+c[1])/2-f.cz)<0){nx=-nx;nz=-nz;}
+    const columns=Math.max(1,Math.round(len/4)),g=windowGeometry.clone(),uv=g.attributes.uv;for(let k=0;k<uv.count;k++)uv.setXY(k,uv.getX(k)*columns,uv.getY(k)*floors);
+    const pane=new THREE.Mesh(g,facadeGlass);pane.position.set((a[0]+c[0])/2+nx*.1,base+b.h*.52,(a[1]+c[1])/2+nz*.1);pane.rotation.y=Math.atan2(nx,nz);pane.scale.set(len*.88,b.h*.83,1);root.add(pane);detailWindows+=columns*floors;
+   }
+   return;
+  }
   let front=0,nearest=Infinity;
   const reach=Math.max(f.w,f.d)+85,nearRoads=roadEdges.filter(r=>r.minX<f.cx+reach&&r.maxX>f.cx-reach&&r.minZ<f.cz+reach&&r.maxZ>f.cz-reach);
   for(let j=0;j<b.points.length-1;j++){const a=b.points[j],c=b.points[j+1],x=(a[0]+c[0])/2,z=(a[1]+c[1])/2;for(const r of nearRoads){const distance=edgeDistance(x,z,r.a,r.b);if(distance<nearest){nearest=distance;front=j;}}}
