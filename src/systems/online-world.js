@@ -27,7 +27,7 @@ export class OnlineWorld{
   this.localPlate.label.hidden=true;
   if(localView.playing&&!localView.firstPerson&&this.client.session){
    const me=this.client.room?.players?.find(p=>p.id===this.client.session.user.id);
-   const name=me?.name||document.getElementById('online-name')?.value||'Estuary Rat';
+   const name=me?.name||this.client.status.playerName||document.getElementById('online-name')?.value||'Estuary Rat';
    const anchor=localView.eye?localView.eye.clone().add(new THREE.Vector3(0,.38,0)):new THREE.Vector3(viewer.x,viewer.y+2,viewer.z);
    placeNameplate(this.localPlate,name,this.client.creator,anchor,camera);
   }

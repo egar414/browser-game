@@ -3,20 +3,21 @@ import {database,rpc,users} from './multiplayer-fixture.js';
 const host='https://tqvgqtgxwgxdxpbvuatf.supabase.co';
 const status=p=>p.evaluate(()=>window.__ESTUARY__.status);
 test.use({actionTimeout:15000});
-function session(id,email){
+function session(id,email,metadata={}){
  const exp=Math.floor(Date.now()/1000)+3600;
  const part=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
- return {access_token:`${part({alg:'HS256',typ:'JWT'})}.${part({sub:id,role:'authenticated',aud:'authenticated',exp})}.fixture`,token_type:'bearer',expires_in:3600,expires_at:exp,refresh_token:`fixture-${id}`,user:{id,email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{},created_at:new Date().toISOString()}};
+ return {access_token:`${part({alg:'HS256',typ:'JWT'})}.${part({sub:id,role:'authenticated',aud:'authenticated',exp})}.fixture`,token_type:'bearer',expires_in:3600,expires_at:exp,refresh_token:`fixture-${id}`,user:{id,email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:metadata,created_at:new Date().toISOString()}};
 }
 async function boot(p,f,id,email){
+ f.metadata??=new Map();
  await p.addInitScript(()=>localStorage.setItem('estuary-rats-v1',JSON.stringify({quality:'Low',muted:true,locals:false,seaState:'calm',oceanVersion:1,dayMode:'day'})));
  await p.route(`${host}/**`,async route=>{
   const req=route.request(),url=new URL(req.url());const data=req.postDataJSON()||{};
   let response;
   try{
-   if(url.pathname==='/auth/v1/token')response=session(id,email);
+   if(url.pathname==='/auth/v1/token')response=session(id,email,f.metadata.get(id));
    else if(url.pathname==='/auth/v1/logout')response={};
-   else if(url.pathname==='/auth/v1/user')response=session(id,email).user;
+   else if(url.pathname==='/auth/v1/user'){if(req.method()==='PUT')f.metadata.set(id,{...f.metadata.get(id),...data.data});response=session(id,email,f.metadata.get(id)).user;}
    else if(url.pathname.startsWith('/rest/v1/rpc/')){
     const token=req.headers().authorization?.slice(7);let uid='';try{uid=JSON.parse(Buffer.from(token.split('.')[1],'base64url')).sub;}catch{}
     response=await rpc(f,uid,url.pathname.split('/').at(-1),data);
@@ -83,6 +84,21 @@ test('creator title sits above the local player name, follows driving and hides 
   await p.keyboard.down('KeyW');await expect.poll(async()=>(await status(p)).speed,{timeout:30000}).toBeGreaterThan(5);await p.keyboard.up('KeyW');await expect(plate).toBeVisible();await p.screenshot({path:'test-results/creator-overhead-name.png'});
   await p.keyboard.press('KeyP');await expect(plate).toBeHidden();await p.keyboard.press('KeyP');await expect(plate).toBeVisible();
   await p.locator('#online-status').click();await p.getByRole('button',{name:'SIGN OUT',exact:true}).click();await p.getByRole('button',{name:'BACK TO GAME',exact:true}).click();await expect(plate).toBeHidden();expect(errors).toEqual([]);
+ }finally{await f.db.close();}
+});
+test('Ewan stays saved across reload and login; an unassigned Creator tag has a direct account-specific setup',async({page:p,context})=>{
+ test.setTimeout(180000);const f=await database();const errors=[];p.on('pageerror',e=>errors.push(e.message));
+ try{
+  await context.grantPermissions(['clipboard-read','clipboard-write']);await boot(p,f,users[0],'ewan@example.test');
+  await expect(p.locator('#online-creator-status')).toContainText('not assigned');
+  await p.locator('#online-name').fill('Ewan');await p.locator('#online-save-name').click();await expect.poll(()=>f.metadata.get(users[0])?.game_name).toBe('Ewan');
+  await p.locator('#online-copy-creator').click();await expect(p.locator('#online-message')).toContainText('Creator setup copied');const grant=await p.evaluate(()=>navigator.clipboard.readText());expect(grant).toContain(`values ('${users[0]}')`);
+  await p.reload();await p.waitForFunction(()=>window.__ESTUARY__?.status.ready);await p.locator('.launch-card').getByRole('button',{name:'ONLINE / ACCOUNT',exact:true}).click();await expect(p.locator('#online-name')).toHaveValue('Ewan');
+  // Owner applies exactly the copy button's script, then the player refreshes.
+  await f.owner(grant);await p.getByRole('button',{name:'REFRESH ACCOUNT',exact:true}).click();await expect(p.locator('#online-creator-perks')).toBeVisible();
+  await p.getByRole('button',{name:'JOIN PUBLIC WORLD',exact:true}).click();await p.locator('[data-online="drive"]').click();await expect(p.locator('#local-player-name .player-name')).toHaveText('Ewan');await expect(p.locator('#local-player-name .player-title')).toBeVisible();
+  await p.screenshot({path:'test-results/ewan-saved-creator-tag.png'});
+  await p.locator('#online-status').click();await p.getByRole('button',{name:'SIGN OUT',exact:true}).click();await p.locator('#online-email').fill('ewan@example.test');await p.locator('#online-password').fill('Fixture-password-123');await p.locator('#online-account').getByRole('button',{name:'SIGN IN',exact:true}).click();await expect(p.locator('#online-name')).toHaveValue('Ewan');expect(errors).toEqual([]);
  }finally{await f.db.close();}
 });
 test('missing database explains setup and allows normal free roam',async({page:p})=>{

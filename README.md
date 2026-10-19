@@ -10,6 +10,11 @@ asset service is required to play.
 
 ## Optional online worlds and accounts
 
+Player names are saved per account on the device and synchronized to Auth
+metadata. Set your name and press **SAVE NAME**, or join a world to save it.
+Reloading and signing back in restore it. Room updates do not overwrite typing;
+account emails are never used as overhead display names.
+
 Open **ONLINE / ACCOUNT** from the garage, HUD or pause screen. Email/password
 accounts use Supabase Auth. The connected project currently allows signup
 without email confirmation, so email addresses are unverified. A custom SMTP
@@ -39,6 +44,12 @@ particle systems, to keep the first release light on laptops. All normal
 single-player features remain available without signing in.
 
 ### Verified Creator badge and garage perks
+
+The Online panel shows whether the badge is active, unassigned, missing its
+database update, or temporarily unable to be checked. **COPY MY CREATOR SETUP**
+copies the account-specific owner script directly from the game. Run that in
+the linked SQL Editor and press **REFRESH ACCOUNT**. An older room snapshot
+without a Creator field no longer cancels a separately verified account role.
 
 A project owner can assign the optional Creator role to their own game account.
 Sign in, choose **OWNER SETUP / CREATOR TAG**, copy **my Creator setup** into the

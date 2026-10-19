@@ -1,3 +1,4 @@
+import {creatorSetupSQL} from './creator-grant.js';
 // All server/user messages use textContent; account credentials never enter game storage.
 export class OnlineUI{
  constructor(client,{open,close,launch}){
@@ -23,6 +24,16 @@ export class OnlineUI{
   this.root.querySelector('form').addEventListener('submit',event=>{event.preventDefault();this.run(async()=>{await client.signIn(this.value('email'),this.value('password'));this.root.querySelector('#online-password').value='';});});
   const perks=document.createElement('p');perks.id='online-creator-perks';perks.className='creator-perks';perks.hidden=true;perks.textContent='★ CREATOR · All garage designs and tuning unlocked · 2× garage XP';this.root.querySelector('#online-signed-in').prepend(perks);
   const refresh=document.createElement('button');refresh.className='secondary';refresh.textContent='REFRESH ACCOUNT';refresh.addEventListener('click',()=>this.run(()=>client.refreshPerks()));this.root.querySelector('#online-signed-in').append(refresh);
+  const nameField=this.root.querySelector('#online-name');nameField.addEventListener('input',()=>{this.nameDirty=true;});
+  const saveName=document.createElement('button');saveName.id='online-save-name';saveName.className='secondary';saveName.textContent='SAVE NAME';saveName.addEventListener('click',()=>{if(!nameField.reportValidity())return;this.run(async()=>{await client.saveName(nameField.value);this.nameDirty=false;this.render(client.status);});});nameField.parentElement.after(saveName);
+  const creatorHelp=document.createElement('div');creatorHelp.id='online-creator-help';creatorHelp.innerHTML='<p id="online-creator-status" role="status"></p><p class="fine-print">Account ID: <span id="online-account-id"></span></p><button id="online-copy-creator" class="secondary">COPY MY CREATOR SETUP</button> <a class="secondary" href="https://supabase.com/dashboard/project/tqvgqtgxwgxdxpbvuatf/sql/new" target="_blank" rel="noopener">OPEN SUPABASE SQL EDITOR ↗</a><p class="fine-print">Project owner only: copy the setup, paste into SQL Editor, click Run, then Refresh Account. The public game key cannot assign badges.</p>';
+  this.root.querySelector('#online-signed-in').append(creatorHelp);
+  creatorHelp.querySelector('button').addEventListener('click',()=>this.run(async()=>{
+   const response=await fetch(`${import.meta.env?.BASE_URL||'/'}creator.sql`,{cache:'no-cache'});if(!response.ok)throw Error('Could not load Creator setup. Please reload and try again.');
+   const sql=creatorSetupSQL(await response.text(),client.status.accountId);
+   try{await navigator.clipboard.writeText(sql);this.message('Creator setup copied. Paste it into your Supabase SQL Editor, click Run, then Refresh Account.');}
+   catch{let field=creatorHelp.querySelector('textarea');if(!field){field=document.createElement('textarea');field.readOnly=true;field.setAttribute('aria-label','Your Creator setup SQL');creatorHelp.append(field);}field.value=sql;field.focus();field.select();this.message('Copy the selected Creator setup with Ctrl+C / Command+C, run it in Supabase SQL Editor, then Refresh Account.');}
+  }));
   this.root.querySelectorAll('[data-online]').forEach(button=>button.addEventListener('click',()=>{
    const action=button.dataset.online;
    if(action==='close'){this.hide();return;}
@@ -48,11 +59,16 @@ export class OnlineUI{
   // Keep an error visible until the next deliberate action instead of clearing it at 3 Hz.
   if(s.message!==this.previousMessage){this.message(s.message);this.previousMessage=s.message;}
   this.root.querySelector('#online-account').hidden=s.signedIn;this.root.querySelector('#online-signed-in').hidden=!s.signedIn;
+  const nameField=this.root.querySelector('#online-name');if(this.accountId!==s.accountId){this.accountId=s.accountId;this.nameDirty=false;nameField.value=s.playerName||'Estuary Rat';}else if(!this.nameDirty&&document.activeElement!==nameField)nameField.value=s.playerName||'Estuary Rat';
   this.root.querySelector('#online-room').textContent=s.room?`${s.room.public?'PUBLIC WORLD':'ROOM '+s.room.code} · ${s.room.players}/8 players${s.connected?'':' · reconnecting'}`:'';
   for(const a of ['drive','leave'])this.root.querySelector(`[data-online="${a}"]`).hidden=!s.room;
   this.statusButton.textContent=s.room?`${s.room.public?'PUBLIC':s.room.code} · ${s.room.players}/8${s.connected?'':' · RETRYING'}`:'ONLINE / ACCOUNT';
   this.statusButton.classList.toggle('is-creator',s.creator);if(s.creator)this.statusButton.textContent='★ CREATOR · '+this.statusButton.textContent;
   this.root.querySelector('#online-creator-perks').hidden=!s.creator;
+  const messages={active:'★ Creator tag active on this account. It appears above your saved name in chase view.',inactive:'Creator tag is not assigned to this account yet. Use the owner setup below.',missing:'The Creator database update is not installed yet. Use the owner setup below.',checking:'Checking your account’s Creator tag…',error:'Could not check your Creator tag. Check your connection and press Refresh Account.'};
+  this.root.querySelector('#online-creator-status').textContent=messages[s.creatorState]||'Sign in to check your Creator tag.';
+  this.root.querySelector('#online-account-id').textContent=s.accountId||'';
+  this.root.querySelector('#online-creator-help').hidden=!s.signedIn||s.creator;
   const guide=this.root.querySelector('a[href*="multiplayer-setup"]');guide.href=`./multiplayer-setup.html${s.accountId?'#creator='+encodeURIComponent(s.accountId):''}`;
   guide.textContent=s.signedIn?'OWNER SETUP / CREATOR TAG ↗':'OWNER SETUP GUIDE ↗';
  }
