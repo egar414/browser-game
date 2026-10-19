@@ -1058,3 +1058,14 @@ Moving visible boaters can be targeted before a stationary observer. The HUD
 names the suspect. Pursuits still last 60 seconds, with a cooldown afterwards.
 NPC simulation remains local to each device; online player positions are shared,
 but this does not make police movement identical across devices.
+
+### Online spray velocity correction
+
+Side spray serialisation now uses a launched droplet's `vx/vy/vz`, rather than
+its `x/y/z` position. At Wharf coordinates the old payload could exceed server
+velocity limits and interrupt exchanges while carving. Received rear plumes
+likewise map `vx/vy/vz` into the renderer's velocity vector; using absolute
+positions incorrectly fired remote packets far away. Regression checks exercise
+an actual sharp-turn payload through the server and verify remote packet speeds.
+Players must reload the latest game build on both devices. This correction does
+not require another SQL migration when automatic flooding is already installed.

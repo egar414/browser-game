@@ -162,7 +162,7 @@ export class Spray {
       this.emit(received?{...received.find(p=>p.kind===(side<0?'left':'right')),lifetime:3,diameter:.005}:launchSpray(v,this.state,side),i%3===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
     }
     const discharge=active?pumpDischarge(v,time):null;this.stream.update(v,discharge);
-    const rear=received?.find(p=>p.kind==='rear'),plume=received?(active&&rear?{origin:rear,velocity:rear,power:rear.power,loaded:v.riderAft||0,packetScale:v.type==='hyper'?2.2:1}:null):jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
+    const rear=received?.find(p=>p.kind==='rear'),plume=received?(active&&rear?{origin:rear,velocity:{x:rear.vx,y:rear.vy,z:rear.vz},power:rear.power,loaded:v.riderAft||0,packetScale:v.type==='hyper'?2.2:1}:null):jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
     this.jetAccumulator+=dt*this.state.jet*(isJet(v.type)?200:90);
     const jetCount=Math.min(30,Math.floor(this.jetAccumulator));this.jetAccumulator-=jetCount;
     for(let i=0;i<jetCount&&discharge;i++){

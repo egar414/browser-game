@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import {Spray} from '../src/systems/spray.js';
+import {QUALITY,VEHICLES} from '../src/config.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {database,rpc,users} from './multiplayer-fixture.js';
@@ -41,4 +44,18 @@ test('misses, rising water and self spray do not flood; private peers use the sa
   await f.owner('delete from er_spray_packets');await seed(50,.25,0);await tick(2);assert.equal((await rpc(f,b,'er_snapshot')).combat.water,0,'rising spray');
   await f.owner('delete from er_spray_packets');await seed(50,1.02,.5);const hit=await tick(3);assert.equal(hit.combat.water,0,'emitter cannot hit itself');assert(hit.players.find(p=>p.id===b).combat.water>7,'private peers need no acceptance flag');
  }finally{await f.db.close();}
+});
+
+test('sharp-turn side spray sends velocity components, never world coordinates, and survives server exchange at the Wharf',async()=>{
+ const v=new VehiclePhysics('ski',()=>null);for(let i=0;i<240;i++)v.update(1/60,{throttle:1,steer:0,trim:0},i/60);
+ Object.assign(v,{steer:1,yawRate:1,slip:-6,lateralAcceleration:12});const p=packPose(v,{colour:0,design:'classic'},{},true,4);
+ const side=p.spray.find(s=>s.kind==='left'||s.kind==='right');assert(side);assert(Math.abs(side.vz)<100,'water velocity is not the ~-1000m world z coordinate');assert(side.vy>1,'side water rises above the chine');
+ const f=await database();try{await rpc(f,a,'er_join',{p_name:'Carver',p_code:'PUBLIC'});const r=await rpc(f,a,'er_exchange',{p_pose:p,p_seq:1});assert(r.players[0].pose.spray.some(s=>s.kind==='left'||s.kind==='right'));}finally{await f.db.close();}
+});
+
+
+test('received rear plume launches with transmitted vx/vy/vz instead of absolute world position',()=>{
+ const spray=new Spray(new THREE.Scene(),{...QUALITY.Low,particles:32,wakeSamples:24,plumeCapacity:80,plumeDensity:.5});
+ const v={type:'ski',config:VEHICLES.ski,x:-220,y:.4,z:-1080,heading:0,pitch:0,roll:0,speed:10,throttle:1,steer:0,vx:0,vz:10,drive:{neutral:true},spray:[{kind:'rear',ox:0,oy:0,oz:-1.5,vx:0,vy:6,vz:-14,power:1}]};
+ for(let i=0;i<6;i++)spray.update(.1,v,i*.1,true,{remote:true});const packets=spray.plume.packets.filter(p=>p.active);assert(packets.length>0);assert(packets.every(p=>Math.abs(p.vz+14)<5),'rear spray moves aft at ~14m/s, not ~1080m/s');assert(packets.every(p=>Math.abs(p.vx)<5));spray.dispose();
 });
