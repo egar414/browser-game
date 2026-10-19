@@ -79,26 +79,13 @@ test('powered bow attitude carries wet side spray outward and up instead of aimi
   assert(Math.abs(cat.vx)>Math.abs(ski.vx));
 });
 
-test('side sheets retain older water at fast frame rates and expire after emission stops',()=>{
-  const s=new Spray(new THREE.Scene(),QUALITY.Low),v={...boat('cat'),slip:-6,yawRate:.8},state=sprayState(v),fan=s.fans[0];
-  for(let i=0;i<180;i++)fan.update(1/120,v,i/120,state.left,state);
-  assert(fan.history.at(-1).time<.1);assert(fan.history.length<110);
-  assert([...fan.geometry.attributes.position.array].every(Number.isFinite));
-  const off={...state,left:0,right:0};
-  for(let i=0;i<480;i++)fan.update(1/120,v,1.5+i/120,0,off);
-  assert(!fan.mesh.visible);assert(fan.history.length<110);s.dispose();
-});
-
-test('live spray edge follows the current chine between stored history samples',()=>{
- const s=new Spray(new THREE.Scene(),QUALITY.Low),v={...boat('ski'),steer:1,yawRate:1,slip:-6};
- for(let i=0;i<24;i++){
-  v.z=i*.15;s.update(1/120,v,i/120,true);
-  for(const [j,fan]of s.fans.entries()){
-   const p=s.state.contacts[j],position=fan.geometry.attributes.position;
-   assert(Math.abs(position.getX(0)-p.x)<1e-5);assert(Math.abs(position.getZ(0)-p.z)<1e-5);
-  }
+test('all craft retain falling spray without flat side-sheet meshes',()=>{
+ for(const type of ['ski','seago','cat','tinny']){const scene=new THREE.Scene(),s=new Spray(scene,QUALITY.Low),v={...boat(type),steer:1,slip:-6,yawRate:.8};
+ for(let i=0;i<90;i++){v.z+=v.vz/60;s.update(1/60,v,i/60,true);}
+ assert.equal(s.fans.length,0);assert(s.particles.some(p=>p.life>0));assert([...s.positions].every(Number.isFinite));
+ for(let i=0;i<300;i++)s.update(1/60,{...v,throttle:0,speed:0,steer:0,yawRate:0,slip:0},1.5+i/60,false);
+ assert(s.particles.every(p=>p.life<=0));assert(!s.plume.mesh.visible);s.dispose();
  }
- s.clear();assert(s.fans.every(f=>f.current===null));s.dispose();
 });
 
 test('rear jet retains forward boat momentum while carrying water farther aft through a full falling arc',async()=>{

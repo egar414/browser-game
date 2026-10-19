@@ -1,3 +1,4 @@
+import{tinnyBounce,hullContactSplash}from'./tinny-bounce.js';
 import{SHAFTING,updatePassenger,shaftPitch,shaftRoll,updateShaftStatus,constrainHullWater}from'./shafting.js';
 import{isJet}from'../config.js';
 import{updateCruiser}from'./cruiser.js';
@@ -29,7 +30,7 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldown:0,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;
@@ -86,7 +87,7 @@ export class VehiclePhysics {
     this.planing=damp(this.planing,onPlane*onPlane*(3-2*onPlane),2.5,dt);
     this.wettedFraction=1-this.planing*(1-hydro.minimumWetted);updatePassenger(this,dt);
     this.drive=this.propulsion.update(dt,this,input,time);
-    const sprayTurn=tenderTurn(this,input,dt);
+    const sprayTurn=tenderTurn(this,input,dt),bounce=tinnyBounce(this,dt);
     if (!this.airborne) {
       let forceX=this.drive.force.x,forceZ=this.drive.force.z;
       const forwardForce=forceX*fx+forceZ*fz;
@@ -156,7 +157,7 @@ export class VehiclePhysics {
       // Angular inertia and damping retain a landing/chop response instead of
       // instantly following a prescribed orientation.
       const shaft=shaftPitch(this,input,surfacePitch,dt);
-      const pitchTarget=shaft===null?surfacePitch+lift+plane+trim+sprayTurn.pitch:shaft+sprayTurn.pitch*.4;
+      const pitchTarget=(shaft===null?surfacePitch+lift+plane+trim+sprayTurn.pitch:shaft+sprayTurn.pitch*.4)+bounce.pitch;
       this.pitchRate+=((pitchTarget-this.pitch)*hydro.pitchSpring-this.pitchRate*hydro.pitchDamping)*dt;
       this.pitch+=this.pitchRate*dt;
       const rollTarget=surfaceRoll-this.yawRate*clamp(this.speed/20,0,1)*(isJet(this.type)?.48:.24)+sprayTurn.roll+shaftRoll(this);
@@ -165,14 +166,14 @@ export class VehiclePhysics {
       // As the bow rises, support moves toward the stern. Raise the body origin
       // around that support instead of submerging the transom a metre deep.
       const sternSupportLift=Math.sin(Math.max(0,this.pitch))*(this.type==='tinny'?c.length*TINNY_HANDLING.sternSupport+(SHAFTING.sternPivot-c.length*TINNY_HANDLING.sternSupport)*(this.shaftLoad||0)*clamp(1-Math.abs(this.steer)/.5,0,1):c.length*(handling?.sternSupport??.29))*clamp((this.pitch-.18)/.4,0,1);
-      const supportError=water+sternSupportLift+sprayTurn.lift-this.y;
+      const supportError=water+sternSupportLift+sprayTurn.lift+bounce.lift-this.y;
       const followingWater=waterVelocity*sprayTurn.damping*(hydro.waterFollow||0);
       // Additional immersed volume supplies bounded reserve buoyancy as a crest
       // reaches the tube tops. This changes heave forces, not render position.
       const reserve=clamp(Math.max(0,supportError-(hydro.reserveDepth||Infinity))**2*(hydro.reserveBuoyancy||0),0,hydro.maxReserve||0);
       const supportAcceleration=supportError*c.spring-this.vy*sprayTurn.damping+verticalReaction+followingWater+reserve;
       this.vy+=supportAcceleration*dt;
-      this.y += this.vy * dt;constrainHullWater(this,time);
+      this.y += this.vy * dt;constrainHullWater(this,time);hullContactSplash(this,dt,time);
       if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe(this.type==='tinny'?'Looped the tinny':'Over the balance point');
       let onRamp=false;
       for (const ramp of ramps) {

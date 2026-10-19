@@ -181,6 +181,7 @@ Asset URLs are relative, including for subdirectory hosting.
 | Q / E | Select jet-ski trim positions (tap/hold), outboard trim; aerial pitch |
 | T | Cycle Cruise / Sport / Freestyle riding modes |
 | C | Wide chase / close chase / first-person camera |
+| U (hold) | Look behind; release to restore the selected view |
 | Mouse drag | Orbit camera; automatically recentres |
 | R | Recover in nearby clear water |
 | F | Start or restart the checkpoint race |
@@ -668,3 +669,25 @@ materials in `src/systems/surface-textures.js`, the water blend in `water.js`,
 cloud/day blending in `atmosphere.js`, and terrain scale in
 `scenery-lighting.js`. Asset origin/encoding details are in
 `src/assets/textures/README.md`.
+
+### Continuous tinny bounce, contact spray and rear view
+
+The Tender Rat 225 bounces under powered straight cruising too, with a stronger
+shafting bounce. Sharp turns blend into the existing catch/rebound response.
+It settles off throttle; idle and airborne boats do not receive this support
+oscillation. A shafting downstroke can briefly touch the stern against the
+visible wave surface; the hull-contact constraint bounds penetration rather
+than letting the boat phase through the water.
+
+Crossing hull contacts emit a small splash from the actual sampled contact
+point, with a cooldown and impact threshold. Already emitted water continues
+falling. Flat side-sheet meshes have been removed from every craft; falling
+spray particles, the jet ski's rear plume, low prop wash and fading wakes remain.
+Particle pools have not been enlarged.
+
+Hold **U** to look behind and release it to return immediately to your selected
+camera. It works in both chase views and first person without changing the
+saved camera choice. On phones, hold **REAR**. Blur/pause clears the held input.
+Tune bounce and contact thresholds in `src/vehicles/tinny-bounce.js`, shafting
+clearance in `shafting.js`, and rear framing in `src/systems/camera.js`.
+These are assisted arcade reactions, not measured tender hydrodynamics.

@@ -1,0 +1,24 @@
+import test from'node:test';import assert from'node:assert/strict';import * as THREE from'three';
+import{VehiclePhysics}from'../src/vehicles/physics.js';import{setSeaState}from'../src/config.js';import{minimumHullClearance}from'../src/vehicles/shafting.js';import{tinnyBounce}from'../src/vehicles/tinny-bounce.js';import{ChaseCamera}from'../src/systems/camera.js';
+test('tinny bounces straight ahead, shafts with contact splashes at the hull, and settles off power',()=>{
+ setSeaState('calm',0,true);
+ for(const freestyle of [false,true])for(const hz of [30,60,120]){
+ const events=[],v=new VehiclePhysics('tinny',()=>null,e=>events.push({...e,boatX:v.x,boatZ:v.z}));v.x=-200;v.z=-1000;v.heading=0;let low=Infinity,high=-Infinity,clear=Infinity;
+ for(let i=0;i<hz*12;i++){v.update(1/hz,{throttle:1,steer:0,trim:0,freestyle},i/hz);assert(!v.wipeout&&!v.airborne);if(i>hz*5){low=Math.min(low,v.pitch);high=Math.max(high,v.pitch);clear=Math.min(clear,minimumHullClearance(v,i/hz));}}
+ assert(high-low>(freestyle?.07:.035));if(freestyle)assert(clear>-.07&&clear<.04,'stern touches without phasing the hull under waves');
+ const contacts=events.filter(e=>e.contact);assert(contacts.length>4&&contacts.length<32);assert(contacts.every(e=>Math.hypot(e.x-e.boatX,e.z-e.boatZ)<1.5&&e.impact>.25&&e.impact<=4));
+ for(let i=0;i<hz*5;i++)v.update(1/hz,{throttle:0,steer:0,trim:0,freestyle:false},12+i/hz);assert(v.bounceLoad<.02);v.recover();assert.equal(v.hullHits,0);assert.equal(v.contactDepths,null);
+ }
+});
+test('bounce stays inactive at rest, airborne and on other craft',()=>{
+ for(const change of [{speed:0},{airborne:true},{wipeout:1}]){const v={type:'tinny',speed:10,throttle:1,drive:{wetness:1},...change};for(let i=0;i<120;i++){const b=tinnyBounce(v,1/60);assert.equal(Math.abs(b.lift),0);assert.equal(Math.abs(b.pitch),0);}}
+ assert.deepEqual(tinnyBounce({type:'cat'},1/60),{lift:0,pitch:0});
+});
+test('held rear view reverses camera direction and restores chase/first person immediately on release',()=>{
+ for(const mode of [0,1,2]){const camera=new THREE.PerspectiveCamera(),chase=new ChaseCamera(camera),v={type:'tinny',x:1040,y:1,z:-1770,heading:Math.PI/2,speed:10,pitch:0,shaftLoad:0},input={orbit:0,dragging:false,held:()=>false};
+ chase.update(1/60,v,input,mode);const forward=camera.getWorldDirection(new THREE.Vector3());input.held=()=>true;chase.update(1/60,v,input,mode);const rear=camera.getWorldDirection(new THREE.Vector3());assert(forward.dot(rear)<-.4);assert(chase.rearView);input.held=()=>false;chase.update(1/60,v,input,mode);assert(camera.getWorldDirection(new THREE.Vector3()).dot(forward)>.99);assert(!chase.rearView);
+ }
+});
+test('sportfisher rear chase camera stays outside the longer bow',()=>{
+ const camera=new THREE.PerspectiveCamera(),chase=new ChaseCamera(camera),v={type:'cruiser',x:1040,y:1,z:-1770,heading:0,speed:10},input={orbit:0,held:()=>true};chase.update(1/60,v,input,0);assert(camera.position.z-v.z>12);assert(camera.position.y-v.y>=10);
+});

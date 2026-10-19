@@ -476,3 +476,26 @@ included). This is software-renderer inspection, not a hardware-GPU FPS claim.
 - No real laptop or physical phone was available. Close terrain/vehicles
   remain 3D; generated textures do not establish photorealism or a measured
   reconstruction of Mooloolaba.
+
+## Continuous tender bounce and rear view — 2026-10-19
+
+- 125/125 Node checks and production build passed. Bouncing straight cruise and
+  shafting exercised at 30/60/120 Hz; contact splashes stay at hull samples,
+  penetration is bounded, releasing power settles the stance, and recovery
+  clears contact history. The former always-dry hull assertion was updated for
+  brief, bounded stern touches requested by this feature; full mesh clearance
+  and immersed prop checks remain, alongside new water-contact assertions.
+- Removed flat side-sheet geometry rather than enlarging particle pools. All
+  craft retain live falling spray; emissions expire and clear. Existing rear
+  plume, sharp-turn conditions and nearby world visibility checks still pass.
+- Desktop Chromium driving test passed: tinny straight shaft bounce, repeated
+  hull hits, held U rear chase, release, first-person rear, and manual recovery;
+  inspected bounce/contact and rear-view screenshots. Landscape touch test
+  passed with genuine CDP touchStart/touchEnd on REAR. Initial synthetic pointer
+  dispatch was replaced because it cannot establish a browser pointer capture.
+- Existing multivehicle sharp-spray browser flow passed for cat, tinny and ski,
+  including impact feedback, ordinary ski rear plume, turning and orbiting
+  nearby boats/land. No critical page errors in these driving flows.
+- Linux Chromium with SwiftShader software WebGL, desktop 1100×720 / 960×640
+  and landscape phone emulation 844×390. No physical phone or user laptop was
+  available; these checks do not establish a device frame-rate guarantee.

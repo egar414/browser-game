@@ -90,67 +90,6 @@ class FoamWake {
   dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
 }
 
-class SprayFan {
-  constructor(scene,texture,side,segments) {
-    this.side=side;this.strength=0;this.history=[];this.current=null;this.rows=Math.max(16,segments*2);this.columns=8;
-    const stride=this.columns+1,count=(this.rows+1)*stride,positions=new Float32Array(count*3),uvs=new Float32Array(count*2),indices=[];
-    for(let i=0;i<=this.rows;i++)for(let j=0;j<=this.columns;j++)uvs.set([j/this.columns,i/this.rows],(i*stride+j)*2);
-    for(let i=0;i<this.rows;i++)for(let j=0;j<this.columns;j++){const a=i*stride+j;indices.push(a,a+1,a+stride,a+1,a+stride+1,a+stride);}
-    this.geometry=new THREE.BufferGeometry();this.geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));this.geometry.setAttribute('uv',new THREE.BufferAttribute(uvs,2));this.geometry.setAttribute('aWet',new THREE.BufferAttribute(new Float32Array(count),1));this.geometry.setIndex(indices);
-    this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,
-      uniforms:{uNoise:{value:texture},uTime:{value:0},uStrength:{value:0}},
-      vertexShader:`attribute float aWet;varying float vWet;varying vec2 vUv;void main(){vWet=aWet;vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-      fragmentShader:`varying float vWet;varying vec2 vUv;uniform sampler2D uNoise;uniform float uTime;uniform float uStrength;
-        void main(){float noise=texture2D(uNoise,vUv*vec2(.9,1.4)+vec2(0.,-uTime*.5)).r;
-        float detail=texture2D(uNoise,vUv*vec2(4.,3.)-uTime*.25).r;
-        float grain=texture2D(uNoise,vUv*vec2(23.,17.)+vec2(uTime*.13,0.)).r;
-        float edges=pow(max(sin(vUv.x*3.14159),0.),.45)*(1.-smoothstep(.85,1.,vUv.y));
-        edges*=smoothstep(.01,.08,min(vUv.x,1.-vUv.x)+(detail-.5)*.08);
-        float broken=smoothstep(.18,.78,noise*.5+detail*.22+grain*.28);
-        float alpha=edges*(.2+broken*.8)*(.55+grain*.45)*min(uStrength,1.3)*vWet*.65;
-        if(alpha<.006)discard;
-        gl_FragColor=vec4(mix(vec3(.68,.82,.8),vec3(.98,.99,.95),broken),alpha);
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
-      }`});
-    this.mesh=new THREE.Mesh(this.geometry,this.material);this.mesh.frustumCulled=false;this.mesh.renderOrder=3;scene.add(this.mesh);
-  }
-  update(dt,v,time,strength,state) {
-    if(strength<.001&&!this.history.length){this.current=null;this.mesh.visible=false;return;}
-    this.strength=THREE.MathUtils.lerp(this.strength,strength,1-Math.exp(-dt*9));
-    if(dt>0){
-      const drops=strength>.001?Array.from({length:this.columns+1},(_,j)=>launchSpray(v,state,this.side,()=>j/this.columns)):(this.current?.drops||this.history[0].drops);
-      this.current={time,strength,drops};
-      if(strength>.001&&(!this.history.length||time-this.history[0].time>=1/SIDE_SPRAY.historyHz-1e-6))this.history.unshift(this.current);
-    }
-    while(this.history.length&&(time-this.history.at(-1).time>SIDE_SPRAY.sheetLife+.15||this.history.length>Math.ceil(SIDE_SPRAY.sheetLife*SIDE_SPRAY.historyHz)+4))this.history.pop();
-    const peak=this.history.reduce((max,f)=>Math.max(max,f.strength*clamp(1-(time-f.time)/SIDE_SPRAY.sheetLife)),this.current?.strength||0);
-    this.mesh.visible=peak>.06;
-    if(!this.mesh.visible)return;
-    const p=this.geometry.attributes.position,wet=this.geometry.attributes.aWet;
-    for(let i=0;i<=this.rows;i++){
-      const wanted=time-i/this.rows*SIDE_SPRAY.sheetLife;
-      let newer=this.current||this.history[0],older=newer;
-      for(const f of this.history){older=f;if(f.time>=wanted)newer=f;else break;}
-      const fraction=clamp((wanted-older.time)/(newer.time-older.time||1));
-      const birth=THREE.MathUtils.lerp(older.time,newer.time,fraction),age=time-birth;
-      const frameStrength=THREE.MathUtils.lerp(older.strength,newer.strength,fraction);
-      for(let j=0;j<=this.columns;j++){
-        const a=older.drops[j],b=newer.drops[j],mix=(x,y)=>x+(y-x)*fraction;
-        // Retain the actual past contact position and motion through the turn.
-        // Broad sheets curve behind the craft instead of swivelling as one jet.
-        const px=mix(a.x,b.x)+mix(a.vx,b.vx)*age,pz=mix(a.z,b.z)+mix(a.vz,b.vz)*age;
-        const py=mix(a.y,b.y)+mix(a.vy,b.vy)*age-4.905*age*age,water=waveHeight(px,pz,time);
-        p.setXYZ(i*(this.columns+1)+j,px,Math.max(water+.025,py),pz);
-        wet.setX(i*(this.columns+1)+j,clamp((py-water)*7)*clamp(frameStrength/(v.type==='cat'?.65:.8)));
-      }
-    }
-    p.needsUpdate=true;wet.needsUpdate=true;this.material.uniforms.uTime.value=time;this.material.uniforms.uStrength.value=clamp(v.type==='cat'?Math.sqrt(peak/1.3):peak/1.3,.1,1.2);
-  }
-
-  dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
-}
-
 class PumpStream {
   constructor(scene){
     this.rows=14;this.sides=8;const positions=new Float32Array((this.rows+1)*this.sides*3),indices=[];
@@ -193,7 +132,7 @@ export class Spray {
     this.points=new THREE.Points(g,this.material);this.points.frustumCulled=false;this.points.renderOrder=4;scene.add(this.points);
     this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,quality.plumeCapacity??Math.min(3200,Math.round(1600+quality.particles*.8)),quality.plumeDensity??.65);
     this.wake=new FoamWake(scene,this.texture,quality.wakeSamples);
-    this.fans=[new SprayFan(scene,this.texture,-1,quality.fanSegments),new SprayFan(scene,this.texture,1,quality.fanSegments)];
+    this.fans=[]; // Removed flat spray sheets; retain falling droplets and rear plume.
     this.state={left:0,right:0,rate:0};this.time=0;this.waterImpacts=0;this.impactBudget=0;
   }
   clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.current=null;fan.mesh.visible=false;}}
@@ -253,7 +192,7 @@ export class Spray {
     for(const attr of Object.values(this.points.geometry.attributes))attr.needsUpdate=true;
     for(const p of this.plume.impacts.filter((_,i)=>i%3===0))this.impact(p.x,p.z,p.strength);
     const visibleState=dt>0?this.state:{...this.state,rate:0};this.wake.update(dt,v,time,visibleState);
-    this.fans[0].update(dt,v,time,this.state.left,this.state);this.fans[1].update(dt,v,time,this.state.right,this.state);
+
   }
   resize(height,fov,pixelRatio){this.material.uniforms.uScale.value=height*pixelRatio/(2*Math.tan(THREE.MathUtils.degToRad(fov)*.5));}
   dispose(){this.points.removeFromParent();this.points.geometry.dispose();this.material.dispose();this.stream.dispose();this.plume.dispose();this.wake.dispose();this.fans.forEach(f=>f.dispose());this.texture.dispose();}
