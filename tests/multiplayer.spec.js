@@ -73,6 +73,18 @@ test('email sending quota errors show the owner setting instead of repeated sign
  await p.locator('#online-email').fill('fixture@example.test');await p.locator('#online-password').fill('Fixture-password-123');await p.getByRole('button',{name:'CREATE ACCOUNT',exact:true}).click();
  await expect(p.locator('#online-message')).toContainText('Confirm email');expect(emails).toBe(1);await expect(p.locator('#online-message')).toContainText('stop retrying');
 });
+test('creator title sits above the local player name, follows driving and hides in first person and on sign-out',async({page:p})=>{
+ test.setTimeout(150000);const f=await database();const errors=[];p.on('pageerror',e=>errors.push(e.message));
+ try{
+  await f.db.query('insert into public.er_creators(user_id) values($1)',[users[0]]);
+  await boot(p,f,users[0],'creator@example.test');await p.locator('#online-name').fill('My Rat');await p.getByRole('button',{name:'JOIN PUBLIC WORLD',exact:true}).click();await p.locator('[data-online="drive"]').click();
+  const plate=p.locator('#local-player-name');await expect(plate).toBeVisible();await expect(plate.locator('.player-title')).toHaveText('★ CREATOR');await expect(plate.locator('.player-name')).toHaveText('My Rat');
+  const title=await plate.locator('.player-title').boundingBox(),name=await plate.locator('.player-name').boundingBox();expect(title.y+title.height).toBeLessThanOrEqual(name.y+1);
+  await p.keyboard.down('KeyW');await expect.poll(async()=>(await status(p)).speed,{timeout:30000}).toBeGreaterThan(5);await p.keyboard.up('KeyW');await expect(plate).toBeVisible();await p.screenshot({path:'test-results/creator-overhead-name.png'});
+  await p.keyboard.press('KeyP');await expect(plate).toBeHidden();await p.keyboard.press('KeyP');await expect(plate).toBeVisible();
+  await p.locator('#online-status').click();await p.getByRole('button',{name:'SIGN OUT',exact:true}).click();await p.getByRole('button',{name:'BACK TO GAME',exact:true}).click();await expect(plate).toBeHidden();expect(errors).toEqual([]);
+ }finally{await f.db.close();}
+});
 test('missing database explains setup and allows normal free roam',async({page:p})=>{
  test.setTimeout(120000);const errors=[];p.on('pageerror',e=>errors.push(e.message));
  await p.route(`${host}/rest/v1/rpc/**`,route=>route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({code:'PGRST202',message:'Function missing'})}));

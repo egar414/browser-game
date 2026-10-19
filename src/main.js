@@ -269,7 +269,7 @@ try {
     if(firstPerson&&eye){eye.x+=Math.sin(cameraView.heading)*.42;eye.z+=Math.cos(cameraView.heading)*.42;}
     chase.update(dt,cameraView,input,firstPerson?2:deckPoint?1:settings.camera,state==='home',eye,firstPerson&&fishing.active?offshore.float.position:null);
     const day=dayClock.status;atmosphere.update(simulationTime,camera.position,day);sun.color.set(day.sunColour);sun.intensity=day.sunIntensity;hemi.intensity=day.ambient;scene.fog.color.set(day.fog);water.setDay(day);
-    onlineWorld.update(dt,now,render,camera);
+    onlineWorld.update(dt,now,render,camera,{playing:state==='playing',firstPerson,eye});
     dolphins.render(simulationTime,render,qualityName);people.render(dt,simulationTime,render,qualityName);
     spray.resize(innerHeight,camera.fov,renderer.getPixelRatio());
     sun.position.set(vehicle.x+SUN_DIRECTION.x*400,SUN_DIRECTION.y*400,vehicle.z+SUN_DIRECTION.z*400);sun.target.position.set(vehicle.x,0,vehicle.z);

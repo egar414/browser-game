@@ -47,8 +47,9 @@ account UUID from the signed-in session; no email or password needs to be shared
 The script installs `supabase/migrations/002_creator.sql` and inserts only that
 UUID into `er_creators`. Normal API clients cannot read or write the role table.
 
-Creator accounts receive a gold name tag visible to other players, every garage
-design/tuning option, and 2× local garage XP. The perk flag is session-derived and
+Creator accounts receive a gold CREATOR title above their overhead player name,
+visible to themselves in chase view and to other players, every garage
+design/tuning option, and 2× local garage XP. The local nameplate hides in first person and after sign-out. The perk flag is session-derived and
 excluded from saved settings. Sign-out/revocation removes access to any unearned
 garage options. This gives no account-management or database privileges and
 changes no online damage rules. `tests/creator.test.js` verifies owner-only grants,
