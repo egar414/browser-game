@@ -34,6 +34,10 @@ import{Fishing,FISHING_LAUNCH}from'./systems/fishing.js';
 import{SportfishingTraffic}from'./systems/sportfishing-traffic.js';
 import{OffshoreView}from'./systems/offshore-view.js';
 import { BarGuide, BAR_LAUNCH } from './systems/bar-guide.js';
+import {OnlineClient} from './systems/online-client.js';
+import {OnlineUI} from './systems/online-ui.js';
+import {OnlineWorld} from './systems/online-world.js';
+import {packPose} from './systems/network-state.js';
 
 const settings=loadSettings();const dayClock=new DayCycle(settings.dayMode);validLoadout(settings);setSeaState(settings.seaState,0,true);let state='home',controlsFrom='home',ready=false,renderer,model,water,spray,environment,hemi,dolphins,people,qualityName='Medium',sun;
 let playground,barGuide,locals,cruisers,offshore,speedRun,garageReturn=null;
@@ -54,6 +58,7 @@ function trimKey(type){return {ski:'trimSki',cat:'trimCat',tinny:'trimTinny',cru
 function setRideMode(mode){vehicle.setMode(mode);settings.rideMode=vehicle.rideMode;persistTrim();saveSettings(settings);document.getElementById('ride-mode').value=mode;ui.toast(`${RIDE_MODES[mode].name} mode`,RIDE_MODES[mode].description);}
 function persistTrim(){const key=trimKey(vehicle.type);if(settings[key]!==vehicle.trimDegrees){settings[key]=vehicle.trimDegrees;saveSettings(settings);}}
 const input=new Input(code=>{
+  if(typeof onlineUI!=='undefined'&&!onlineUI.root.classList.contains('hidden')){if(code==='Escape')onlineUI.hide();return;}
   if(code==='Blur'){if(state==='playing')pause();return;}
   if(code==='Escape'){if(state==='controls')closeControls();else if(state==='paused')resume();else pause();return;}
   if(code==='KeyH'){showControls();return;}
@@ -83,6 +88,14 @@ const ui=new UI(settings,{
   race(){if(['cruiser','racer'].includes(vehicle.type)){ui.toast('Choose a smaller craft for canal racing');return;}if(state==='playing'){fishing.cancel();battle.cancel();activities.startRace(vehicle);}},challenge(){if(['cruiser','racer'].includes(vehicle.type)){ui.toast('Choose a smaller craft for tricks');return;}if(state==='playing'){fishing.cancel();battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,meetLocals,visitFishing,visitWaterfront,visitDolphins,visitCoast,visitSpeedRun,meetBigBoats,
 });
 new TouchControls(input);
+const online=new OnlineClient({getPose:()=>packPose(vehicle,settings,deck,state!=='home')});
+const onlineWorld=new OnlineWorld(scene,online);
+let onlineFrom='home';
+const onlineUI=new OnlineUI(online,{
+ open(){onlineFrom=state;if(state==='playing')pause();input.clear();},
+ close(){input.clear();if(onlineFrom==='playing')resume();},
+ launch(){if(state==='home')play();else resume();},
+});
 const activities=new Activities(scene,settings,(title,subtitle)=>ui.toast(title,subtitle));
 const battle=new SprayBattle(scene,event=>{
   if(event.type==='score')activities.event(event);
@@ -249,6 +262,7 @@ try {
     if(firstPerson&&eye){eye.x+=Math.sin(cameraView.heading)*.42;eye.z+=Math.cos(cameraView.heading)*.42;}
     chase.update(dt,cameraView,input,firstPerson?2:deckPoint?1:settings.camera,state==='home',eye,firstPerson&&fishing.active?offshore.float.position:null);
     const day=dayClock.status;atmosphere.update(simulationTime,camera.position,day);sun.color.set(day.sunColour);sun.intensity=day.sunIntensity;hemi.intensity=day.ambient;scene.fog.color.set(day.fog);water.setDay(day);
+    onlineWorld.update(dt,now,render,camera);
     dolphins.render(simulationTime,render,qualityName);people.render(dt,simulationTime,render,qualityName);
     spray.resize(innerHeight,camera.fov,renderer.getPixelRatio());
     sun.position.set(vehicle.x+SUN_DIRECTION.x*400,SUN_DIRECTION.y*400,vehicle.z+SUN_DIRECTION.z*400);sun.target.position.set(vehicle.x,0,vehicle.z);
@@ -257,5 +271,5 @@ try {
   }
   requestAnimationFrame(frame);
   // Read-only diagnostics for browser acceptance tests. No scoring or teleport cheats in the shipped game.
-  window.__ESTUARY__={get status(){return {ready,state,simulationTime,features:'shaft-balance-wildlife-first-person',day:dayClock.status,dolphins:{visible:dolphins.visible},pedestrians:{visible:people.visibleCount,focus:people.focusId,people:people.status},camera:{rearView:!!chase.rearView,mode:settings.camera,position:{x:camera.position.x,y:camera.position.y,z:camera.position.z}},deck:{active:deck.active,x:deck.x,z:deck.z},fishing:fishing.status(vehicle),sportfishers:cruisers.status,locals:{...locals.status,visible:locals.visibleCount},moorings:environment.userData.moorings.status,bar:barGuide.status(vehicle),targets:playground.status,airTrick:{pose:vehicle.airTricks.pose,completed:[...vehicle.airTricks.completed]},battle:battle.status,seaState:settings.seaState,sea:oceanReport(simulationTime),scenery:environment.userData.stats,detailedCraft:!!model?.userData.blenderShell,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,roll:vehicle.roll,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,shaft:vehicle.shaft?{...vehicle.shaft}:null,passengerAft:vehicle.passengerAft,hullCorrection:vehicle.hullCorrection,bounce:{load:vehicle.bounceLoad,compression:vehicle.bounceCompression,hits:vehicle.hullHits,lastHit:vehicle.lastHullHit},planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,waveLaunch:!!vehicle.waveLaunch,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{waterImpacts:spray.waterImpacts,turnGate:spray.state.turnGate,rearPlume:spray.plume.mesh.visible,fallingPackets:spray.plume.falling,plumePackets:spray.plume.geometry.instanceCount,left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,graphics:{textures:surfaceTextureStatus(),pixelRatio:renderer.getPixelRatio(),shadows:renderer.shadowMap.enabled,shadowSize:sun.shadow.mapSize.x,reflectionHz:water.reflectionHz,reflectionCaptures:water.reflectionCaptures,groundContacts:environment.userData.stats.contactShadows},fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
+  window.__ESTUARY__={get status(){return {ready,state,simulationTime,online:{...online.status,visibleCrafts:[...onlineWorld.models.values()].filter(e=>e.model.visible).length},features:'shaft-balance-wildlife-first-person',day:dayClock.status,dolphins:{visible:dolphins.visible},pedestrians:{visible:people.visibleCount,focus:people.focusId,people:people.status},camera:{rearView:!!chase.rearView,mode:settings.camera,position:{x:camera.position.x,y:camera.position.y,z:camera.position.z}},deck:{active:deck.active,x:deck.x,z:deck.z},fishing:fishing.status(vehicle),sportfishers:cruisers.status,locals:{...locals.status,visible:locals.visibleCount},moorings:environment.userData.moorings.status,bar:barGuide.status(vehicle),targets:playground.status,airTrick:{pose:vehicle.airTricks.pose,completed:[...vehicle.airTricks.completed]},battle:battle.status,seaState:settings.seaState,sea:oceanReport(simulationTime),scenery:environment.userData.stats,detailedCraft:!!model?.userData.blenderShell,vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,roll:vehicle.roll,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,shaft:vehicle.shaft?{...vehicle.shaft}:null,passengerAft:vehicle.passengerAft,hullCorrection:vehicle.hullCorrection,bounce:{load:vehicle.bounceLoad,compression:vehicle.bounceCompression,hits:vehicle.hullHits,lastHit:vehicle.lastHullHit},planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,waveLaunch:!!vehicle.waveLaunch,slip:vehicle.slip,wipeout:vehicle.wipeout,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{waterImpacts:spray.waterImpacts,turnGate:spray.state.turnGate,rearPlume:spray.plume.mesh.visible,fallingPackets:spray.plume.falling,plumePackets:spray.plume.geometry.instanceCount,left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,graphics:{textures:surfaceTextureStatus(),pixelRatio:renderer.getPixelRatio(),shadows:renderer.shadowMap.enabled,shadowSize:sun.shadow.mapSize.x,reflectionHz:water.reflectionHz,reflectionCaptures:water.reflectionCaptures,groundContacts:environment.userData.stats.contactShadows},fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
 } catch(error){console.error(error);ui.error(`WebGL could not start: ${error.message}. Use a current Chrome, Edge, Firefox or Safari with hardware acceleration enabled.`);}

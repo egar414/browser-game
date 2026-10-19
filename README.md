@@ -8,6 +8,43 @@ performance offshore racing cat. Cruise the Mooloolah estuary and its connected
 northern coast based on OpenStreetMap shorelines. No account, API key or external
 asset service is required to play.
 
+## Optional online worlds and accounts
+
+Open **ONLINE / ACCOUNT** from the garage, HUD or pause screen. Email/password
+accounts use Supabase Auth; confirmation emails are enabled on the connected
+project. The public world and private 8-character-code rooms each hold up to
+8 signed-in players. A private room expires after 24 hours. One account controls
+one craft; sleeping/disconnected memberships expire after 45 seconds.
+
+The owner must first follow [the multiplayer setup guide](public/multiplayer-setup.html):
+run `supabase/migrations/001_multiplayer.sql` in Supabase SQL Editor and set Auth's
+Site URL / allowed redirect URL to `https://egar414.github.io/browser-game/`.
+The same SQL is downloadable as `public/multiplayer.sql`; a test checks they match.
+No secret/service-role key is needed or accepted by the frontend. The configured
+`public/multiplayer-config.json` contains only the intentionally public publishable
+key. Deployments can override it with `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY` at build time.
+
+The client loads Auth only when Online is opened. Movement is client-simulated,
+exchanged through authenticated, rate-limited database RPCs approximately 3 times
+per second and interpolated for rendering. Requests never block the physics loop;
+network errors remove stale craft and retry with backoff. There is no arbitrary
+client Broadcast, direct table access, public account email list or password table.
+This is not an authoritative anti-cheat server. Player hull collisions and flooding,
+AI traffic, races, scoring, fishing and selected weather are not synchronized.
+Remote boats currently have rider, trim, paint and deck animation but no extra
+particle systems, to keep the first release light on laptops. All normal
+single-player features remain available without signing in.
+
+Run `node --test tests/multiplayer.test.js` for PostgreSQL (PGlite) migration,
+permissions, privacy, capacity, input validation and smoothing checks. Run
+`NO_PROXY=127.0.0.1,localhost npx playwright test tests/multiplayer.spec.js` for
+two-browser gameplay and missing-backend fallback. That browser suite routes Auth
+HTTP through a local fixture and runs the actual SQL in PGlite: it does not prove
+live email delivery or production two-account connectivity. Test those separately
+after the owner's database setup. The cloud runner uses Chromium software WebGL;
+its frame rate is not representative of a laptop GPU.
+
 ## Rear trim plume and big-boat flooding
 
 The jet ski's visible rear/trim plume now counts as water aboard when its falling
