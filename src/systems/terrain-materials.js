@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {surfaceTexture} from './surface-textures.js';
 // Small, original tileable textures, bundled with the game as procedural code.
 export function groundMaterial(colour,kind){
   const n=128,heights=new Float32Array(n*n),pixels=new Uint8Array(n*n*4),normal=new Uint8Array(n*n*4);
@@ -18,5 +19,5 @@ export function groundMaterial(colour,kind){
   }
   const texture=data=>{const t=new THREE.DataTexture(data,n,n);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearMipmapLinearFilter;t.generateMipmaps=true;t.needsUpdate=true;return t;};
   const map=texture(pixels);map.colorSpace=THREE.SRGBColorSpace;
-  const m=new THREE.MeshStandardMaterial({color:colour,map,normalMap:texture(normal),normalScale:new THREE.Vector2(.32,.32),roughness:1});m.userData.ground=true;return m;
+  const m=new THREE.MeshStandardMaterial({color:kind==='grass'?'#eef0de':'#ffffff',map:surfaceTexture(kind),normalMap:texture(normal),normalScale:new THREE.Vector2(.32,.32),roughness:1});m.userData.ground=true;m.userData.surfaceKind=kind;map.dispose();return m;
 }

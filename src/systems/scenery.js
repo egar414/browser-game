@@ -8,6 +8,7 @@ import { createMooredTinnies } from './moored-boats.js';
 import {bridgeLayout} from './bridge-layout.js';
 import { buildMappedBuildings, roofMaterial, facadeWindowMaterial } from './architecture.js';
 import { groundMaterial } from './terrain-materials.js';
+import {coastalMaterial} from './surface-textures.js';
 import { box, tube } from '../vehicles/models.js';
 import { mapData, lands, landAt, pointInPoly, edgeDistance } from './geography.js';
 import { BAR_RAMP, rampProfile, rampBaseHeight } from '../vehicles/ramps.js';
@@ -27,7 +28,7 @@ function seeded(seed){let s=seed;return()=>((s=Math.imul(s,1664525)+1013904223|0
 export function buildEstuaryScenery(scene,quality,solids){
   const root=new THREE.Group();scene.add(root);const contacts=[];
   const sand=groundMaterial(ART.sand,'sand'),grass=groundMaterial(ART.grass,'grass'),park=groundMaterial(ART.park,'grass'),road=material(ART.road);
-  const concrete=material('#c3c4b6'),timber=material('#92836c'),navy=material('#263e4f');
+  const concrete=material('#c3c4b6'),timber=coastalMaterial('timber'),navy=material('#263e4f');
   const walls=ART.walls.map(material),roofs=ART.roofs.map(roofMaterial);
   walls.forEach(m=>m.userData.stylizedWall=quality.trees>.6);
   const garden=material(ART.garden),fence=material(ART.fence),homeGlass=facadeWindowMaterial();
@@ -250,12 +251,12 @@ export function buildEstuaryScenery(scene,quality,solids){
   }
   const updateTinnies=createMooredTinnies(root,tinnySites,undefined,quality.trees>.9?650:quality.trees>.6?480:320);updateTinnies(0,mapData.spawn);root.userData.update=updateTinnies;root.userData.moorings=updateTinnies.fleet;
   // Mapped entrance breakwater, dressed with original interlocking stone blocks.
-  const stone=material('#697575'),stoneGeo=new THREE.IcosahedronGeometry(1,1),rockSites=[];
+  const stone=coastalMaterial('rock'),stoneGeo=new THREE.IcosahedronGeometry(1,1),rockSites=[];
   for(const wall of mapData.breakwaters)for(let i=1;i<wall.points.length;i++){
     const a=wall.points[i-1],b=wall.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);
     for(let d=0;d<len;d+=2.2)for(const side of [-1,0,1])rockSites.push([a[0]+(b[0]-a[0])*d/len+(b[1]-a[1])/len*side*1.1,.2+(side===0?.6:0)+random()*.4,a[1]+(b[1]-a[1])*d/len-(b[0]-a[0])/len*side*1.1]);
   }
-  const rocks=new THREE.InstancedMesh(stoneGeo,stone,rockSites.length);rockSites.forEach(([x,y,z],i)=>{const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(random(),random()*6,random()));matrix.compose(new THREE.Vector3(x,y,z),q,new THREE.Vector3(1.3+random()*.5,.7+random()*.5,1.2+random()*.7));rocks.setMatrixAt(i,matrix);rocks.setColorAt(i,new THREE.Color().setHSL(.48,.045,.26+random()*.14));});rocks.computeBoundingSphere();rocks.castShadow=rocks.receiveShadow=true;root.add(rocks);
+  const rocks=new THREE.InstancedMesh(stoneGeo,stone,rockSites.length);rockSites.forEach(([x,y,z],i)=>{const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(random(),random()*6,random()));matrix.compose(new THREE.Vector3(x,y,z),q,new THREE.Vector3(1.3+random()*.5,.7+random()*.5,1.2+random()*.7));rocks.setMatrixAt(i,matrix);rocks.setColorAt(i,new THREE.Color().setHSL(.48,.045,.65+random()*.18));});rocks.computeBoundingSphere();rocks.castShadow=rocks.receiveShadow=true;root.add(rocks);
   function sign(text,x,y,z,width){
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;const ctx=canvas.getContext('2d');ctx.fillStyle='#254d51';ctx.fillRect(0,0,512,96);ctx.fillStyle='#f4e8cb';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 36px sans-serif';ctx.fillText(text,256,48,490);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(width,width*96/512),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));m.position.set(x,y,z);root.add(m);

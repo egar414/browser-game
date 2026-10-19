@@ -42,3 +42,9 @@ TikTok overlays, logos or audio are distributed. All new tinny meshes, roof and
 window atlases, leaf masks and stone dressing are original procedural work.
 Additional residential and breakwater geometry comes from the same OSM extracts
 and remains covered by the ODbL database attribution above.
+
+The 2026-10-19 coastal material pass uses original image-generation output for
+water, panoramic clouds, sand, grass, rock and timber. These invented images are
+not Mooloolaba aerial/satellite photographs and contain no copied logos or
+external stock art. They are shipped locally as six WebP files; origin and
+asset preparation are recorded in `src/assets/textures/README.md`.

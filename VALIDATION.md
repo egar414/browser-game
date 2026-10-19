@@ -451,3 +451,28 @@ included). This is software-renderer inspection, not a hardware-GPU FPS claim.
 - Search Console ownership verification and indexing requests were not
   performed. No Google verification token was supplied. Published crawlable
   content and metadata do not establish Google indexing or ranking.
+
+## Generated coastal textures — 2026-10-19
+
+- Node: 122/122 checks passed; production Vite build passed.
+- Actual Chromium interaction via `tests/coastal-textures.spec.js` passed:
+  six generated WebP assets loaded successfully; selected/driven jet ski;
+  visited waterfront and bar; changed Low → Medium → Low and
+  daylight → sunset → night → daylight; no repeated image requests during
+  quality changes; blocked the water image and reloaded to verify a ready,
+  playable neutral-texture fallback. No critical page or shader errors.
+- Inspected browser screenshots of the coast, sky, water, sunset and night.
+  Caught and fixed immutable WebGL texture storage retaining 1px fallback
+  colours: releasing that allocation before full-size upload restored the
+  generated images. Sky/cloud reflections, surface ripples and timber/ground
+  detail are visible in the corrected browser capture.
+- Linux Chromium, headless SwiftShader software WebGL, 1100×720 viewport,
+  Low pixel ratio .65. A sampled bar frame reported ~10 FPS, 135 draw calls,
+  1,684,351 triangles. This is software-renderer test evidence, not a stable
+  benchmark or a promise of real-laptop/mobile performance. No new scene
+  objects or geometry were added; water adds texture lookups while the photo
+  sky skips daytime procedural cloud noise. The added texture payload is
+  703 KiB, approximately 17 MiB RGBA GPU storage including mipmaps.
+- No real laptop or physical phone was available. Close terrain/vehicles
+  remain 3D; generated textures do not establish photorealism or a measured
+  reconstruction of Mooloolaba.

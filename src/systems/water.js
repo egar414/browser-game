@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {surfaceTexture,SKY_TEXTURE_GLSL} from './surface-textures.js';
 import{COASTAL_STYLE as ART,glslColour}from'./art-direction.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { WAVES, WORLD, WAVE_FIELD, seaAmplitude } from '../config.js';
@@ -45,7 +46,7 @@ export class Water {
     field.minFilter=field.magFilter=THREE.LinearFilter;field.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({
       uniforms:{
-        uDaylight:{value:1},uSkyHorizon:{value:new THREE.Color(ART.skyHorizon)},uSkyZenith:{value:new THREE.Color(ART.skyZenith)},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
+        uSurface:{value:surfaceTexture('water')},uSkyPhoto:{value:surfaceTexture('sky')},uSurfaceReady:{value:0},uSkyReady:{value:0},uDaylight:{value:1},uSkyHorizon:{value:new THREE.Color(ART.skyHorizon)},uSkyZenith:{value:new THREE.Color(ART.skyZenith)},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(WORLD.minX,WORLD.minZ,width,depth)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
         uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
         uReflection:{value:null},uReflectionMatrix:{value:new THREE.Matrix4()},uReflect:{value:0},
         uHull:{value:new THREE.Vector4(0,0,1,2)},uHeading:{value:0},uContact:{value:1},
@@ -64,6 +65,8 @@ export class Water {
           gl_Position=projectionMatrix*viewMatrix*vec4(p,1.);
         }`,
       fragmentShader:`
+        uniform sampler2D uSurface;uniform sampler2D uSkyPhoto;uniform float uSurfaceReady;uniform float uSkyReady;
+        ${SKY_TEXTURE_GLSL}
         uniform float uDaylight;uniform vec3 uSkyHorizon;uniform vec3 uSkyZenith;uniform float uTime;uniform vec4 uMapBounds;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
         uniform sampler2D uReflection;uniform float uReflect;uniform vec4 uHull;uniform float uHeading;uniform float uContact;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;
@@ -80,8 +83,15 @@ export class Water {
           float bed=.82+.18*sin(p.x*.13+sin(p.y*.16))*sin(p.y*.18);
           vec3 deep=mix(${glslColour(ART.waterDeep)},${glslColour(ART.waterShallow)}*bed,smoothstep(.01,.78,shore));
           float bank=vBank;deep=mix(deep,vec3(.13,.37,.27)*bed,bank*.63);
+          // Two slow, opposing flows break up the photograph's repetition.
+          // Geometry and buoyancy still use the shared analytic wave field.
+          vec3 photoA=texture2D(uSurface,p*.038+vec2(uTime*.006,-uTime*.003)+ripples*.06).rgb;
+          vec3 photoB=texture2D(uSurface,p*.071+vec2(-uTime*.004,uTime*.005)).rgb;
+          float surfaceGrain=clamp(dot(mix(photoA,photoB,.35),vec3(.2126,.7152,.0722))*4.,.55,1.65);
+          deep*=mix(1.,surfaceGrain,.38*uSurfaceReady*(.35+.65*micro));
           vec3 reflected=reflect(-view,n);
           vec3 sky=mix(uSkyHorizon,uSkyZenith,pow(max(reflected.y,0.),.42));
+          if(uSkyReady>.5){vec3 photoSky=coastalSky(uSkyPhoto,reflected);sky=mix(sky,mix(uSkyHorizon*.65,photoSky,uDaylight)*(.12+.88*uDaylight),.85*smoothstep(.05,.4,uDaylight));}
           vec3 reflection=sky;
           if(uReflect>.5){
             vec2 uv=vReflection.xy/vReflection.w+ripples*.065+vNormal.xz*.028;
@@ -91,6 +101,9 @@ export class Water {
           vec3 colour=mix(deep*(.2+uDaylight*.8),reflection,.12+fresnel*.77);
           float crest=smoothstep(.15,.9,vWorld.y)*.07;
           colour+=vec3(.08,.31,.26)*crest;
+          // Small texture reflections read as ripples, never as a white foam sheet.
+          float photoGlint=smoothstep(.22,.65,max(photoA.r,max(photoA.g,photoA.b)));
+          colour+=vec3(.12,.15,.14)*photoGlint*uSurfaceReady*micro*uDaylight;
           vec3 halfVector=normalize(view+uSun);
           float spec=pow(max(dot(n,halfVector),0.),350.);
           float sheen=pow(max(dot(n,halfVector),0.),45.);
@@ -137,7 +150,7 @@ export class Water {
     this.material.uniforms.uReflect.value=0;
   }
   update(t,x,z,v) {
-    const u=this.material.uniforms;u.uTime.value=t;u.uSea.value=seaAmplitude(t);u.uCenter.value.set(x,z);
+    const u=this.material.uniforms;u.uSurfaceReady.value=u.uSurface.value.userData.loaded?1:0;u.uSkyReady.value=u.uSkyPhoto.value.userData.loaded?1:0;u.uTime.value=t;u.uSea.value=seaAmplitude(t);u.uCenter.value.set(x,z);
     if(v){u.uHull.value.set(x,z,v.config.width*.72,v.config.length*.62);u.uHeading.value=v.heading;u.uContact.value=v.airborne?Math.max(0,1-v.y/4):1;}
   }
   setDay(day){const u=this.material.uniforms;u.uDaylight.value=day.daylight;u.uSkyHorizon.value.set(day.horizon);u.uSkyZenith.value.set(day.zenith);}

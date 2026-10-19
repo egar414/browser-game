@@ -82,8 +82,8 @@ level in Pause → Visual quality. Actual frame rates depend on the device.
 
 Tune rendering budgets in `QUALITY` in `src/config.js`, procedural ground/contact
 shade in `src/systems/scenery-lighting.js`, and sun/ambient light in `src/main.js`.
-All new surface detail is generated locally; there are no extra asset downloads,
-API keys, third-party plugins or accounts needed.
+Coastal surface images are bundled with the game and cached after loading;
+no external art host, API key, third-party plugin or account is needed.
 
 ## Free-roam local boaters
 
@@ -643,3 +643,28 @@ it; pushing past the balance point animates a backward tumble, breaks the combo
 and automatically recovers in safe water. R still recovers manually. On touch,
 use GO + LIFT + TRIM UP. Loop buildup, decay and rotation rate live in `SHAFTING`.
 This is an arcade manoeuvre, not a validated prediction of real tender behaviour.
+
+### Generated realistic coastal texture pass
+
+The game now bundles original generated photographic-style water, panoramic
+clouds, sand, coastal grass, rock and jetty timber. The six WebP textures add
+about 703 KiB compressed and are shared across world/quality rebuilds instead
+of being downloaded again. Vite's fingerprinted asset URLs support caching.
+Sky uses the existing single background dome; on Low, water also samples it
+for cloud reflections without an extra scene capture. Daylight and sunset
+colour the backdrop, while night retains the procedural stars.
+
+The animated ocean and boat buoyancy still share the same analytic waves;
+the water photograph adds two drifting scales of surface detail and highlights.
+Ground keeps lightweight normal/macro variation. Boats, nearby houses and land
+remain 3D so driving/collision/exploration work. This is a material improvement,
+not a replacement for geometry or a claim of photorealistic rendering or faster
+FPS. Existing Low/Auto resolution and scene batching remain in effect.
+
+The loader waits for textures and craft before Play, tolerates failed image
+loads with neutral surfaces, and exposes loaded/failed texture names in
+`window.__ESTUARY__.status.graphics.textures`. Tune URLs, loading and shared
+materials in `src/systems/surface-textures.js`, the water blend in `water.js`,
+cloud/day blending in `atmosphere.js`, and terrain scale in
+`scenery-lighting.js`. Asset origin/encoding details are in
+`src/assets/textures/README.md`.

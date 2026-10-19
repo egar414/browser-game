@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// Original procedural detail: no downloaded imagery or extra texture requests.
+// Shared photographic surface maps plus lightweight large-scale variation.
 export function finishGroundMaterial(material){
  if(!material.userData.ground)return;
  material.onBeforeCompile=shader=>{
@@ -10,6 +10,10 @@ export function finishGroundMaterial(material){
    float groundHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
    float groundNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(groundHash(i),groundHash(i+vec2(1.,0.)),f.x),mix(groundHash(i+vec2(0.,1.)),groundHash(i+1.),f.x),f.y);}
   `+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`
+   vec4 sampledDiffuseColor=texture2D(map,vGroundWorld.xz*${material.userData.surfaceKind==='grass'?'.55':'.7'});
+   diffuseColor*=sampledDiffuseColor;
+  `);
   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
    vec2 groundP=vGroundWorld.xz;
    float groundMacro=groundNoise(groundP*.034)*.7+groundNoise(groundP*.13+51.)*.3;
@@ -18,7 +22,7 @@ export function finishGroundMaterial(material){
    diffuseColor.rgb*=mix(.90,1.12,groundMacro)*(1.+(groundGrain-.5)*.055*groundNear);
   `);
  };
- material.customProgramCacheKey=()=> 'sculpted-coastal-ground-v2';
+ material.customProgramCacheKey=()=> `photographic-coastal-ground-v3-${material.userData.surfaceKind}`;
 }
 
 // One instanced, feathered contact-shadow draw anchors houses and trees even
