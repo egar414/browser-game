@@ -1,6 +1,6 @@
 import{waveHeight}from'../config.js';
-import{bodyVector,bodyPoint}from'./propulsion.js';
-export const SHAFTING={balancePitch:1.28,lowerPitch:.98,upperPitch:1.49,minimumSpeed:2.4,throttleBalance:.56,throttleMoment:.62,speedMoment:.045,speedTarget:7.2,sternPivot:1.10,passengerResponse:2.4};
+import{bodyPoint}from'./propulsion.js';
+export const SHAFTING={balancePitch:1.28,lowerPitch:.98,upperPitch:1.49,minimumSpeed:2.4,throttleBalance:.56,throttleMoment:.62,speedMoment:.045,speedTarget:7.2,sternPivot:1.10,hullClearance:.12,passengerResponse:2.4};
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
 export function updatePassenger(v,dt){
@@ -36,7 +36,7 @@ export function minimumHullClearance(v,time){
 // High bow rides pivot around the transom, leaving the propeller immersed.
 export function constrainHullWater(v,time){
  v.hullCorrection=0;if(v.airborne||!['tinny','cat','cruiser'].includes(v.type))return;
- const bow=clamp((v.pitch-.45)/.7),dry=bow*(v.shaftLoad||0)*clamp(1-Math.abs(v.steer||0)/.5),allow=v.type==='cruiser'?.1:v.type==='cat'?.22:.30*(1-dry)-.015*dry;
+ const bow=clamp((v.pitch-.45)/.7),dry=bow*(v.shaftLoad||0)*clamp(1-Math.abs(v.steer||0)/.5),allow=v.type==='cruiser'?.1:v.type==='cat'?.22:.30*(1-dry)-SHAFTING.hullClearance*dry;
  if(v.type!=='cruiser'&&bow<.05)return;
  let correction=0;for(const point of clearancePoints(v)){const p=bodyPoint(v,point);correction=Math.max(correction,waveHeight(p.x,p.z,time)-allow-p.y);}
  if(correction>0){v.y+=correction;v.vy=Math.max(0,v.vy||0);v.hullCorrection=correction;}

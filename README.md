@@ -548,7 +548,8 @@ Hold Shift / phone LIFT once moving, then pulse W / GO using the top-right
 SPEED UP / SLOW DOWN meter. Full throttle can loop the boat. Release LIFT to
 settle; steering transitions to a lower spray slide. Two crew ride the tender:
 the passenger moves forward during takeoff and aft when planing. Dry-hull bow
-rides emit their smaller falling spray near the immersed motor, not the dry bow.
+rides keep the alloy hull clear of the surface, with the lower unit and propeller
+immersed. The smaller falling spray comes from that wet motor contact.
 This is a deliberately difficult arcade stance, not a validated real-world model.
 
 P / phone EYES directly toggles first person; C / VIEW still cycles three views.
