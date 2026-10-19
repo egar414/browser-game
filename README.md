@@ -1045,3 +1045,16 @@ recovery, and Apex's 300 km/h drive/turn/brake/reverse/trim/camera/reload sequen
 The cloud runner uses Chromium with SwiftShader software rendering, not a laptop
 GPU; one offshore Low-quality sample was 3.2 fps / 60 draw calls. This is test-runner
 evidence, not a claim about player-device frame rates.
+
+### Police visibility fix
+
+All four patrol craft now launch 23–83 m ahead of the Wharf spawn. Blue lights,
+overhead POLICE markers, blue minimap dots and a distance indicator make them
+easier to identify. **FIND POLICE** and **WATCH CHASE** are on the driving HUD as
+well as pause settings. FIND faces the camera at a patrol; WATCH chooses a visible
+local/online boater, starts a pursuit, and places the observer behind the chase
+with both the police and marked suspect ahead. Police have small pooled wakes.
+Moving visible boaters can be targeted before a stationary observer. The HUD
+names the suspect. Pursuits still last 60 seconds, with a cooldown afterwards.
+NPC simulation remains local to each device; online player positions are shared,
+but this does not make police movement identical across devices.
