@@ -28,10 +28,16 @@ export function chineContact(v,side,time=0) {
   const wet=clamp(1-best.error/.32)*hullImmersion(v,time);
   return {...best,y:Math.max(best.y,waveHeight(best.x,best.z,time)+.025),wet};
 }
+export function sharpTurnLoad(v){
+ if(v.airborne||v.wipeout||v.speed<3||v.throttle<.12)return 0;
+ const turning=Math.max(Math.abs(v.steer||0),clamp(Math.abs(v.yawRate||0)/1.3),clamp(Math.abs(v.slip||0)/10)),steer=clamp((turning-.25)/.35),waterLoad=clamp((Math.abs(v.yawRate||0)-.16)/.6+Math.abs(v.slip||0)/7+Math.abs(v.lateralAcceleration||0)/12);
+ return steer*waterLoad*clamp((v.speed-3)/4)*clamp(v.throttle*2);
+}
 export function sprayState(v,_freestyle=false,time=0) {
-  const speed=clamp(v.speed,0,32),contacts=[chineContact(v,-1,time),chineContact(v,1,time)];
+  const speed=clamp(v.speed,0,32),turnGate=sharpTurnLoad(v),contacts=turnGate>0?[chineContact(v,-1,time),chineContact(v,1,time)]:[];
   const drive=v.drive,jet=v.airborne||v.wipeout||drive?.neutral?0:clamp((drive?.flow||0)/(isJet(v.type)?.11:1.2));
-  if(v.airborne||v.wipeout||speed<.7)return {speed,rate:0,left:0,right:0,jet,outside:0,contacts};
+  if(v.airborne||v.wipeout||speed<.7)return {speed,rate:0,left:0,right:0,jet,outside:0,contacts,turnGate};
+  if(!turnGate)return {speed,rate:0,left:0,right:0,jet,outside:0,contacts,turnGate};
   // The stern's cross-flow includes hull slip and yaw around its centre.
   // A setup carve leaves momentum behind when the rider reverses the bars;
   // spray follows that water load rather than instantly following a key press.
@@ -41,11 +47,11 @@ export function sprayState(v,_freestyle=false,time=0) {
   const outside=Math.sign(sternCrossFlow);
   const shaft=v.type==='tinny'&&(v.shaftLoad||0)>.35&&v.pitch>.8;
   const side=sign=>(clamp(speed/(v.type==='tinny'?14:23))*.65+turn*(outside===sign?1:.1)*clamp(speed/7))*contacts[sign===-1?0:1].wet;
-  const scale=v.type==='tinny'?TINNY_SPRAY.loadScale:1,power=shaft?clamp(v.throttle)*jet*.7:0,left=(side(-1)+power)*scale,right=(side(1)+power)*scale;
-  return {speed,outside,left,right,rate:clamp((left+right)*135,0,680),jet,contacts};
+  const scale=v.type==='tinny'?TINNY_SPRAY.loadScale:1,power=shaft?clamp(v.throttle)*jet*.7:0,left=(side(-1)+power)*scale*turnGate,right=(side(1)+power)*scale*turnGate;
+  return {speed,outside,left,right,rate:clamp((left+right)*135,0,680),jet,contacts,turnGate};
 }
 export function launchSpray(v,state,side,random=Math.random) {
-  const strength=side===-1?state.left:state.right,p=state.contacts[side===-1?0:1];
+  const strength=side===-1?state.left:state.right,p=state.contacts[side===-1?0:1]||chineContact(v,side);
   if(v.type==='tinny'&&p.motor){
     // Low, dense prop wash travels aft and falls back, as in the supplied photo.
     const spread=random(),power=clamp(v.throttle||0)*clamp(v.drive?.wetness||0),rear=state.speed*.85+power*TINNY_SPRAY.shaftRear;
@@ -90,6 +96,7 @@ export function stepDroplet(p,dt) {
 // from the unchanged chine spray and hydraulic reaction-force calculation.
 export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:12, spread:.78, drag:.32, baseRate:260, poweredRate:330, coreOpacity:1.1, mistOpacity:.10, coreGrowth:.62, coreRadius:1.25, mistRadius:1.35, fineFraction:.14, streakThreshold:.84, bowLift:1.8, bowReach:.28 };
 export function jetPlumeSource(v,discharge,time=0,state=null){
+  if(state&&!(state.turnGate>0))return null;
   if(!isJet(v.type)||!discharge||v.airborne||v.wipeout||discharge.reverse>.08||discharge.flow<JET_PLUME.minimumFlow||v.throttle<.08)return null;
   const power=clamp(discharge.flow/.16)*clamp(v.throttle),trim=clamp((v.drive?.trimAngle||0)/.33),bow=bowSprayLoad(v);
   const dx=discharge.velocity.x-(v.vx||0),dz=discharge.velocity.z-(v.vz||0),len=Math.hypot(dx,dz)||1;

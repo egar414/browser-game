@@ -33,5 +33,5 @@ test('bow rides retain bounded hull contact in rolling bar swell without wiping 
 
 test('shaft prop wash travels aft in a low falling trail, rather than a tall side fan',()=>{
  setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');Object.assign(v,{x:-200,z:-1000,heading:0,pitch:1.22,roll:-.25,shaftLoad:1,riderAft:1,throttle:1,speed:11,vx:0,vz:11,y:1.3,drive:{...v.drive,flow:.8,wetness:1,trimAngle:0,steeringAngle:0,neutral:false}});
- const state=sprayState(v,false,0);assert(state.rate>120);for(const side of [-1,1])for(const sample of [.1,.5,.9]){const p=launchSpray(v,state,side,()=>sample),start={...p};assert(p.vy>0&&p.vy<2.7);assert(Math.abs(p.vx)<2);assert(p.vz-v.vz< -10);let peak=p.y;for(let i=0;i<60;i++){stepDroplet(p,1/60);peak=Math.max(peak,p.y);}assert(peak-start.y<.4);assert(p.y<start.y);}
+ assert.equal(sprayState(v,false,0).rate,0,'straight shaft has only low prop wash');v.steer=1;v.yawRate=1;v.slip=-6;const state=sprayState(v,false,0);assert(state.rate>120);for(const side of [-1,1])for(const sample of [.1,.5,.9]){const p=launchSpray(v,state,side,()=>sample),start={...p};assert(p.vy>0&&p.vy<2.7);assert(Math.abs(p.vx)<2);assert(p.vz-v.vz< -10);let peak=p.y;for(let i=0;i<60;i++){stepDroplet(p,1/60);peak=Math.max(peak,p.y);}assert(peak-start.y<.4);assert(p.y<start.y);}
 });

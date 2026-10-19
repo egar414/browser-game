@@ -1,3 +1,4 @@
+import{distantBoats}from'./boat-lod.js';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildTender} from '../vehicles/tender.js';
@@ -27,9 +28,10 @@ export function createMooredTinnies(root,sites,onEvent,drawDistance=400){
   const waterGeometry=new THREE.ShapeGeometry(outline);waterGeometry.rotateX(Math.PI/2);
   const water=new THREE.InstancedMesh(waterGeometry,new THREE.MeshStandardMaterial({color:'#397d83',transparent:true,opacity:.8,roughness:.3,side:THREE.DoubleSide,depthWrite:false}),sites.length);
   water.userData.dynamic=true;water.instanceMatrix.setUsage(THREE.DynamicDrawUsage);root.add(water);
+  const distant=distantBoats(root,sites.length);
   const render=(time,view)=>{
     const visible=fleet.boats.filter(p=>!view||Math.hypot(p.x-view.x,p.z-view.z)<drawDistance);
-    render.visibleCount=visible.length;
+    render.visibleCount=visible.length;const detailed=new Set(visible);distant.update(fleet.boats.filter(p=>!detailed.has(p)&&p.sinking<.98&&(!view||Math.hypot(p.x-view.x,p.z-view.z)<1100)),time);
     const poses=new Map();for(const p of visible){
       const fx=Math.sin(p.heading),fz=Math.cos(p.heading),fill=p.water/MOORING_FLOOD.capacityLitres;
       const y=waveHeight(p.x,p.z,time),front=waveHeight(p.x+fx*.8,p.z+fz*.8,time),back=waveHeight(p.x-fx*.8,p.z-fz*.8,time),left=waveHeight(p.x-fz*.5,p.z+fx*.5,time),right=waveHeight(p.x+fz*.5,p.z-fx*.5,time);

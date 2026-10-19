@@ -47,7 +47,7 @@ class FoamWake {
     const fX=Math.sin(v.heading),fZ=Math.cos(v.heading);
     const motor=state.contacts?.find(p=>p.motor),x=motor?motor.x:v.x-fX*v.config.length*.47,z=motor?motor.z:v.z-fZ*v.config.length*.47;
     if(this.last&&Math.hypot(x-this.last.x,z-this.last.z)>24)this.clear();
-    if(dt>0&&state.rate>0&&(!this.last||Math.hypot(x-this.last.x,z-this.last.z)>SPRAY_TUNING.sampleSpacing)){
+    if(dt>0&&state.speed>.7&&!v.airborne&&!v.wipeout&&(!this.last||Math.hypot(x-this.last.x,z-this.last.z)>SPRAY_TUNING.sampleSpacing)){
       if(this.last)this.distance+=Math.hypot(x-this.last.x,z-this.last.z);
       this.last={x,z};this.history.unshift({x,z,fx:fX,fz:fZ,time,distance:this.distance,width:v.config.width*(motor?.6:1),speed:v.speed,power:state.jet,energy:Math.max(state.left,state.right)});
       if(this.history.length>this.samples)this.history.pop();
@@ -116,11 +116,12 @@ class SprayFan {
     this.mesh=new THREE.Mesh(this.geometry,this.material);this.mesh.frustumCulled=false;this.mesh.renderOrder=3;scene.add(this.mesh);
   }
   update(dt,v,time,strength,state) {
+    if(strength<.001&&!this.history.length){this.current=null;this.mesh.visible=false;return;}
     this.strength=THREE.MathUtils.lerp(this.strength,strength,1-Math.exp(-dt*9));
     if(dt>0){
-      const drops=Array.from({length:this.columns+1},(_,j)=>launchSpray(v,state,this.side,()=>j/this.columns));
+      const drops=strength>.001?Array.from({length:this.columns+1},(_,j)=>launchSpray(v,state,this.side,()=>j/this.columns)):(this.current?.drops||this.history[0].drops);
       this.current={time,strength,drops};
-      if(!this.history.length||time-this.history[0].time>=1/SIDE_SPRAY.historyHz-1e-6)this.history.unshift(this.current);
+      if(strength>.001&&(!this.history.length||time-this.history[0].time>=1/SIDE_SPRAY.historyHz-1e-6))this.history.unshift(this.current);
     }
     while(this.history.length&&(time-this.history.at(-1).time>SIDE_SPRAY.sheetLife+.15||this.history.length>Math.ceil(SIDE_SPRAY.sheetLife*SIDE_SPRAY.historyHz)+4))this.history.pop();
     const peak=this.history.reduce((max,f)=>Math.max(max,f.strength*clamp(1-(time-f.time)/SIDE_SPRAY.sheetLife)),this.current?.strength||0);
@@ -184,33 +185,38 @@ export class Spray {
     this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uScale:{value:600},uNoise:{value:this.texture}},
       vertexShader:`attribute float aSize;attribute float aAlpha;attribute float aKind;varying float vAlpha;varying float vKind;uniform float uScale;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uScale/max(1.,-mv.z),1.,(aKind<.5||aKind>1.5)?52.:112.);vAlpha=aAlpha;vKind=aKind;}`,
       fragmentShader:`uniform sampler2D uNoise;varying float vAlpha;varying float vKind;void main(){vec2 q=gl_PointCoord-.5;float d=length(q*vec2((vKind<.5||vKind>1.5)?1.5:1.,1.));if(d>.5)discard;
-        float noise=texture2D(uNoise,gl_PointCoord*1.7).r;float alpha=(vKind<.5||vKind>1.5)?(1.-smoothstep(.2,.5,d)):(1.-smoothstep(.08,.5,d))*(.1+noise*.18);
+        float noise=texture2D(uNoise,gl_PointCoord*1.7).r;float alpha=(vKind<.5||vKind>1.5)?(1.-smoothstep(.2,.5,d)):(1.-smoothstep(.08,.5,d))*(.2+noise*.34);
         gl_FragColor=vec4(mix(vec3(.69,.88,.91),vec3(.98,1.,.95),1.-d),alpha*vAlpha*(vKind>1.5?(.25+noise*.75):1.));
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`});
     this.points=new THREE.Points(g,this.material);this.points.frustumCulled=false;this.points.renderOrder=4;scene.add(this.points);
-    this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,Math.min(3200,Math.round(1600+quality.particles*.8)),quality.plumeDensity??.65);
+    this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,quality.plumeCapacity??Math.min(3200,Math.round(1600+quality.particles*.8)),quality.plumeDensity??.65);
     this.wake=new FoamWake(scene,this.texture,quality.wakeSamples);
     this.fans=[new SprayFan(scene,this.texture,-1,quality.fanSegments),new SprayFan(scene,this.texture,1,quality.fanSegments)];
-    this.state={left:0,right:0,rate:0};this.time=0;
+    this.state={left:0,right:0,rate:0};this.time=0;this.waterImpacts=0;this.impactBudget=0;
   }
   clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.current=null;fan.mesh.visible=false;}}
-  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
+  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,secondary:false,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
+  impact(x,z,strength){
+    if(this.impactBudget<=0)return;this.impactBudget--;this.waterImpacts++;
+    this.wake.returns.push({x,z,time:this.time,strength:clamp(strength,.25,.8)});
+    for(let j=0;j<3;j++){const a=j*Math.PI*2/3+Math.random(),s=.7+Math.random()*1.1;this.emit({x,y:waveHeight(x,z,this.time)+.035,z,vx:Math.sin(a)*s,vy:.7+Math.random()*.9,vz:Math.cos(a)*s,lifetime:.35+Math.random()*.15,secondary:true},2);}
+  }
   splash(v,impact) {
     const count=Math.min(this.count*.4,40+impact*13);
     for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:v.x,y:waveHeight(v.x,v.z,this.time)+.1,z:v.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},i%8===0?1:0);}
     this.wake.splash(v,impact,this.time);
   }
   update(dt,v,time,active=true,controls={}) {
-    this.time=time;this.state=sprayState(v,false,time);
+    this.time=time;this.impactBudget=dt>0?6:0;this.state=sprayState(v,false,time);
     if(!active)this.state={...this.state,rate:0,left:0,right:0,jet:0};
     // Reserve room for falling heavy drops and pump froth on smaller pools.
     this.accumulator+=dt*Math.min(this.state.rate,this.count*.75/(SIDE_SPRAY.dropletLife+.2));
     const count=Math.min(Math.floor(this.accumulator),80);this.accumulator-=count;
     for(let i=0;i<count;i++){
       const side=Math.random()*(this.state.left+this.state.right)<this.state.left?-1:1;
-      this.emit(launchSpray(v,this.state,side),i%5===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
+      this.emit(launchSpray(v,this.state,side),i%3===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
     }
     const discharge=active?pumpDischarge(v,time):null;this.stream.update(v,discharge);
     const plume=jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
@@ -240,12 +246,12 @@ export class Spray {
     for(let i=0;i<this.count;i++){
       const p=this.particles[i],particleDt=p.birthStep??dt;p.birthStep=null;p.life-=particleDt;
       if(p.life>0){stepDroplet(p,particleDt);
-        if(p.y<waveHeight(p.x,p.z,time)-.02)p.life=0;
+        if(p.y<waveHeight(p.x,p.z,time)-.02){if(!p.secondary&&p.vy<-.8)this.impact(p.x,p.z,Math.abs(p.vy)*.06);p.life=0;}
         this.positions.set([p.x,p.y,p.z],i*3);this.sizes[i]=p.size*(p.kind?1+(1-p.life/p.max)*1.9:1);this.alphas[i]=clamp(p.life/.2);this.kinds[i]=p.kind;
       }else{this.alphas[i]=0;this.sizes[i]=0;}
     }
     for(const attr of Object.values(this.points.geometry.attributes))attr.needsUpdate=true;
-    if(this.plume.impacts.length)this.wake.returns.push(...this.plume.impacts.filter((_,i)=>i%3===0));
+    for(const p of this.plume.impacts.filter((_,i)=>i%3===0))this.impact(p.x,p.z,p.strength);
     const visibleState=dt>0?this.state:{...this.state,rate:0};this.wake.update(dt,v,time,visibleState);
     this.fans[0].update(dt,v,time,this.state.left,this.state);this.fans[1].update(dt,v,time,this.state.right,this.state);
   }

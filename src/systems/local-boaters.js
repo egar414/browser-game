@@ -1,3 +1,4 @@
+import{distantBoats}from'./boat-lod.js';
 import * as THREE from'three';
 import{mergeGeometries}from'three/addons/utils/BufferGeometryUtils.js';
 import{makeVehicle}from'../vehicles/models.js';
@@ -22,19 +23,19 @@ function batch(group,excluded){
 }
 export class LocalBoaters extends LocalTraffic{
  constructor(scene,collision,onEvent){
-  super(collision,onEvent);this.visibleCount=0;
+  super(collision,onEvent);this.visibleCount=0;this.distant=distantBoats(scene,this.boats.length);
   this.boats.forEach((b,i)=>{
    const colours=['#bdc9cc','#e8a45f','#bfd4ca','#d7cbc1','#79bab7','#c4ced0'];
    b.model=makeVehicle(b.type,colours[i%colours.length]);b.model.name=`Local boater ${b.name}`;scene.add(b.model);
    const parts=b.model.userData;batch(b.model,new Set([parts.rider,parts.motor,parts.passenger]));batch(parts.motor,new Set([parts.propeller]));
-   b.effects=new THREE.Group();scene.add(b.effects);b.spray=new Spray(b.effects,{...QUALITY.Low,particles:80,wakeSamples:40,fanSegments:5,plumeDensity:.3});
+   b.effects=new THREE.Group();scene.add(b.effects);b.spray=new Spray(b.effects,{...QUALITY.Low,particles:80,wakeSamples:40,fanSegments:5,plumeDensity:.3,plumeCapacity:0});
    b.water=new THREE.Mesh(new THREE.PlaneGeometry(b.type==='cat'?.85:.72,b.type==='cat'?2.2:1.45),new THREE.MeshStandardMaterial({color:'#579c9d',transparent:true,opacity:.78,roughness:.2,metalness:.15,side:THREE.DoubleSide}));
    b.water.rotation.x=-Math.PI/2;b.water.position.z=-.08;parts.body.add(b.water);b.visible=false;
   });
  }
  render(dt,time,player,quality,height,fov,pixelRatio,playing,alpha=1){
   const nearby=this.boats.filter(b=>Math.hypot(b.v.x-player.x,b.v.z-player.z)<T.viewDistance).sort((a,b)=>Math.hypot(a.v.x-player.x,a.v.z-player.z)-Math.hypot(b.v.x-player.x,b.v.z-player.z)).slice(0,T.visible[quality]||3);
-  const visible=new Set(nearby);this.visibleCount=0;
+  const visible=new Set(nearby);this.distant.update(this.enabled?this.boats.filter(b=>!visible.has(b)&&b.flood.sinking<.98&&Math.hypot(b.v.x-player.x,b.v.z-player.z)<1100).map(b=>({...b.v,y:b.v.y-b.flood.sinking*2.8})):[],time);this.visibleCount=0;
   for(const b of this.boats){
    const show=this.enabled&&visible.has(b)&&b.flood.sinking<.98;b.model.visible=b.effects.visible=show;
    if(!show){if(b.visible)b.spray.clear();b.visible=false;continue;}b.visible=true;this.visibleCount++;

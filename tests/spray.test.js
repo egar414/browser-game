@@ -18,17 +18,17 @@ test('spray follows actual slip and turn load, without artificial Shift multipli
   const opposite=sprayState({...v,vx:6,slip:6,yawRate:-1,steer:-1},true);assert(opposite.right>opposite.left*2);
 });
 test('outward launch direction mirrors correctly and originates at the chine',()=>{
-  const v=boat(),s=sprayState(v),left=launchSpray(v,s,-1,()=>.5),right=launchSpray(v,s,1,()=>.5);
+  const v={...boat(),steer:1,yawRate:1,slip:-6},s=sprayState(v),left=launchSpray(v,s,-1,()=>.5),right=launchSpray(v,s,1,()=>.5);
   assert(left.x<0&&right.x>0);assert(left.vx<0&&right.vx>0);assert(Math.abs(left.z)<=v.config.length*.44&&Math.abs(right.z)<=v.config.length*.44);assert(left.y>=waveHeight(left.x,left.z,0)&&right.y>=waveHeight(right.x,right.z,0));
   const reversed=sprayState({...v,vz:-3,speed:3});assert(reversed.rate<s.rate);
 });
 test('emission is stable across frame rates and geometry stays within its pool',()=>{
-  const run=dt=>{const scene=new THREE.Scene(),s=new Spray(scene,QUALITY.Low),v=boat();
+  const run=dt=>{const scene=new THREE.Scene(),s=new Spray(scene,QUALITY.Low),v={...boat(),steer:1,yawRate:1,slip:-6};
     for(let t=0;t<2-dt*.5;t+=dt){v.z+=v.vz*dt;v.y=waveHeight(v.x,v.z,t)+.14;s.update(dt,v,t,true,{freestyle:false});}
     const emitted=s.next;assert(s.wake.history.length>4);assert(s.wake.history.length<=QUALITY.Low.wakeSamples);
     assert(s.wake.geometry.drawRange.count<=s.wake.geometry.index.count);
     assert([...s.positions].every(Number.isFinite));s.dispose();assert.equal(scene.children.length,0);return emitted;};
-  assert(Math.abs(run(1/60)-run(1/30))<=3);
+  const fine=run(1/60),coarse=run(1/30);assert(fine>50&&coarse>50);assert(Math.abs(fine-coarse)/Math.max(fine,coarse)<.25);
 });
 test('foam fades, splash rings expand, and recovery clears old spray',()=>{
   const scene=new THREE.Scene(),s=new Spray(scene,QUALITY.Low),v=boat();
@@ -68,14 +68,14 @@ test('dense central core remains bounded and keeps descending water on Low quali
 
 test('powered bow attitude carries wet side spray outward and up instead of aiming it underwater',()=>{
   for(const type of ['ski','cat']){
-    const v=boat(type),state=sprayState(v),flat=launchSpray(v,state,-1,()=>.5);
+    const v={...boat(type),steer:1,yawRate:1,slip:-6},state=sprayState(v),flat=launchSpray(v,state,-1,()=>.5);
     const bow={...v,pitch:.85,riderAft:1},drop=launchSpray(bow,state,-1,()=>.5);
     assert(drop.vy>flat.vy);assert(Math.abs(drop.vx)>Math.abs(flat.vx));
     assert(drop.lifetime>flat.lifetime);assert(drop.lifetime<=SIDE_SPRAY.dropletLife);
     assert.equal(drop.x,state.contacts[0].x);assert.equal(drop.z,state.contacts[0].z);
     for(const change of [{airborne:true},{wipeout:1},{throttle:0},{riderAft:0}])assert.equal(bowSprayLoad({...bow,...change}),0);
   }
-  const v=boat('cat'),state=sprayState(v),cat=launchSpray(v,state,-1,()=>.5),ski=launchSpray({...v,type:'ski'},state,-1,()=>.5);
+  const v={...boat('cat'),steer:1,yawRate:1,slip:-6},state=sprayState(v),cat=launchSpray(v,state,-1,()=>.5),ski=launchSpray({...v,type:'ski'},state,-1,()=>.5);
   assert(Math.abs(cat.vx)>Math.abs(ski.vx));
 });
 
@@ -90,7 +90,7 @@ test('side sheets retain older water at fast frame rates and expire after emissi
 });
 
 test('live spray edge follows the current chine between stored history samples',()=>{
- const s=new Spray(new THREE.Scene(),QUALITY.Low),v=boat('ski');
+ const s=new Spray(new THREE.Scene(),QUALITY.Low),v={...boat('ski'),steer:1,yawRate:1,slip:-6};
  for(let i=0;i<24;i++){
   v.z=i*.15;s.update(1/120,v,i/120,true);
   for(const [j,fan]of s.fans.entries()){

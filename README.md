@@ -585,3 +585,25 @@ roughly 50–60° supported stance instead of a near-vertical throttle balance.
 Held throttle does not cause a backflip. The hull stays visibly clear with the
 lower unit/propeller immersed; the chase camera moves closer and slightly aside
 to show that gap. Release LIFT to settle, or steer into the lower spray slide.
+
+### Sharp-turn spray and distant visibility
+
+Large side sprays and the jet-ski rear plume now require a sharp powered turn
+with actual yaw/slip load. Straight cruising, gentle steering and straight tinny
+shafting keep a normal wake and low pump/prop wash. Already-emitted spray remains
+in world space and falls; sampled water impacts add short rebound droplets and
+expanding foam rings from bounded pools, without an endless splash chain.
+
+Idle fans no longer build trajectory histories. AI outboards allocate zero jet
+plume packets, and Medium reflections capture at 8 Hz to reduce extra scene
+renders. Distant tinnies and local boats retain simple instanced silhouettes out
+to 1.1 km beyond the full-detail range; the camera far plane covers 6.5 km of
+terrain. These changes reduce cutoff popping and unused spray work; hardware
+performance still varies. Turn thresholds are in `sharpTurnLoad` in
+`src/systems/spray-model.js`; distant geometry is in `src/systems/boat-lod.js`.
+
+A local Node 24 CPU microbenchmark of 1,000 idle AI-outboard spray updates
+measured 17 ms with the former 1,664-packet allocation and 6 ms with zero jet
+packets. This isolated timing does not measure overall browser FPS. Gameplay
+checks use Linux Chromium software WebGL; real laptop/phone speed remains
+hardware-dependent.
