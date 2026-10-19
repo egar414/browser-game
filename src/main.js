@@ -230,7 +230,7 @@ try {
     const firstPerson=settings.camera===2&&state!=='home',rider=model.userData.rider;
     if(rider.userData.face)rider.userData.face.visible=!firstPerson;for(const part of [...(rider.userData.faceParts||[]),...(rider.userData.bodyParts||[])])part.visible=!firstPerson;
     model.updateWorldMatrix(true,true);const eye=rider.userData.eye?.getWorldPosition(new THREE.Vector3());
-    const cameraView=deckPoint?{...view,heading:render.heading+deck.heading}:view;
+    const cameraView=deckPoint?{...view,heading:render.heading+deck.heading,hullHeading:render.heading}:view;
     if(firstPerson&&eye){eye.x+=Math.sin(cameraView.heading)*.42;eye.z+=Math.cos(cameraView.heading)*.42;}
     chase.update(dt,cameraView,input,firstPerson?2:deckPoint?1:settings.camera,state==='home',eye,firstPerson&&fishing.active?offshore.float.position:null);
     const day=dayClock.status;atmosphere.update(simulationTime,camera.position,day);sun.color.set(day.sunColour);sun.intensity=day.sunIntensity;hemi.intensity=day.ambient;scene.fog.color.set(day.fog);water.setDay(day);

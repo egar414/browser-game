@@ -1,3 +1,4 @@
+import{sportfisherZ}from'./sportfisher-shape.js';
 import{waveHeight}from'../config.js';
 import{bodyPoint}from'./propulsion.js';
 export const SHAFTING={balancePitch:1.22,lowerPitch:.98,upperPitch:1.49,minimumSpeed:2.4,throttleBalance:.56,throttleMoment:.62,overThrottleMoment:.12,speedMoment:.045,speedTarget:7.2,sternPivot:1.10,hullClearance:.12,bankAngle:.30,passengerResponse:2.4};
@@ -32,7 +33,7 @@ export function updateShaftStatus(v,dt){
 export function clearancePoints(v){
  if(v.type==='tinny')return[[-1.08,.52,-.23],[-.82,.59,-.27],[.12,.58,-.23],[.68,.42,-.10],[1.09,.14,.08],[1.17,.015,.18]].flatMap(([z,w,bottom])=>[[0,bottom,z],[-w*.76,bottom+.06,z],[w*.76,bottom+.06,z]]);
  if(v.type==='cat')return[-1,1].flatMap(side=>[-1.5,0,1.25].map(z=>[side*.73,-.1,z]));
- if(v.type==='cruiser')return[-1,1].flatMap(side=>[-4,-1,1.5].map(z=>[side*1.5,.83,z]));
+ if(v.type==='cruiser')return[-1,1].flatMap(side=>[-4,-1,1.5].map(z=>[side*1.5,.83,sportfisherZ(z)]));
  return[];
 }
 export function minimumHullClearance(v,time){

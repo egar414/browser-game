@@ -1,3 +1,4 @@
+import{SPORTFISHER_LENGTH,sportfisherZ}from'./vehicles/sportfisher-shape.js';
 import mapData from './data/mooloolaba.json' with {type:'json'};
 // All distances are metres; performance is arcade tuning, not manufacturer data.
 export const FIXED_STEP = 1 / 60;
@@ -85,8 +86,8 @@ export const PROPULSION = {
 };
 
 // Heavy twin-screw sportfisher; gameplay values, not manufacturer performance.
-VEHICLES.cruiser={...VEHICLES.cat,name:'Reef Runner 38',subtitle:'Flybridge sportfisher',description:'Drive a big fishing boat. Slow down, press J to leave the helm, walk the rear cockpit and cast beyond the bar.',length:10.65,width:3.96,maxSpeed:15.5,reverseMax:2.6,rideHeight:.1,colours:['#254761','#2c7e85','#b0bbbe']};
-PROPULSION.cruiser={...PROPULSION.cat,effectiveMass:6500,motorMount:[0,.3,-4.5],propeller:[0,-.8,-.4],maximumRpm:4000};
+VEHICLES.cruiser={...VEHICLES.cat,name:'Reef Runner 38',subtitle:'Flybridge sportfisher',description:'Drive a big fishing boat. Slow down, press J to leave the helm, walk the rear cockpit and cast beyond the bar.',length:SPORTFISHER_LENGTH,width:3.96,maxSpeed:15.5,reverseMax:2.6,rideHeight:.1,colours:['#254761','#2c7e85','#b0bbbe']};
+PROPULSION.cruiser={...PROPULSION.cat,effectiveMass:6500,motorMount:[0,.3,sportfisherZ(-4.5)],propeller:[0,-.8,-.4],maximumRpm:4000};
 HYDRODYNAMICS.cruiser={...HYDRODYNAMICS.cat};
 
 export const isJet=type=>type==='ski'||type==='seago';

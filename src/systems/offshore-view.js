@@ -1,3 +1,4 @@
+import{sportfisherZ,SPORTFISHER_STERN}from'../vehicles/sportfisher-shape.js';
 import{makeDeckCharacter}from'../vehicles/wardrobe.js';
 import * as THREE from'three';
 import{mergeGeometries}from'three/addons/utils/BufferGeometryUtils.js';
@@ -59,12 +60,12 @@ export function makeSportfisher(name,colour,crew=true){
   rod(g,new THREE.Vector3(side*1.4,1.85,2.5),new THREE.Vector3(side*.7,1.85,4.5),chrome,.02);
  }
  box(.65,.15,.65,0,1.55,-3.1,white);rod(g,new THREE.Vector3(0,.95,-3.1),new THREE.Vector3(0,1.5,-3.1),chrome,.06);
- const person=(x,y,z,seated=false)=>{const person=makeDeckCharacter();person.userData.animate(0,0,false,seated);person.scale.setScalar(.85);person.position.set(x,y,z);g.add(person);};if(crew){person(0,3.25,-.15,true);person(.8,1,-3.4);}
+ const person=(x,y,z,seated=false)=>{const person=makeDeckCharacter();person.userData.keepProportions=true;person.userData.animate(0,0,false,seated);person.scale.setScalar(.85);person.position.set(x,y,sportfisherZ(z));g.add(person);};if(crew){person(0,3.25,-.15,true);person(.8,1,-3.4);}
  const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.5,.62),label(name));sign.position.set(0,1.2,-5.035);sign.rotation.y=Math.PI;g.add(sign);
  // One draw per material keeps detailed fittings affordable for school laptops.
  g.updateMatrixWorld(true);const buckets=new Map(),old=[];
- g.traverse(o=>{if(!o.isMesh)return;let geo=o.geometry.clone();if(geo.index)geo=geo.toNonIndexed();geo.applyMatrix4(o.matrixWorld);if(!geo.attributes.uv)geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*2),2));if(!buckets.has(o.material))buckets.set(o.material,[]);buckets.get(o.material).push(geo);old.push(o);});
- old.forEach(o=>{g.remove(o);o.geometry.dispose();});for(const [m,geos]of buckets){const mesh=new THREE.Mesh(mergeGeometries(geos),m);mesh.receiveShadow=true;g.add(mesh);geos.forEach(v=>v.dispose());}g.name=`Sportfisher ${name}`;return g;
+ g.traverse(o=>{if(!o.isMesh)return;let geo=o.geometry.clone();if(geo.index)geo=geo.toNonIndexed();geo.applyMatrix4(o.matrixWorld);let ancestor=o,crewPart=false;while(ancestor&&ancestor!==g){crewPart ||= !!ancestor.userData.keepProportions;ancestor=ancestor.parent;}if(!crewPart){const p=geo.attributes.position;for(let i=0;i<p.count;i++)p.setZ(i,sportfisherZ(p.getZ(i)));geo.computeVertexNormals();}if(!geo.attributes.uv)geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*2),2));if(!buckets.has(o.material))buckets.set(o.material,[]);buckets.get(o.material).push(geo);old.push(o);});
+ old.forEach(o=>{o.removeFromParent();o.geometry.dispose();});for(const [m,geos]of buckets){const mesh=new THREE.Mesh(mergeGeometries(geos),m);mesh.receiveShadow=true;g.add(mesh);geos.forEach(v=>v.dispose());}g.name=`Sportfisher ${name}`;return g;
 }
 function fishGeometry(){
  const body=new THREE.SphereGeometry(1,10,6);body.scale(.18,.3,.78);
@@ -94,7 +95,7 @@ export class OffshoreView{
   this.markers.forEach((g,i)=>g.position.y=waveHeight(FISHING_SPOTS[i].x,FISHING_SPOTS[i].z,time));
   const visible=new Set(this.traffic.boats.filter(b=>Math.hypot(player.x-b.x,player.z-b.z)<950).sort((a,b)=>Math.hypot(player.x-a.x,player.z-a.z)-Math.hypot(player.x-b.x,player.z-b.z)).slice(0,quality==='Low'?2:4));
   this.traffic.boats.forEach((b,i)=>{const m=this.boats[i];m.visible=this.traffic.enabled&&visible.has(b);m.position.set(b.x,b.y,b.z);m.rotation.set(-b.pitch,b.heading,b.roll,'YXZ');});
-  this.wakeClock+=playing?dt:0;if(this.wakeClock>.16){this.wakeClock=0;for(const b of this.traffic.boats)if(this.traffic.enabled&&b.speed>.5&&Math.hypot(player.x-b.x,player.z-b.z)<500)this.wakes.push({x:b.x-Math.sin(b.heading)*5,z:b.z-Math.cos(b.heading)*5,h:b.heading,t:time});}
+  this.wakeClock+=playing?dt:0;if(this.wakeClock>.16){this.wakeClock=0;for(const b of this.traffic.boats)if(this.traffic.enabled&&b.speed>.5&&Math.hypot(player.x-b.x,player.z-b.z)<500)this.wakes.push({x:b.x-Math.sin(b.heading)*(-SPORTFISHER_STERN),z:b.z-Math.cos(b.heading)*(-SPORTFISHER_STERN),h:b.heading,t:time});}
   this.wakes=this.wakes.filter(w=>time-w.t<5).slice(-120);this.wakes.forEach((w,i)=>{const age=time-w.t;this.dummy.position.set(w.x,waveHeight(w.x,w.z,time)+.035,w.z);this.dummy.rotation.set(-Math.PI/2,0,-w.h);this.dummy.scale.set(3.5+age*2.2,.45+age*.8,1);this.dummy.updateMatrix();this.foam.setMatrixAt(i,this.dummy.matrix);});this.foam.count=this.wakes.length;this.foam.instanceMatrix.needsUpdate=true;
   const f=this.fishing;this.tackle.visible=f.active;if(!f.active)return;
   const h=player.heading,sx=Math.sin(h),cz=Math.cos(h),origin=new THREE.Vector3(player.x+cz*.45,player.y+.6,player.z-sx*.45),tip=origin.clone().add(new THREE.Vector3(cz*1.7,2.3,-sx*1.7));

@@ -569,3 +569,12 @@ constraints keep the hull clear. Shaft prop wash is low and narrow, starts at
 the wet lower unit and trails aft into falling droplets and foam. Normal powered
 spray turns use the broader chine fans. Tune the pose in `SHAFTING` and wash in
 `TINNY_SPRAY`; the single photo is a visual reference, not measured physics data.
+
+
+The sportfisher now has a longer foredeck and rear fishing cockpit (12.55 m
+hull length in gameplay). Cabin, tower, beam and characters retain their original
+proportions. Shape extensions, deck limits and hull length are shared in
+`src/vehicles/sportfisher-shape.js`; player/AI collision, buoyancy, wake and camera
+framing follow the revised hull. The third-person deck camera stays aft of the
+cabin so walking and fishing have a clear view. This is an original game boat,
+not a scale model.

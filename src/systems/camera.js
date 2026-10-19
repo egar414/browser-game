@@ -13,10 +13,14 @@ export class ChaseCamera {
       if(!this.initialized){this.camera.position.copy(target);this.look.copy(look);this.initialized=true;}
       this.camera.position.lerp(target,1-Math.exp(-dt*14));this.look.lerp(look,1-Math.exp(-dt*10));this.camera.lookAt(this.look);this.camera.fov=76;this.camera.updateProjectionMatrix();return;
     }
-    const heading=v.heading+input.orbit+(menu?Math.PI+.65:0);
+    const deck=v.type==='character';
+    // The cockpit camera stays aft of the cabin instead of following the
+    // character's backward-facing heading into the superstructure.
+    const orbit=deck?THREE.MathUtils.clamp(input.orbit,-1.2,1.2):input.orbit;
+    const heading=(deck?(v.hullHeading??v.heading):v.heading)+orbit+(menu?Math.PI+.65:0);
     const big=v.type==='cruiser';
-    const distance=big?(menu?19:mode?12:23):menu?8.5:mode?5.3:13.5+Math.min(2.5,v.speed*.10);
-    const height=big?(menu?9:mode?8:12):menu?4:mode?2.15:5.8+v.speed*.035;
+    const distance=big?(menu?21:mode?13:25):menu?8.5:mode?5.3:13.5+Math.min(2.5,v.speed*.10);
+    const height=deck?3.6:big?(menu?9:mode?8:12):menu?4:mode?2.15:5.8+v.speed*.035;
     const ahead=menu?0:mode?v.speed*.14:3+v.speed*.20;
     const look=new THREE.Vector3(v.x+Math.sin(v.heading)*ahead,v.y+(big?2.2:menu||mode?.85:.25),v.z+Math.cos(v.heading)*ahead);
     const target=new THREE.Vector3(v.x-Math.sin(heading)*distance,v.y+height,v.z-Math.cos(heading)*distance);

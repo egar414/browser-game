@@ -1,3 +1,4 @@
+import{sportfisherZ,SPORTFISHER_STERN,SPORTFISHER_BOW,SPORTFISHER_SHAPE}from'../vehicles/sportfisher-shape.js';
 import{SPORTFISHER_HEIGHT}from'../config.js';
 import{CruisePath}from'./local-traffic.js';
 import{mapData,edgeDistance}from'./geography.js';
@@ -22,7 +23,7 @@ export class SportfishingTraffic{
   this.world=collision;this.enabled=true;
   this.boats=[['Reef Runner','river',90],['Blue Marlin','offshore',250],['Wide Line','offshore',940],['Saltwater','canal',150]].map(([name,route,progress])=>{
    const path=new CruisePath(SPORTFISHER_ROUTES[route],route!=='canal'),p=path.at(progress);
-   return{name,route,path,progress,...p,y:waveHeight(p.x,p.z,0),pitch:0,roll:0,speed:0,bridgeHold:0,collider:{name:'Sportfishing cruiser',a:[p.x,p.z-4],b:[p.x,p.z+4],width:3.7,height:SPORTFISHER_HEIGHT,disabled:true}};
+   return{name,route,path,progress,...p,y:waveHeight(p.x,p.z,0),pitch:0,roll:0,speed:0,bridgeHold:0,collider:{name:'Sportfishing cruiser',a:[p.x+Math.sin(p.heading)*(SPORTFISHER_STERN+SPORTFISHER_SHAPE.beam/2),p.z+Math.cos(p.heading)*(SPORTFISHER_STERN+SPORTFISHER_SHAPE.beam/2)],b:[p.x+Math.sin(p.heading)*(SPORTFISHER_BOW-SPORTFISHER_SHAPE.beam/2),p.z+Math.cos(p.heading)*(SPORTFISHER_BOW-SPORTFISHER_SHAPE.beam/2)],width:SPORTFISHER_SHAPE.beam,height:SPORTFISHER_HEIGHT,disabled:true}};
   });
  }
  get colliders(){return this.boats.map(b=>b.collider);}
@@ -44,9 +45,9 @@ export class SportfishingTraffic{
    b.speed+=(desired-b.speed)*(1-Math.exp(-dt*(desired<b.speed?2:.4)));
    const nx=b.x+sx*b.speed*dt,nz=b.z+cz*b.speed*dt;
    if(!bridgeObstruction(nx,nz,Math.max(b.y,waveHeight(nx,nz,time))+SPORTFISHER_HEIGHT,7)&&!this.world(nx,nz,5,0,b.collider)){b.x=nx;b.z=nz;}else b.speed=0;
-   const front=waveHeight(b.x+sx*4,b.z+cz*4,time),rear=waveHeight(b.x-sx*4,b.z-cz*4,time),left=waveHeight(b.x-cz*1.5,b.z+sx*1.5,time),right=waveHeight(b.x+cz*1.5,b.z-sx*1.5,time),k=1-Math.exp(-dt*3);
-   b.y+=((front+rear+left+right)/4-b.y)*k;b.pitch+=(Math.atan2(front-rear,8)-b.pitch)*k;b.roll+=(Math.atan2(right-left,3)-b.roll)*k;
-   b.collider.a[0]=b.x-sx*3.8;b.collider.a[1]=b.z-cz*3.8;b.collider.b[0]=b.x+sx*3.8;b.collider.b[1]=b.z+cz*3.8;b.collider.height=b.y+SPORTFISHER_HEIGHT+.2;
+   const bow=sportfisherZ(4),stern=sportfisherZ(-4),front=waveHeight(b.x+sx*bow,b.z+cz*bow,time),rear=waveHeight(b.x+sx*stern,b.z+cz*stern,time),left=waveHeight(b.x-cz*1.5,b.z+sx*1.5,time),right=waveHeight(b.x+cz*1.5,b.z-sx*1.5,time),k=1-Math.exp(-dt*3);
+   b.y+=((front+rear+left+right)/4-b.y)*k;b.pitch+=(Math.atan2(front-rear,bow-stern)-b.pitch)*k;b.roll+=(Math.atan2(right-left,3)-b.roll)*k;
+   b.collider.a[0]=b.x+sx*(SPORTFISHER_STERN+SPORTFISHER_SHAPE.beam/2);b.collider.a[1]=b.z+cz*(SPORTFISHER_STERN+SPORTFISHER_SHAPE.beam/2);b.collider.b[0]=b.x+sx*(SPORTFISHER_BOW-SPORTFISHER_SHAPE.beam/2);b.collider.b[1]=b.z+cz*(SPORTFISHER_BOW-SPORTFISHER_SHAPE.beam/2);b.collider.height=b.y+SPORTFISHER_HEIGHT+.2;
   }
  }
 }
