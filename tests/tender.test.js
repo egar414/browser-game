@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import{tenderTurn}from'../src/vehicles/tender-handling.js';
 import{VehiclePhysics}from'../src/vehicles/physics.js';
 import{VEHICLES,PROPULSION,TINNY_HANDLING,CAT_HANDLING,waveHeight,setSeaState}from'../src/config.js';
-import{sprayState,launchSpray}from'../src/systems/spray-model.js';
+import{plumeTrajectory}from'../src/systems/jet-plume.js';
+import{sprayState,launchSpray,jetPlumeSource,pumpDischarge}from'../src/systems/spray-model.js';
 import{buildTender}from'../src/vehicles/tender.js';
 import{makeVehicle}from'../src/vehicles/models.js';
 import{loadSettings}from'../src/systems/storage.js';
@@ -50,7 +51,14 @@ test('reference tender is an open alloy hull and rider stays attached to its ste
 });
 test('falling spray from every craft enters an open tender, sinks it once and resets finitely',()=>{
  for(const type of ['ski','cat','tinny']){
-  const events=[],fleet=new MooringFlood([{id:type,x:type==='ski'?6:type==='tinny'?-7:-10,z:type==='ski'?-2:0,heading:0}],e=>events.push(e)),v=attacker(type);
+  const events=[],v=attacker(type);let x=type==='tinny'?-7:-10,z=0;
+  if(type==='ski'){
+   // Match the visible rear plume's actual falling arc rather than the old,
+   // shorter quadratic-drag proxy that could sink boats outside that plume.
+   const rear=jetPlumeSource(v,pumpDischarge(v,0),0,sprayState(v,false,0)),initial={...rear.origin,vx:rear.velocity.x,vy:rear.velocity.y,vz:rear.velocity.z,drag:.32};
+   for(let t=.1;t<4.8;t+=.005){const q=plumeTrajectory(initial,t);if(q.vy<0&&q.y<waveHeight(q.x,q.z,t)+.46){x=q.x;z=q.z;break;}}
+  }
+  const fleet=new MooringFlood([{id:type,x,z,heading:0}],e=>events.push(e));
   for(let i=0;i<2100&&!fleet.boats[0].resetIn;i++){v.y=waveHeight(0,0,i/60)+.14;fleet.update(1/60,v,i/60);}
   assert.equal(fleet.boats[0].sinks,1,type);assert.equal(events.length,1);assert.equal(fleet.status[0].water,100);
   const standingWater=fleet.boats[0].water;fleet.clearSpray();for(let i=0;i<120;i++)fleet.update(1/60,v,40+i/60,false);assert(fleet.boats[0].sinking>.4);assert.equal(fleet.boats[0].water,standingWater);

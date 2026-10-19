@@ -92,7 +92,7 @@ VEHICLES.cruiser={...VEHICLES.cat,name:'Reef Runner 38',subtitle:'Flybridge spor
 PROPULSION.cruiser={...PROPULSION.cat,effectiveMass:6500,motorMount:[0,.3,sportfisherZ(-4.5)],propeller:[0,-.8,-.4],maximumRpm:4000};
 HYDRODYNAMICS.cruiser={...HYDRODYNAMICS.cat};
 
-export const isJet=type=>type==='ski'||type==='seago';
+export const isJet=type=>type==='ski'||type==='seago'||type==='hyper';
 export const SPORTFISHER_HEIGHT=10.8;
 // Original long-hull performance PWC; 120 km/h is a game speed ceiling.
 VEHICLES.seago={...VEHICLES.ski,name:'Seago 120',subtitle:'Performance touring jet ski',description:'A longer, black performance hull with a 120 km/h game speed ceiling. Nine trim settings, powerful carving and a balanced bow ride.',length:3.65,width:1.32,maxSpeed:120/3.6,reverseMax:4,lateralGrip:4.1,slideGrip:1.2,spring:45,damping:12,airSteer:2.8,wheelieAngle:.82,wipeoutAngle:1.27,colours:['#b83836','#3a91ba','#b2bfc4']};
@@ -103,3 +103,11 @@ HYDRODYNAMICS.seago={...HYDRODYNAMICS.ski,planingStart:5,planingEnd:16,yawInerti
 VEHICLES.racer={...VEHICLES.cat,name:'Riptide 500',subtitle:'Twin-engine offshore racing cat',description:'A 12 m closed-cockpit racing cat with twin inboard bays and surface drives. Massive planing spray. 500 km/h is fictional arcade tuning. Launches on the offshore speed run.',length:12.4,width:4.4,maxSpeed:500/3.6,reverseMax:4.5,rideHeight:.18,wheelieAngle:.10,wipeoutAngle:1.5,colours:['#28a8c4','#f36545','#8ac9a7']};
 PROPULSION.racer={...PROPULSION.cat,effectiveMass:4000,maximumRpm:7000,motorMount:[0,.1,-5.7],propeller:[0,-.28,-.58],shaftPower:1_200_000};
 HYDRODYNAMICS.racer={...HYDRODYNAMICS.cat};
+
+// Original photo-inspired flagship PWC. All high-speed/extended-trim values are arcade.
+export const APEX_TRIM_POSITIONS=[-12,-8,-4,0,4,8,12,17,22,28,36];
+export const jetTrimPositions=type=>type==='hyper'?APEX_TRIM_POSITIONS:SKI_TRIM_POSITIONS;
+export const APEX_HANDLING={steerResponse:10,yawLimit:2.8,turnSpeedScale:45,airPitch:1.25,airPitchLimit:1.22,bowTargetLimit:1.36,landingPitchLimit:1.02,trickMultiplier:1.25,boundaryMargin:350};
+VEHICLES.hyper={...VEHICLES.seago,name:'Apex 300',subtitle:'Extreme performance freestyle jet ski',description:'Champagne hull, red shoulders and a sculpted black deck. 300 km/h arcade speed, eleven extended-trim positions, huge falling spray and the quickest aerial spins. Q trims up, Shift lifts; Y adds a Heart attack in the air. High trim trades speed for bow lift.',length:3.62,width:1.30,maxSpeed:300/3.6,reverseMax:5,lateralGrip:6.4,slideGrip:1.55,spring:62,damping:16,rideHeight:.16,airSteer:8.5,wheelieAngle:.88,wipeoutAngle:1.56,colours:['#b9b49b','#d0dce0','#414b53']};
+PROPULSION.hyper={...PROPULSION.seago,effectiveMass:390,maximumRpm:9500,hydraulicPower:850000,nozzleArea:.0075,nozzleMount:[0,-.06,-1.81],intake:[0,-.34,-1.38],fullImmersion:.12,linearResistance:16,quadraticResistance:.65,steeringAngle:.42};
+HYDRODYNAMICS.hyper={...HYDRODYNAMICS.seago,planingStart:4,planingEnd:16,yawInertia:1100,yawDamping:3.8,yawSpeedDamping:.025,pitchSpring:24,pitchDamping:10,rollSpring:29,rollDamping:10,waterFollow:.75,reserveBuoyancy:80,reserveDepth:.2,maxReserve:12};

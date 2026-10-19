@@ -8,6 +8,71 @@ performance offshore racing cat. Cruise the Mooloolah estuary and its connected
 northern coast based on OpenStreetMap shorelines. No account, API key or external
 asset service is required to play.
 
+## Rear trim plume and big-boat flooding
+
+The jet ski's visible rear/trim plume now counts as water aboard when its falling
+heavy core crosses an open hull. Capture uses the same linear-drag/gravity
+trajectory as the rendered plume, including water still falling after throttle
+release. Wider Apex spray is checked out to 200 m; small-craft side fans retain
+their existing droplet paths. Gameplay water volumes do not depend on graphics
+quality or the number of visible particles.
+
+Big AI sportfishers receive water through their **open rear cockpit**. Their
+closed cabin and foredeck are excluded. They settle as water builds; the cockpit
+shows water, then they stop, sink, lose their collision obstacle and relaunch
+24 seconds after swamping. The meter is gameplay-scaled (240 capacity units),
+not a real flooding or vessel-stability model. There is no battle timer needed.
+
+Pause → **FIND BIG BOATS** sets up a pass. Hold U / REAR to watch where your rear
+plume falls, or carve a sharp side fan across the open cockpit. The nearby hull's
+water percentage confirms hits and shows its reset timer when swamped. A big
+boat takes more water than a tender. Tune `BIG_BOAT_FLOOD` in
+`src/systems/sportfishing-traffic.js` and the shared capture volume/rate values in
+`src/systems/mooring-flood.js`. Multiplayer/Supabase work is deferred; this
+published build remains single-player.
+
+## Apex 300 performance jet ski
+
+Select **APEX 300** at launch. It is an original champagne/red/black performance
+PWC based on the supplied side-profile photo: pointed broad hull, sculpted
+shoulders, long saddle with raised rear pad, textured footwells, vents, separate
+bars, trim nozzle and reverse bucket. No copied manufacturer logo or model asset.
+
+**300 km/h, the extreme trim and engine values are fictional arcade tuning.**
+Sport mode and low trim give the full speed ceiling. Pause → OFFSHORE SPEED RUN
+provides room. Steering responds quickly but retains momentum and loses some
+maximum authority at speed. Braking then reverse, shared water support, intake
+ventilation and swept full-hull collision remain active. In light conditions it
+stays on the water; larger swell and physical ramps give actual airborne motion.
+
+Q/E selects **11 trim positions, −12° to +36°**, the widest range in the game.
+Hold W + Shift / GO + LIFT to lift the bow; high trim gives an approximately 78°
+maximum powered stance and trades speed for lift. Release LIFT and settle trim
+to return to the plane. This is authored handling, not real-world VTS behaviour.
+Existing Sparkplug and Seago retain their nine-position trim tables.
+
+A/D gives faster aerial spins; Q/E levels the landing. Hold **Y / HEART** in the
+air for a **Heart attack**; Z/X/V remain Hangman, No-hander and Superman. Release
+before touchdown. Completed air moves score only after a clean landing, with a
+25% Apex aerial award bonus; wipeouts discard them. No jump or flight button.
+
+Apex has the tallest/widest rear plume and strongest loaded sharp-turn fans.
+The global spray sprite scale grows from 1.45 to 1.75 (about 21% over the previous
+release), with unchanged particle capacities. Riptide's side and twin rear wash
+also carry farther and higher; touchdown bursts spread slightly farther. Legacy
+small-craft fan trajectories stay intact so existing pontoon spray passes still
+work. Falling droplets, surface returns and sharp-turn side-spray gates remain.
+
+U/REAR looks behind; P opens first person. The fast chase and eye cameras track
+velocity so they stay with the craft at 300 instead of lagging into the plume.
+Choice and trim save locally; the seventh craft fits a two-row selector and
+landscape touch includes the new HEART button only for Apex.
+
+Tune `VEHICLES.hyper`, `PROPULSION.hyper`, `HYDRODYNAMICS.hyper`,
+`APEX_HANDLING` and `APEX_TRIM_POSITIONS` in `src/config.js`; `APEX_SPRAY` and
+`SPRAY_VISUAL_SCALE` in `src/systems/spray-model.js`. The editable original model
+is `src/vehicles/apex-model.js`; the Heart attack pose is in `rider.js`.
+
 ## Riptide 500 offshore racing cat
 
 Select **RIPTIDE 500** and press Play to launch into the extended offshore run.

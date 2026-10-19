@@ -1,5 +1,5 @@
 import{isJet}from'../config.js';
-import { PROPULSION, RIDE_MODES, SKI_TRIM_POSITIONS, waveHeight } from '../config.js';
+import { PROPULSION, RIDE_MODES, jetTrimPositions, waveHeight } from '../config.js';
 const rad=degrees=>degrees*Math.PI/180;
 const clamp=(value,min=0,max=1)=>Math.max(min,Math.min(max,value));
 const damp=(value,target,rate,dt)=>value+(target-value)*(1-Math.exp(-rate*dt));
@@ -81,7 +81,7 @@ export class Propulsion {
     const targetRpm=c.idleFraction+(1-c.idleFraction)*Math.sqrt(shifting?0:demand)*Math.cbrt(mode.power*reversePower);
     this.rpmFraction=damp(this.rpmFraction,targetRpm,dt>0?8:0,dt);
     this.reverse=damp(this.reverse,reversing&&!shifting?1:0,mode.gateResponse,dt);
-    const selectedTrim=rad(clamp(v.trimDegrees||0,isJet(this.type)?SKI_TRIM_POSITIONS[0]:-7,isJet(this.type)?SKI_TRIM_POSITIONS.at(-1):8));
+    const selectedTrim=rad(clamp(v.trimDegrees||0,isJet(this.type)?jetTrimPositions(this.type)[0]:-7,isJet(this.type)?jetTrimPositions(this.type).at(-1):8));
     // The selected VTS position may change at idle; the physical nozzle moves in forward thrust.
     if(!isJet(this.type)||(!reversing&&demand>.025))this.trimAngle=damp(this.trimAngle,selectedTrim,5,dt);
     const trimAngle=this.trimAngle;

@@ -60,3 +60,9 @@ cockpit crew and invented livery. The user-supplied Maritimo #12 photograph and
 specification table were used as visual/layout references only; no photograph,
 brand logo or manufacturer model is bundled. The 500 km/h setting is fictional
 arcade tuning. Exact reference engine identity and performance are unverified.
+
+Apex 300 (2026-10-19): original procedural performance-PWC geometry and invented
+APEX 300 livery, using the user-supplied champagne/red/black jet-ski side photo
+as a shape/colour reference only. No Sea-Doo logos, photograph pixels or licensed
+manufacturer geometry are bundled. Speed, power and extreme trim are explicitly
+fictional arcade settings, not claims about the reference production model.

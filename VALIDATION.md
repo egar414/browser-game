@@ -581,3 +581,50 @@ was kept separate from the pending northern coastline map changes.
   are user references. Original model/livery; exact engine output unverified.
   The 500 km/h setting is expressly fictional arcade performance. This release
   retains both preceding spray refinements and the separate northern coastline.
+
+## Apex 300, larger sprays and big-boat flooding — 2026-10-19
+
+- 149 Node checks, production build and whitespace check pass. New Apex tests
+  exercise speed ceiling and progressive steering/brake/reverse at 30/60/120 Hz,
+  eleven trim positions without changing legacy nine-position skis, controlled
+  ~78° bow ride, swept high-speed collision, original model/attached hands,
+  aerial-only Heart attack with clean-landing banking/wipeout loss, largest
+  bounded plume, fast chase/eye cameras and persisted choice/trim.
+- Actual desktop Chromium flow passes: Wharf launch, offshore visit, 300 km/h,
+  falling rear water, rear/first-person views, brake into reverse, recover,
+  highest trim and powered bow stance, loaded side spray, reload persistence.
+  Separate actual bar-kicker run banks a Heart attack via W/Y without test
+  teleport hooks. Landscape 844×390 phone emulation selects Apex, drives with
+  native touch GO, taps trim and recovers; HEART is visible only for Apex.
+  Inspected chase, eye, bow-ride and carving screenshots. No critical page or
+  shader errors in the desktop flow. Physical phone performance is untested.
+- Added rear-plume capture tests use the visible packet trajectory (linear drag
+  plus gravity), including a high-trim Apex receiver beyond 65 m and detached
+  water after release. Misses/dry/airborne cases do not fill. Big-boat cockpit
+  catches water; cabin/foredeck misses. Full hulls stop, disable their obstacle,
+  sink and reset once. A normal-controls Apex pass simulation also accumulates
+  water and sinks a moving sportfisher. These are arcade water quantities.
+- Actual browser big-boat approach passes: select Apex, FIND BIG BOATS, W and U,
+  then release throttle. Falling rear water raises Blue Marlin to 25.29% water
+  aboard without a battle. The fully sunk/reset lifecycle is covered by Node
+  simulation; the browser flow verifies real hits/rendering rather than waiting
+  for a complete repeated-pass sinking cycle. A further actual browser regression
+  drives cat/tinny/ski through sharp turns, verifies falling impacts, retains the
+  normal ski rear jet, and checks moored boats and land remain rendered.
+- Global sprite scale grows 1.45→1.75 (~21%) with unchanged visible-particle pools.
+  Legacy side-droplet paths retain pontoon-pass gameplay. A historical static
+  ski-rear receiver fixture was updated to the *visible* plume's falling crossing
+  because capture now follows that path instead of its former shorter proxy.
+  No assertion was removed. Rear gameplay water volume is stronger; actual entry
+  into an open hull is still required, independently of visual quality/LOD.
+- Big AI sportfishers have 240 gameplay water units, open-rear capture geometry,
+  an instanced cockpit-water surface, progressive settling, 6-second descent
+  and relaunch 24 seconds after swamping. New navigation button and nearby water
+  hint provide feedback. Cabin/bridge collision and normal traffic remain active.
+- Headless software sample at Apex speed: Linux Chromium/SwiftShader, Low,
+  1100×720, ~3.08 FPS at that moment, 60 draws, 1,555,603 triangles, 469 plume
+  packets (241 descending). This is a software-renderer snapshot, not a real
+  laptop/phone performance claim. Shader/model/particle assets remain local.
+- 300 km/h, effective engine values, −12°…+36° trim and extreme bow attitude are
+  expressly fictional tuning, not claims about the production ski in the image.
+  Multiplayer/Supabase was explicitly deferred by the user; this is single-player.

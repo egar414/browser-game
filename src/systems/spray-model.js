@@ -1,4 +1,4 @@
-export const SPRAY_VISUAL_SCALE=1.45;
+export const SPRAY_VISUAL_SCALE=1.75;
 import{isJet}from'../config.js';
 import { waveHeight } from '../config.js';
 import { bodyPoint, bodyVector, propulsionPose, hullImmersion } from '../vehicles/propulsion.js';
@@ -6,7 +6,8 @@ export const SPRAY_TUNING = { minimumSpeed:.7, maximumSpeed:32, gravity:9.81, wa
 export const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 export const SIDE_SPRAY = { catWidth:1.72, catLift:1.12, bowReach:.32, bowLift:1.8, sheetLife:3.2, historyHz:30, dropletLife:3.4 };
 // Surface-piercing prop wash and wet aft chines, independent of jet-pump spray.
-export const RACER_SPRAY={sideStrength:2.5,sideSpeed:12,sideLift:7,rearSpeed:34,rearLift:10,packetScale:1.65};
+export const RACER_SPRAY={sideStrength:2.5,sideSpeed:14,sideLift:8,rearSpeed:40,rearLift:12,packetScale:1.85};
+export const APEX_SPRAY={sideScale:1.55,sideWidth:1.35,sideLift:1.3,rearSpeed:45,lift:10,trimLift:9,maximumLift:22,packetScale:2.2};
 export const TINNY_SPRAY={width:1.10,lift:1.20,loadScale:.88,shaftWidth:1.08,shaftLift:.72,shaftRear:6.5,shaftRise:1.6,shaftSpread:1.1};
 // Actual powered, aft-weighted bow attitude; pressing Shift alone adds no spray.
 export function bowSprayLoad(v){return v.airborne||v.wipeout?0:clamp(((v.pitch||0)-.25)/.6)*clamp(v.riderAft||0)*clamp(v.throttle||0);}
@@ -56,7 +57,7 @@ export function sprayState(v,_freestyle=false,time=0) {
   const outside=Math.sign(sternCrossFlow);
   const shaft=v.type==='tinny'&&(v.shaftLoad||0)>.35&&v.pitch>.8;
   const side=sign=>(clamp(speed/(v.type==='tinny'?14:23))*.65+turn*(outside===sign?1:.1)*clamp(speed/7))*contacts[sign===-1?0:1].wet;
-  const scale=v.type==='tinny'?TINNY_SPRAY.loadScale:1,power=shaft?clamp(v.throttle)*jet*.7:0,left=(side(-1)+power)*scale*turnGate,right=(side(1)+power)*scale*turnGate;
+  const scale=v.type==='hyper'?APEX_SPRAY.sideScale:v.type==='tinny'?TINNY_SPRAY.loadScale:1,power=shaft?clamp(v.throttle)*jet*.7:0,left=(side(-1)+power)*scale*turnGate,right=(side(1)+power)*scale*turnGate;
   return {speed,outside,left,right,rate:clamp((left+right)*135,0,680),jet,contacts,turnGate};
 }
 export function launchSpray(v,state,side,random=Math.random) {
@@ -72,10 +73,10 @@ export function launchSpray(v,state,side,random=Math.random) {
     return{x:p.x,y:p.y,z:p.z,vx:(v.vx||0)+velocity.x,vy:velocity.y+(v.vy||0)*.15,vz:(v.vz||0)+velocity.z,strength:strength*(1+power*.45),diameter:.004+spread*.003,lifetime:.9+spread*.4};
   }
   const shaft=v.type==='tinny'&&p.motor,cat=v.type==='cat',bow=shaft?bowSprayLoad(v)*.35:bowSprayLoad(v),broad=shaft?TINNY_SPRAY.shaftWidth:cat?SIDE_SPRAY.catWidth:v.type==='tinny'?TINNY_SPRAY.width:1.06,lift=shaft?TINNY_SPRAY.shaftLift:cat?SIDE_SPRAY.catLift:v.type==='tinny'?TINNY_SPRAY.lift:1.32;
-  const spread=random(),angle=-.2+spread*1.45,flow=(2+strength*3.2)*broad*(1+bow*SIDE_SPRAY.bowReach);
+  const spread=random(),angle=-.2+spread*1.45,flow=(2+strength*3.2)*broad*(v.type==='hyper'?APEX_SPRAY.sideWidth:1)*(1+bow*SIDE_SPRAY.bowReach);
   // Spray leaves the wet waterline. Rotating its up-vector with a bow-high hull
   // incorrectly aimed the entire fan underwater, cutting off a bow-ride spray.
-  const local=bodyVector({heading:v.heading},[side*flow*Math.cos(angle),((.8+strength*1.7)*lift+bow*SIDE_SPRAY.bowLift)*(.8+Math.sin(spread*Math.PI)*.35),-state.speed*(cat?.4:.5)-flow*Math.sin(angle)]);
+  const local=bodyVector({heading:v.heading},[side*flow*Math.cos(angle),((.8+strength*1.7)*lift+bow*SIDE_SPRAY.bowLift)*(v.type==='hyper'?APEX_SPRAY.sideLift:1)*(.8+Math.sin(spread*Math.PI)*.35),-state.speed*(cat?.4:.5)-flow*Math.sin(angle)]);
   const vy=(v.vy||0)*.25+local.y;
   return {x:p.x,y:p.y,z:p.z,vx:(v.vx||0)+local.x,vy,vz:(v.vz||0)+local.z,strength,diameter:.0035+spread*.0025,lifetime:clamp(2*Math.max(0,vy)/SPRAY_TUNING.gravity+.3,.8,SIDE_SPRAY.dropletLife)};
 }
@@ -118,8 +119,9 @@ export function jetPlumeSource(v,discharge,time=0,state=null){
   const power=clamp(discharge.flow/.16)*clamp(v.throttle),trim=clamp((v.drive?.trimAngle||0)/.33),bow=bowSprayLoad(v);
   const dx=discharge.velocity.x-(v.vx||0),dz=discharge.velocity.z-(v.vz||0),len=Math.hypot(dx,dz)||1;
   const loaded=state?clamp((Math.max(state.left,state.right)-.8)/2.5):0;
-  const washLift=1.1+power*JET_PLUME.lift+trim*JET_PLUME.trimLift+loaded*loaded*5.8+bow*JET_PLUME.bowLift;
-  const lift=Math.min(13,Math.max(discharge.aerial?discharge.velocity.y:0,washLift));
+  const apex=v.type==='hyper',tuning=apex?APEX_SPRAY:JET_PLUME;
+  const washLift=1.1+power*tuning.lift+trim*tuning.trimLift+loaded*loaded*5.8+bow*JET_PLUME.bowLift;
+  const lift=Math.min(apex?APEX_SPRAY.maximumLift:15,Math.max(discharge.aerial?discharge.velocity.y:0,washLift));
   return {origin:{...discharge.origin,y:Math.max(discharge.origin.y,waveHeight(discharge.origin.x,discharge.origin.z,time)+.055)},
-    velocity:{x:(v.vx||0)+dx/len*(3+power*JET_PLUME.rearSpeed)*(1+bow*JET_PLUME.bowReach),y:lift,z:(v.vz||0)+dz/len*(3+power*JET_PLUME.rearSpeed)*(1+bow*JET_PLUME.bowReach)},power,loaded};
+    velocity:{x:(v.vx||0)+dx/len*(3+power*tuning.rearSpeed)*(1+bow*JET_PLUME.bowReach),y:lift,z:(v.vz||0)+dz/len*(3+power*tuning.rearSpeed)*(1+bow*JET_PLUME.bowReach)},power:power*(apex?1.25:1),loaded,packetScale:apex?APEX_SPRAY.packetScale:1};
 }

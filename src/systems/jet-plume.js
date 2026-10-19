@@ -37,10 +37,10 @@ export class JetPlume {
     const count=Math.min(Math.floor(this.packets.length*.12),points.length*24),fx=Math.sin(v.heading||0),fz=Math.cos(v.heading||0),energy=Math.sqrt(clamp(impact,.25,10));
     for(let i=0;i<count;i++){
       const point=points[i%points.length],sideOffset=(point.x-v.x)*fz-(point.z-v.z)*fx,side=Math.abs(sideOffset)>.04?Math.sign(sideOffset):(Math.random()<.5?-1:1);
-      const outward=(3+energy*2.4)*(.7+Math.random()*.6),aft=1.5+energy*.8,seed=Math.random(),fine=seed<JET_PLUME.fineFraction;
+      const outward=(3+energy*2.4)*1.12*(.7+Math.random()*.6),aft=1.5+energy*.8,seed=Math.random(),fine=seed<JET_PLUME.fineFraction;
       const p=this.packets[this.next++%this.packets.length];
       Object.assign(p,{active:true,birth:time,lifetime:2.6,x:point.x,y:waveHeight(point.x,point.z,time)+.055,z:point.z,
-        vx:(v.vx||0)*.45+fz*side*outward-fx*aft,vy:(2.5+energy*1.7)*(.8+Math.random()*.35),vz:(v.vz||0)*.45-fx*side*outward-fz*aft,
+        vx:(v.vx||0)*.45+fz*side*outward-fx*aft,vy:(2.5+energy*1.7)*1.12*(.8+Math.random()*.35),vz:(v.vz||0)*.45-fx*side*outward-fz*aft,
         drag:fine?.8:.46,seed,fine,power:.85+clamp(impact/8)*.4,size:.24+Math.random()*.13,loaded:.5,packetScale:1});
     }
   }

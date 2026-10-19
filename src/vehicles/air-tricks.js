@@ -1,4 +1,4 @@
-export const AIR_TRICKS={hangman:{name:'Hangman',points:280},nohander:{name:'No-hander',points:180},superman:{name:'Superman',points:320}};
+export const AIR_TRICKS={heartattack:{name:'Heart attack',points:450},hangman:{name:'Hangman',points:280},nohander:{name:'No-hander',points:180},superman:{name:'Superman',points:320}};
 // One award per pose per jump, banked only by the clean-landing branch.
 export class AirTricks {
   constructor(){this.reset();}

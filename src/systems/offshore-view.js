@@ -1,4 +1,6 @@
-import{sportfisherZ,SPORTFISHER_STERN}from'../vehicles/sportfisher-shape.js';
+import{BIG_BOAT_FLOOD}from'./sportfishing-traffic.js';
+import{floodCapacity}from'./mooring-flood.js';
+import{sportfisherZ,SPORTFISHER_STERN,SPORTFISHER_DECK}from'../vehicles/sportfisher-shape.js';
 import{makeDeckCharacter}from'../vehicles/wardrobe.js';
 import * as THREE from'three';
 import{mergeGeometries}from'three/addons/utils/BufferGeometryUtils.js';
@@ -74,6 +76,7 @@ function fishGeometry(){
 export class OffshoreView{
  constructor(scene,traffic,fishing){
   this.traffic=traffic;this.fishing=fishing;this.boats=traffic.boats.map((b,i)=>{const m=makeSportfisher(b.name,['#254761','#2c7e85','#b0bbbe','#677b9c'][i]);scene.add(m);return m;});
+  this.cockpitWater=new THREE.InstancedMesh(new THREE.PlaneGeometry(3.12,SPORTFISHER_DECK.maxZ-SPORTFISHER_DECK.minZ+.6),new THREE.MeshStandardMaterial({color:'#397d83',transparent:true,opacity:.78,roughness:.3,side:THREE.DoubleSide,depthWrite:false}),traffic.boats.length);this.cockpitWater.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.cockpitWater.frustumCulled=false;this.cockpitWater.count=0;scene.add(this.cockpitWater);
   const fishMat=new THREE.MeshStandardMaterial({color:'#81b5bd',metalness:.35,roughness:.35,side:THREE.DoubleSide});
   this.fish=new THREE.InstancedMesh(fishGeometry(),fishMat,96);this.fish.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.fish.frustumCulled=false;scene.add(this.fish);this.dummy=new THREE.Object3D();
   this.markers=FISHING_SPOTS.map(s=>{const g=new THREE.Group();g.position.set(s.x,0,s.z);const buoy=new THREE.Mesh(new THREE.SphereGeometry(.5,10,8),mat('#f5cb64'));buoy.scale.y=1.3;g.add(buoy);rod(g,new THREE.Vector3(0,.3,0),new THREE.Vector3(0,2.5,0),mat('#e1e4cf'),.04);const flag=new THREE.Mesh(new THREE.PlaneGeometry(.8,.5),new THREE.MeshBasicMaterial({color:'#66d7cb',side:THREE.DoubleSide}));flag.position.set(.4,2.2,0);g.add(flag);scene.add(g);return g;});
@@ -94,7 +97,10 @@ export class OffshoreView{
   this.fish.count=count;this.fish.instanceMatrix.needsUpdate=true;
   this.markers.forEach((g,i)=>g.position.y=waveHeight(FISHING_SPOTS[i].x,FISHING_SPOTS[i].z,time));
   const visible=new Set(this.traffic.boats.filter(b=>Math.hypot(player.x-b.x,player.z-b.z)<950).sort((a,b)=>Math.hypot(player.x-a.x,player.z-a.z)-Math.hypot(player.x-b.x,player.z-b.z)).slice(0,quality==='Low'?2:4));
-  this.traffic.boats.forEach((b,i)=>{const m=this.boats[i];m.visible=this.traffic.enabled&&visible.has(b);m.position.set(b.x,b.y,b.z);m.rotation.set(-b.pitch,b.heading,b.roll,'YXZ');});
+  let filledCockpits=0;
+  this.traffic.boats.forEach((b,i)=>{const m=this.boats[i];const fill=b.flood.water/floodCapacity(b.flood),sink=b.flood.sinking;m.visible=this.traffic.enabled&&visible.has(b)&&sink<.995;m.position.set(b.x,b.y-fill*BIG_BOAT_FLOOD.fillDrop-sink*BIG_BOAT_FLOOD.sinkDepth,b.z);m.rotation.set(-b.pitch+sink*.2,b.heading,b.roll+sink*.42,'YXZ');
+    if(m.visible&&fill>.003&&sink<.7){const z=(SPORTFISHER_DECK.minZ+SPORTFISHER_DECK.maxZ)/2;this.dummy.position.set(b.x+Math.sin(b.heading)*z,b.y+.93-fill*.1-sink*BIG_BOAT_FLOOD.sinkDepth,b.z+Math.cos(b.heading)*z);this.dummy.rotation.set(-Math.PI/2,0,-b.heading);this.dummy.scale.setScalar(1);this.dummy.updateMatrix();this.cockpitWater.setMatrixAt(filledCockpits++,this.dummy.matrix);}
+  });this.cockpitWater.count=filledCockpits;this.cockpitWater.instanceMatrix.needsUpdate=true;
   this.wakeClock+=playing?dt:0;if(this.wakeClock>.16){this.wakeClock=0;for(const b of this.traffic.boats)if(this.traffic.enabled&&b.speed>.5&&Math.hypot(player.x-b.x,player.z-b.z)<500)this.wakes.push({x:b.x-Math.sin(b.heading)*(-SPORTFISHER_STERN),z:b.z-Math.cos(b.heading)*(-SPORTFISHER_STERN),h:b.heading,t:time});}
   this.wakes=this.wakes.filter(w=>time-w.t<5).slice(-120);this.wakes.forEach((w,i)=>{const age=time-w.t;this.dummy.position.set(w.x,waveHeight(w.x,w.z,time)+.035,w.z);this.dummy.rotation.set(-Math.PI/2,0,-w.h);this.dummy.scale.set(3.5+age*2.2,.45+age*.8,1);this.dummy.updateMatrix();this.foam.setMatrixAt(i,this.dummy.matrix);});this.foam.count=this.wakes.length;this.foam.instanceMatrix.needsUpdate=true;
   const f=this.fishing;this.tackle.visible=f.active;if(!f.active)return;

@@ -619,3 +619,17 @@ Its wave response samples both hulls and constrains immersion; high-speed
 handling is intentionally stable rather than a validated offshore hydrodynamic
 or safety simulator. The added offshore run is authored sea, not a new surveyed
 bathymetric or coastal dataset. Tuning is documented in README.md.
+
+## Apex 300 photo reference and arcade limits — 2026-10-19
+
+The supplied image is the visual reference for an original champagne hull,
+red shoulder panels and raised rear saddle, black deck and long pointed bow.
+No exact model year or manufacturer performance has been inferred from the
+image. The requested 300 km/h and the eleven −12°…+36° trim selections are
+intentional arcade capabilities, not real production PWC specifications.
+The existing waterjet momentum solver is retained with effective, fictional
+power/mass/resistance values and a strict speed ceiling. Steering, wet intake,
+nozzle/bucket pose, four-point wave sampling and collision stay active. A controlled
+maximum bow target trades speed for lift. No input creates a midair re-launch.
+The exclusive Heart attack pose and boosted aerial scores still need an actual
+jump and clean landing; idle/repeated grounded input cannot bank the move.

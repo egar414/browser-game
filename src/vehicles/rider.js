@@ -44,9 +44,11 @@ export function makeRider(parent,type){
     const pose=v.airTricks?.pose,b=v.airTricks?.blend||0;
     if(pose==='hangman'){hip.x-=b*.24;hip.y+=b*.08;}
     if(pose==='superman'){hip.y+=b*.42;hip.z-=b*.38;}
+    if(pose==='heartattack'){hip.y+=b*.44;hip.z-=b*.23;}
     torso.position.copy(hip);torso.rotation.set(.35+aft*.42+load*.012+bow*.08+soaked*.25,0,lean*.85);
     if(pose==='hangman')torso.rotation.z-=b*.42;
     if(pose==='superman')torso.rotation.x+=b*.9;
+    if(pose==='heartattack')torso.rotation.x+=b*1.25;
     torso.updateMatrix();
     root.userData.balance={aft,lean,bow,soaked,hip:hip.toArray()};
     for(const l of limbs){
@@ -64,6 +66,7 @@ export function makeRider(parent,type){
       const legHip=hip.clone().add(new THREE.Vector3(side*.14,0,0));
       const foot=new THREE.Vector3(tinny?-.20+side*.22:cat?-.42+side*.23:side*.44,tinny?.04:cat?.4:.32,(tinny?-.20:cat?-.75:-.37)-aft*(outboard?.12:.48));
       if(pose==='hangman')foot.lerp(new THREE.Vector3(hip.x-.55,hip.y-.25,hip.z-.35+side*.15),b);
+      if(pose==='heartattack')foot.lerp(new THREE.Vector3(hip.x+side*.20,hip.y+.65,hip.z-.45),b);
       if(pose==='superman')foot.lerp(new THREE.Vector3(hip.x+side*.18,hip.y+.12,hip.z-.82),b);
       const knee=joint(legHip,foot,.46,.47,new THREE.Vector3(side*.6,.05,1));
       placeSegment(l.leg[0],legHip,knee);placeSegment(l.leg[1],knee,foot);l.foot.position.copy(foot);

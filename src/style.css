@@ -87,3 +87,6 @@
 /* Six craft remain readable in the narrow launch card. */
 .vehicle-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.vehicle-tabs button{width:100%;min-width:0;white-space:nowrap;padding:10px 3px;font-size:8px;letter-spacing:.45px}.on-racer .activity-shortcuts{display:none}
 @media(max-height:500px) and (min-width:501px){.touch-device .vehicle-tabs button{padding:7px 2px}.touch-device .launch-card .colour-row{margin:8px 0}.touch-device .launch-card .garage-progress{margin-bottom:6px;padding-top:5px}}
+
+/* Keep the seventh craft on two rows; its featured button spans the last pair. */
+.vehicle-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.vehicle-tabs button{font-size:7px;letter-spacing:.15px;padding-inline:2px}.vehicle-tabs [data-vehicle="hyper"]{grid-column:span 2}.apex-only{display:none}.on-apex .apex-only{display:block}
