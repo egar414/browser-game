@@ -35,3 +35,13 @@ test('shaft prop wash travels aft in a low falling trail, rather than a tall sid
  setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');Object.assign(v,{x:-200,z:-1000,heading:0,pitch:1.22,roll:-.25,shaftLoad:1,riderAft:1,throttle:1,speed:11,vx:0,vz:11,y:1.3,drive:{...v.drive,flow:.8,wetness:1,trimAngle:0,steeringAngle:0,neutral:false}});
  assert.equal(sprayState(v,false,0).rate,0,'straight shaft has only low prop wash');v.steer=1;v.yawRate=1;v.slip=-6;const state=sprayState(v,false,0);assert(state.rate>120);for(const side of [-1,1])for(const sample of [.1,.5,.9]){const p=launchSpray(v,state,side,()=>sample),start={...p};assert(p.vy>0&&p.vy<2.7);assert(Math.abs(p.vx)<2);assert(p.vz-v.vz< -10);let peak=p.y;for(let i=0;i<60;i++){stepDroplet(p,1/60);peak=Math.max(peak,p.y);}assert(peak-start.y<.4);assert(p.y<start.y);}
 });
+
+test('deliberate held trim-up loops the tinny and recovers, while early release saves it',()=>{
+ setSeaState('calm',0,true);
+ for(const save of [false,true]){const events=[],v=new VehiclePhysics('tinny',()=>null,e=>events.push(e));v.x=-200;v.z=-1000;v.heading=0;
+ for(let i=0;i<360;i++)v.update(1/60,keys,i/60);
+ let loopPitch=0;
+ for(let i=0;i<360;i++){v.update(1/60,{...keys,trim:!save||i<35?1:0},6+i/60);if(v.looping)loopPitch=Math.max(loopPitch,v.pitch);}
+ if(save){assert(!events.some(e=>e.type==='wipeout'));assert(v.pitch<1.15);assert(v.loopLoad===0);}else{assert(events.some(e=>e.label==='Looped the tinny'));assert(loopPitch>Math.PI*2,'visible backwards rotation');assert(!v.wipeout&&!v.looping,'safe recovery clears loop state');}
+ }
+});

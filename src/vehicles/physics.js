@@ -29,7 +29,7 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      passengerAft:.35,shaftLoad:0,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;
@@ -58,12 +58,12 @@ export class VehiclePhysics {
   }
   wipe(reason) {
     if (this.wipeout) return;
-    this.airTricks.reset();this.shaftLoad=0;if(this.shaft)this.shaft={...this.shaft,active:false,cue:'WIPEOUT',seconds:0};this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
+    this.looping=this.type==='tinny'&&reason==='Looped the tinny';this.airTricks.reset();this.shaftLoad=0;if(this.shaft)this.shaft={...this.shaft,active:false,cue:'WIPEOUT',seconds:0};this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
   }
   update(dt, input, time, ramps = []) {
     if(this.type==='cruiser')return updateCruiser(this,dt,input,time);
     this.previous = this.snapshot();
-    if (this.wipeout > 0) { this.wipeout -= dt; if (this.wipeout <= 0) this.recover(true); return; }
+    if (this.wipeout > 0) { if(this.looping){this.pitch+=SHAFTING.loopRate*dt;this.y=waveHeight(this.x,this.z,time)+.65;this.roll*=Math.exp(-3*dt);} this.wipeout -= dt; if (this.wipeout <= 0) this.recover(true); return; }
     const c = this.config;
     const mode=RIDE_MODES[this.rideMode],driveConfig=PROPULSION[this.type],hydro=HYDRODYNAMICS[this.type];
     this.trickCooldown = Math.max(0, this.trickCooldown - dt);
@@ -173,7 +173,7 @@ export class VehiclePhysics {
       const supportAcceleration=supportError*c.spring-this.vy*sprayTurn.damping+verticalReaction+followingWater+reserve;
       this.vy+=supportAcceleration*dt;
       this.y += this.vy * dt;constrainHullWater(this,time);
-      if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe('Over the balance point');
+      if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe(this.type==='tinny'?'Looped the tinny':'Over the balance point');
       let onRamp=false;
       for (const ramp of ramps) {
         // A ramp rises toward +Z. Entering backward hits its foam-covered side instead of launching.

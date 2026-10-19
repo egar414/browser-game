@@ -111,11 +111,11 @@ test('loaded tender turns kick the stern, bounce on the water and settle when Sh
  assert(v.heading-h>6);assert(maxSlip>10);assert(high-low>.25&&high-low<.65);assert(v.sprayTurnLoad>.2);
  advance(v,2,{throttle:1},10);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.slip)<1.5);assert(Math.abs(v.roll)<.15);assert(!v.airborne&&!v.wipeout);
 });
-test('tender bounce needs powered wet steering load; idle, cruise and airtime cannot trigger it',()=>{
+test('tender bounce needs powered wet steering load; idle, gentle steering and airtime cannot trigger it',()=>{
  for(const changes of [{speed:0},{throttle:0},{steer:0},{airborne:true},{wipeout:1},{drive:{wetness:0}}]){
   const v={...attacker(),steer:1,config:VEHICLES.tinny,...changes};for(let i=0;i<120;i++){const turn=tenderTurn(v,{freestyle:true},1/60);assert.equal(turn.lift,0);assert.equal(turn.pitch,0);assert.equal(Math.abs(turn.roll),0);}
  }
- const v={...attacker(),steer:1,config:VEHICLES.tinny};for(let i=0;i<120;i++)assert.equal(tenderTurn(v,{freestyle:false},1/60).lift,0);
+ const v={...attacker(),steer:.2,config:VEHICLES.tinny};for(let i=0;i<120;i++)assert.equal(tenderTurn(v,{freestyle:false},1/60).lift,0);
 });
 
 test('tinny spray stays a compact falling fan under a fixed loaded turn',()=>{
@@ -150,4 +150,12 @@ test('Thundercat loaded turns catch and rock without acquiring tender-like insta
  }
  assert(v.heading-h>4&&v.heading-h<6);assert(max-min>.2&&max-min<.8);assert(peakFan>1);
  advance(v,3,{throttle:1},10);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.roll)<.2);assert(Math.abs(v.slip)<1.5);
+});
+
+test('ordinary sharp tinny turns dip first, rebound and return to a straight plane',()=>{
+ setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;advance(v,6,{throttle:1});
+ const heights=[],pitches=[];
+ for(let i=0;i<180;i++){const t=6+i/60;v.update(1/60,{...input,throttle:1,steer:1},t);heights.push(v.y-waveHeight(v.x,v.z,t)-v.config.rideHeight);pitches.push(v.pitch);assert(!v.wipeout&&!v.airborne);}
+ const dip=heights.findIndex(h=>h<-.03);assert(dip>=0&&dip<60,'hull loads into water first');assert(heights.slice(dip+1).some(h=>h>.06),'buoyancy rebounds above the plane');assert(Math.min(...pitches)<-.06,'bow dips rather than visual-only shaking');
+ advance(v,4,{throttle:1},9);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.pitch)<.15);assert(Math.abs(v.roll)<.15);assert(Math.abs(v.slip)<1);assert(!v.wipeout);
 });

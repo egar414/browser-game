@@ -1,7 +1,7 @@
 import{sportfisherZ}from'./sportfisher-shape.js';
 import{waveHeight}from'../config.js';
 import{bodyPoint}from'./propulsion.js';
-export const SHAFTING={balancePitch:.90,lowerPitch:.75,upperPitch:1.05,minimumSpeed:2.4,throttleBalance:.56,throttleMoment:.12,speedMoment:.004,speedTarget:7.2,sternPivot:1.10,hullClearance:.12,bankAngle:.20,passengerResponse:2.4};
+export const SHAFTING={balancePitch:.90,lowerPitch:.75,upperPitch:1.05,minimumSpeed:2.4,throttleBalance:.56,throttleMoment:.12,speedMoment:.004,speedTarget:7.2,sternPivot:1.10,hullClearance:.12,bankAngle:.20,passengerResponse:2.4,loopBuildRate:.65,loopDecay:1.8,loopPitch:1.85,loopRate:4.2};
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
 export function updatePassenger(v,dt){
@@ -13,10 +13,13 @@ export function shaftPitch(v,input,surfacePitch,dt){
  if(v.type!=='tinny')return null;
  const wanted=input.freestyle&&!v.airborne&&!v.wipeout&&v.speed>SHAFTING.minimumSpeed&&v.throttle>.04&&Math.abs(v.steer)<.4;
  v.shaftLoad=damp(v.shaftLoad||0,wanted?1:0,wanted?3.2:4,dt);
+ // Deliberate over-trim while lifting can overpower the stable shaft stance.
+ const overTrim=wanted&&v.pitch>.65&&v.throttle>.8&&input.trim>0&&v.trimDegrees>6;
+ v.loopLoad=clamp((v.loopLoad||0)+(overTrim?SHAFTING.loopBuildRate:-SHAFTING.loopDecay)*dt);
  if(v.shaftLoad<.01||Math.abs(v.steer)>.4)return null;
  const speedRise=clamp((v.speed-SHAFTING.minimumSpeed)/3.4),balance=SHAFTING.balancePitch+(v.throttle-SHAFTING.throttleBalance)*SHAFTING.throttleMoment+(v.speed-SHAFTING.speedTarget)*SHAFTING.speedMoment+v.trimDegrees*.004-Math.abs(v.steer)*.35;
  // Weight forward helps takeoff; the second rider then moves aft on the plane.
- return clamp(surfacePitch*.22+balance*speedRise-(1-(v.passengerAft??.35))*.08,0,SHAFTING.upperPitch)*v.shaftLoad;
+ return clamp(surfacePitch*.22+balance*speedRise-(1-(v.passengerAft??.35))*.08,0,SHAFTING.upperPitch)*v.shaftLoad+(v.loopLoad||0)*(SHAFTING.loopPitch-SHAFTING.upperPitch);
 }
 // Prop torque and crew weight cant the raised hull onto one quarter.
 // This feeds the roll spring and water contacts, rather than tilting only the mesh.
@@ -27,7 +30,7 @@ export function shaftRoll(v){
 export function updateShaftStatus(v,dt){
  if(v.type!=='tinny')return;
  const active=!v.airborne&&!v.wipeout&&(v.shaftLoad||0)>.35&&v.pitch>.6&&Math.abs(v.steer)<.4,projected=v.pitch+(v.pitchRate||0)*.24,error=(projected-SHAFTING.balancePitch)/.24;
- const cue=!active?'BUILD SPEED':v.throttle<.25?'MORE THROTTLE':'STABLE BOW RIDE';
+ const cue=(v.loopLoad||0)>.25?'LOOP RISK · RELEASE Q / TRIM UP':!active?'BUILD SPEED':v.throttle<.25?'MORE THROTTLE':'STABLE BOW RIDE';
  v.shaft={active,pitch:v.pitch,error:clamp(error,-1,1),needle:clamp(.5+error*.5),cue,seconds:active&&v.pitch>SHAFTING.lowerPitch?(v.shaft?.seconds||0)+dt:0,risk:clamp((projected-SHAFTING.upperPitch)/.22),passengerAft:v.passengerAft??.35};
 }
 export function clearancePoints(v){

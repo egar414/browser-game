@@ -57,7 +57,7 @@ export const HYDRODYNAMICS = {
 // require speed, wet contact and steering load; they never trigger a jump.
 export const TINNY_HANDLING={steerResponse:10,slideYawGain:.48,slideYawLimit:2.25,
   bowStart:1.3,bowRange:2.6,bowSteeringLoss:.38,surgePitch:.035,sternSupport:.33,
-  bounceHz:1.25,chineLift:.32,pitchBounce:.29,rollBounce:.12,loadedDamping:7.2};
+  bounceHz:.95,chineLift:.24,pitchBounce:.34,rollBounce:.12,loadedDamping:7.2};
 // Broader twin-pontoon support: slower catch/release and less pitch authority
 // than the short tender. Clip-inspired arcade values, not real craft limits.
 export const CAT_HANDLING={steerResponse:7.8,slideYawGain:.24,slideYawLimit:1.75,

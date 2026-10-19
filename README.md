@@ -545,7 +545,9 @@ Tune daylight and bite periods in `src/systems/day-cycle.js`, Seago's drive/hull
 ### Tinny shaft balance and finding wildlife
 
 Hold W + Shift / phone GO + LIFT once moving. The lower 50–60° stance is
-bounded so held throttle does not loop the tinny. Release LIFT to
+bounded during ordinary held throttle. Deliberately holding Q / TRIM UP
+with full throttle and LIFT can now overbalance into a backward loop and wipeout;
+release trim-up early to save it. Release LIFT to
 settle; steering transitions to a lower spray slide. Two crew ride the tender:
 the passenger moves forward during takeoff and aft when planing. Dry-hull bow
 rides keep the alloy hull clear of the surface, with the lower unit and propeller
@@ -582,7 +584,7 @@ not a scale model.
 
 The 225 now holds its shaft on continuous W + Shift / GO + LIFT, using a
 roughly 50–60° supported stance instead of a near-vertical throttle balance.
-Held throttle does not cause a backflip. The hull stays visibly clear with the
+Held throttle alone does not cause a backflip; continuing to hold trim-up can. The hull stays visibly clear with the
 lower unit/propeller immersed; the chase camera moves closer and slightly aside
 to show that gap. Release LIFT to settle, or steer into the lower spray slide.
 
@@ -625,3 +627,19 @@ were 1.67 million and 1.83 million respectively because larger batches retain
 more distant geometry. This is a reduction in submissions, not a claim of a
 particular laptop frame rate; software-renderer FPS is not representative of
 hardware-accelerated Chrome.
+
+
+### Tinny catch, rebound and deliberate loops
+
+A sharp powered turn now loads the 225 bow down first, rebounds through its
+buoyancy springs and settles when steering straightens. Shift loosens the slide
+but is not required for this catch/rebound. Gentle turns, idle, dry prop contact
+and airtime do not start the cycle. No extra particles or water samples were added.
+Tune `TINNY_HANDLING.bounceHz`, `chineLift`, `pitchBounce` and `loadedDamping`.
+
+For a deliberate backward loop, build speed, hold W + Shift, then keep holding
+Q (trim up). The shaft meter warns before overbalance. Release Q early to save
+it; pushing past the balance point animates a backward tumble, breaks the combo
+and automatically recovers in safe water. R still recovers manually. On touch,
+use GO + LIFT + TRIM UP. Loop buildup, decay and rotation rate live in `SHAFTING`.
+This is an arcade manoeuvre, not a validated prediction of real tender behaviour.
