@@ -19,6 +19,7 @@ test('two browser accounts share moving boats, private codes isolate, sign out r
   await expect.poll(async()=>(await status(b)).online.visibleCrafts,{timeout:25000}).toBe(1);
   await expect(b.locator('.online-player-name.is-creator')).toContainText('CREATOR');
   await a.bringToFront();if((await status(a)).state==='paused')await a.keyboard.press('Escape');await a.keyboard.down('KeyW');await expect.poll(async()=>(await status(a)).speed,{timeout:35000}).toBeGreaterThan(6);await a.keyboard.up('KeyW');console.log('Movement reaches the shared PostgreSQL state');
+  await expect.poll(async()=>(await status(b)).online.visibleSprays,{timeout:25000}).toBeGreaterThan(0);
   await expect.poll(async()=>{const snapshot=await rpc(f,users[1],'er_snapshot');return snapshot.players.find(p=>p.id===users[0]).pose.speed;},{timeout:15000}).toBeGreaterThan(2);
   await a.screenshot({path:'test-results/multiplayer-public-world.png'});
   await a.locator('#online-status').click();await a.getByRole('button',{name:'CREATE PRIVATE ROOM',exact:true}).click();

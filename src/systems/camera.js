@@ -60,6 +60,6 @@ export class ChaseCamera {
     for(let t=.2;t<=1;t+=.2) if(collision(v.x+(target.x-v.x)*t,v.z+(target.z-v.z)*t,.5,target.y)) {target.y=Math.max(target.y,12);break;}
     if(!this.initialized){this.camera.position.copy(target);this.look.copy(look);this.initialized=true;}
     this.camera.position.lerp(target,1-Math.exp(-dt*4.5));this.look.lerp(look,1-Math.exp(-dt*6));this.camera.lookAt(this.look);
-    this.camera.fov=menu?48:mode?58:61+Math.min(5,v.speed*.18);this.camera.updateProjectionMatrix();
+    this.camera.fov=menu?48:mode?58:72+Math.min(6,v.speed*.18);this.camera.updateProjectionMatrix();
   }
 }

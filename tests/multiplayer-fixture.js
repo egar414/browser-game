@@ -2,12 +2,14 @@ import {PGlite} from '@electric-sql/pglite';
 import {readFile} from 'node:fs/promises';
 export const migration=await readFile(new URL('../supabase/migrations/001_multiplayer.sql',import.meta.url),'utf8');
 export const creatorMigration=await readFile(new URL('../supabase/migrations/002_creator.sql',import.meta.url),'utf8');
+export const combatMigration=await readFile(new URL('../supabase/migrations/003_spray_combat.sql',import.meta.url),'utf8');
 export const users=['11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333'];
 export async function database(){
  const db=new PGlite();
  await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;`);
  await db.exec(migration);await db.exec(migration);
  await db.exec(creatorMigration);await db.exec(creatorMigration);
+ await db.exec(combatMigration);await db.exec(combatMigration);
  for(const id of users)await db.query('insert into auth.users(id) values($1)',[id]);
  let pending=Promise.resolve();
  const as=(id,sql,args=[])=>{const work=pending.then(()=>db.transaction(async tx=>{await tx.exec('set local role authenticated');await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[id||'']);return tx.query(sql,args);}));pending=work.catch(()=>{});return work;};

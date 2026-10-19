@@ -991,3 +991,40 @@ independent of visual quality and retains the existing 1,024-packet pool; no
 extra visual particles were added. Tune `MOORING_FLOOD` and `sprayCapture` in
 `src/systems/mooring-flood.js`. Online player craft remain outside the local AI
 flooding simulation and cannot be sunk by another player in this release.
+
+### Police patrols, shared spray and automatic online flooding
+
+Four local police craft (two grey console boats and two jet skis) patrol the
+main waterway. Pause → **FIND POLICE PATROL** puts you beside one. Within 105 m
+and a clear line of sight they start a 60-second pursuit; sightings do not extend
+the timer. They return to patrol afterwards, with a 30-second cooldown. Land and
+solid-object probes constrain steering. These are local free-roam NPCs, not
+synchronised server-controlled police. Tune `POLICE` in `police-patrol.js`.
+The wide chase camera now uses a 72–78 degree field of view; C still cycles views.
+
+Remote craft now have bounded spray and wake pools, released on departure or
+when outside spray range. Actual emission points/velocities are sent with poses,
+including the rear trim plume and sharp-turn side fans. Pools are intentionally
+smaller than the local player's effects for laptop performance.
+
+For an existing Supabase project, run **all of `public/online-update.sql`** once
+in its SQL Editor, then reload the game. New projects can use the full
+`public/multiplayer.sql`. No passwords or service-role keys are needed in the
+browser. Existing Creator grants remain intact. This chat cannot apply production
+SQL without a project administration connector.
+
+Once installed, spray hits count automatically in public and private rooms;
+there is no opt-in prompt. Private codes restrict who can join. Server-owned
+ballistic water packets must cross another same-room craft's deck while falling.
+Rear trim plumes and sharp-turn fans can swamp every craft, including large
+boats (their open aft cockpit receives water). Clients never send a claimed
+victim or damage value. Water drains slowly; 100% water sinks a craft for six
+seconds, then it recovers with eight seconds of protection. Movement and source
+poses remain client-simulated; this is casual multiplayer, not competitive
+anti-cheat. The server clamps sources, rate-limits poses and bounds packet pools.
+
+Tests use two isolated browser accounts against a local PostgreSQL-compatible
+fixture to verify shared spray, room isolation, reconnects and driving. Database
+checks cover actual descending hits, shields, automatic sinking/relaunch and
+rejected forged damage. Production PvP is unavailable until the owner runs the
+SQL update; basic online driving continues with the previous backend.

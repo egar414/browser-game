@@ -1,3 +1,4 @@
+import {remoteSpray} from './network-spray.js';
 import{isJet}from'../config.js';
 import * as THREE from 'three';
 import { JetPlume } from './jet-plume.js';
@@ -150,16 +151,18 @@ export class Spray {
   }
   update(dt,v,time,active=true,controls={}) {
     this.time=time;this.impactBudget=dt>0?6:0;this.state=sprayState(v,false,time);
+    const received=controls.remote?remoteSpray(v):null;
+    if(received){const left=received.find(p=>p.kind==='left'),right=received.find(p=>p.kind==='right');this.state={...this.state,left:left?.power||0,right:right?.power||0,rate:((left?.power||0)+(right?.power||0))*100,contacts:[left||{x:v.x,y:v.y,z:v.z,wet:0},right||{x:v.x,y:v.y,z:v.z,wet:0}]};}
     if(!active)this.state={...this.state,rate:0,left:0,right:0,jet:0};
     // Reserve room for falling heavy drops and pump froth on smaller pools.
     this.accumulator+=dt*Math.min(this.state.rate,this.count*.75/(SIDE_SPRAY.dropletLife+.2));
     const count=Math.min(Math.floor(this.accumulator),80);this.accumulator-=count;
     for(let i=0;i<count;i++){
       const side=Math.random()*(this.state.left+this.state.right)<this.state.left?-1:1;
-      this.emit(launchSpray(v,this.state,side),i%3===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
+      this.emit(received?{...received.find(p=>p.kind===(side<0?'left':'right')),lifetime:3,diameter:.005}:launchSpray(v,this.state,side),i%3===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
     }
     const discharge=active?pumpDischarge(v,time):null;this.stream.update(v,discharge);
-    const plume=jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
+    const rear=received?.find(p=>p.kind==='rear'),plume=received?(active&&rear?{origin:rear,velocity:rear,power:rear.power,loaded:v.riderAft||0,packetScale:v.type==='hyper'?2.2:1}:null):jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
     this.jetAccumulator+=dt*this.state.jet*(isJet(v.type)?200:90);
     const jetCount=Math.min(30,Math.floor(this.jetAccumulator));this.jetAccumulator-=jetCount;
     for(let i=0;i<jetCount&&discharge;i++){

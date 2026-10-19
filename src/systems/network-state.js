@@ -1,3 +1,4 @@
+import {packSpray} from './network-spray.js';
 import {availableCraft} from './craft-access.js';
 export const ONLINE_TYPES = ['ski','cat','tinny','cruiser','seago','racer','hyper'];
 const ranges={x:[-2600,9600],y:[-20,60],z:[-4700,3900],heading:[-Math.PI,Math.PI],pitch:[-25,25],roll:[-25,25],vx:[-160,160],vz:[-160,160],speed:[0,160],steer:[-1,1],throttle:[-1,1],trim:[-20,40],rpm:[0,15000],riderAft:[0,1],planing:[0,1],passengerAft:[0,1],trimAngle:[-1,1],steeringAngle:[-2,2],deckX:[-2,2],deckZ:[-8,8],deckHeading:[-Math.PI,Math.PI]};
@@ -6,11 +7,11 @@ export const wrapAngle=a=>Math.atan2(Math.sin(a||0),Math.cos(a||0));
 // Keep a reloaded player's sequence above their old tab's packets. Advancing
 // within a session also tolerates a local clock adjustment without rewinding.
 export const nextSequence=(previous,now=Date.now())=>Math.max(previous+1,now*1000);
-export function packPose(v,settings,deck,active){
+export function packPose(v,settings,deck,active,time=0,emitting=active){
  const result={type:availableCraft(v.type,settings.creatorAccess),colour:settings.colour,design:settings.design,active:!!active,airborne:!!v.airborne,pose:v.airTricks?.pose||null,deck:!!deck.active};
  const values={...v,heading:wrapAngle(v.heading),roll:wrapAngle(v.roll),trim:v.trimDegrees,rpm:v.drive?.rpm,trimAngle:v.drive?.trimAngle,steeringAngle:v.drive?.steeringAngle,deckX:deck.x,deckZ:deck.z,deckHeading:wrapAngle(deck.heading)};
  for(const [key,[lo,hi]]of Object.entries(ranges))result[key]=clamp(values[key],lo,hi);
- return result;
+ result.spray=packSpray(v,time,emitting);return result;
 }
 export function validPose(p){return p&&ONLINE_TYPES.includes(p.type)&&Object.entries(ranges).every(([key,[lo,hi]])=>Number.isFinite(p[key])&&p[key]>=lo&&p[key]<=hi)&&[0,1,2].includes(p.colour);}
 export class RemoteStates{
@@ -23,10 +24,10 @@ export class RemoteStates{
    if(p.pose?.type==='hyper'&&p.creator!==true){this.players.delete(p.id);continue;}
    if(!validPose(p.pose)||!Number.isSafeInteger(p.seq))continue;
    let r=this.players.get(p.id);
-   if(r){r.creator=p.creator===true;r.name=String(p.name||'Boater').slice(0,20);}
+   if(r){r.combat=p.combat;r.creator=p.creator===true;r.name=String(p.name||'Boater').slice(0,20);}
    if(r&&p.seq<=r.seq){r.seen=now;continue;}
    if(!r){r={id:p.id,history:[]};this.players.set(p.id,r);}
-   r.name=String(p.name||'Boater').slice(0,20);r.creator=p.creator===true;r.seq=p.seq;r.seen=now;r.history.push({time:now,...p.pose});
+   r.combat=p.combat;r.name=String(p.name||'Boater').slice(0,20);r.creator=p.creator===true;r.seq=p.seq;r.seen=now;r.history.push({time:now,...p.pose});
    if(r.history.length>8)r.history.shift();
   }
   for(const [id,r]of this.players)if(!ids.has(id)||now-r.seen>12000)this.players.delete(id);

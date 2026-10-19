@@ -16,7 +16,8 @@ export class OnlineClient{
   this.getPose=getPose;this.onChange=onChange;this.createClient=createClient;this.loadConfig=loadConfig;this.remote=new RemoteStates();this.message='Single player · online is optional';this.room=null;this.session=null;this.creator=false;this.creatorState='signed-out';this.creatorError='';this.seq=0;this.failures=0;this.next=0;
  }
  changed(message){if(message)this.message=message;this.onChange(this.status);}
- get status(){return {configured:!!this.client,connected:!!this.room&&this.failures===0,signedIn:!!this.session,accountId:this.session?.user.id||null,playerName:savedPlayerName(this.session?.user),creator:this.creator,creatorState:this.creatorState,creatorError:this.creatorError,room:this.room?{id:this.room.id,code:this.room.code,public:this.room.public,players:this.room.players?.length||0,capacity:8}:null,message:this.message,remotePlayers:this.remote.players.size};}
+ get combat(){const c=this.room?.combat;if(!c)return null;const elapsed=Math.max(0,(performance.now()-(this.combatAt||performance.now()))/1000);return {...c,sinking:Math.max(0,(c.sinking||0)-elapsed),shield:Math.max(0,(c.shield||0)-elapsed)};}
+ get status(){return {combat:this.combat,combatEnabled:this.room?.combatVersion===1,configured:!!this.client,connected:!!this.room&&this.failures===0,signedIn:!!this.session,accountId:this.session?.user.id||null,playerName:savedPlayerName(this.session?.user),creator:this.creator,creatorState:this.creatorState,creatorError:this.creatorError,room:this.room?{id:this.room.id,code:this.room.code,public:this.room.public,players:this.room.players?.length||0,capacity:8}:null,message:this.message,remotePlayers:this.remote.players.size};}
  async restoreSession(storage){
   // A stored session is only a reason to contact Auth, never proof of a role.
   try{storage??=globalThis.localStorage;if(!storage?.getItem('estuary-rats-auth-v1'))return false;}catch{return false;}
@@ -61,7 +62,7 @@ export class OnlineClient{
   this.generation=(this.generation||0)+1;await this.pending;
   const room=await this.rpc('er_join',{p_name:name,p_code:code,p_create:create});
   const me=room.players.find(p=>p.id===this.session.user.id);savePlayerName(this.session.user.id,me?.name||name);
-  this.remote.clear();this.room=room;if(typeof room.creator==='boolean'){this.creator=room.creator;this.creatorState=this.creator?'active':'inactive';}this.failures=0;this.next=0;this.changed(nameWarning||(room.public?'Public world joined.':'Private room ready. Share the room code with friends.'));
+  this.remote.clear();this.room=room;this.combatAt=performance.now();if(typeof room.creator==='boolean'){this.creator=room.creator;this.creatorState=this.creator?'active':'inactive';}this.failures=0;this.next=0;this.changed(nameWarning||(room.public?'Public world joined.':'Private room ready. Share the room code with friends.'));
  }
  clearRoom(){this.generation=(this.generation||0)+1;this.room=null;this.remote.clear();}
  async leave(){this.clearRoom();await this.pending;if(this.client&&this.session)await this.rpc('er_leave');this.changed('Left online world. Single player continues.');}
@@ -71,7 +72,7 @@ export class OnlineClient{
   this.next=now+(document.hidden?10000:333);
   this.pending=this.rpc('er_exchange',{p_pose:this.getPose(),p_seq:this.seq=nextSequence(this.seq)}).then(room=>{
    if(generation!==(this.generation||0))return;
-   this.room=room;if(typeof room.creator==='boolean'){this.creator=room.creator;this.creatorState=this.creator?'active':'inactive';}this.remote.accept(room.players,this.session.user.id,performance.now());this.failures=0;this.changed();
+   this.room=room;this.combatAt=performance.now();if(typeof room.creator==='boolean'){this.creator=room.creator;this.creatorState=this.creator?'active':'inactive';}this.remote.accept(room.players,this.session.user.id,performance.now());this.failures=0;this.changed();
   }).catch(error=>{
    if(generation!==(this.generation||0))return;
    this.failures++;this.remote.clear();this.next=performance.now()+Math.min(10000,1000*2**Math.min(3,this.failures));

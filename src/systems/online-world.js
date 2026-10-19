@@ -1,3 +1,7 @@
+import {packSpray} from './network-spray.js';
+import {isJet} from '../config.js';
+import {Spray} from './spray.js';
+import {QUALITY} from '../config.js';
 import * as THREE from 'three';
 import {VEHICLES} from '../config.js';
 import {makeVehicle} from '../vehicles/models.js';
@@ -18,7 +22,7 @@ function placeNameplate(plate,name,creator,anchor,camera){
 
 export class OnlineWorld{
  constructor(scene,client){this.scene=scene;this.client=client;this.models=new Map();this.localPlate=nameplate();this.localPlate.label.id='local-player-name';}
- remove(id){const entry=this.models.get(id);if(!entry)return;this.scene.remove(entry.model);entry.label.remove();
+ remove(id){const entry=this.models.get(id);if(!entry)return;entry.spray?.dispose();entry.effects?.removeFromParent();this.scene.remove(entry.model);entry.label.remove();
   // Several craft share source geometry/materials. Removing an online craft must
   // never dispose resources still used by the local player or AI boats.
   for(const resource of entry.resources)resource.dispose();this.models.delete(id);
@@ -42,14 +46,18 @@ export class OnlineWorld{
     const model=makeVehicle(p.type,VEHICLES[p.type].colours[p.colour],p.design,{creator:r.creator===true}),clones=new Map();
     const own=resource=>{if(!clones.has(resource))clones.set(resource,resource.clone());return clones.get(resource);};
     model.traverse(o=>{o.castShadow=false;if(o.geometry)o.geometry=own(o.geometry);if(o.material){const materials=Array.isArray(o.material)?o.material:[o.material];const copies=materials.map(m=>{const copy=own(m);for(const k of Object.keys(copy))if(m[k]?.isTexture)copy[k]=own(m[k]);return copy;});o.material=Array.isArray(o.material)?copies:copies[0];}});
-    const plate=nameplate();this.scene.add(model);entry={key,model,...plate,resources:new Set(clones.values())};this.models.set(id,entry);
+    const plate=nameplate();this.scene.add(model);const effects=new THREE.Group();this.scene.add(effects);entry={key,model,effects,spray:null,...plate,resources:new Set(clones.values())};this.models.set(id,entry);
    }
    const {model,label}=entry;const distance=Math.hypot(p.x-viewer.x,p.z-viewer.z);model.visible=!!p.active&&distance<1000;
-   label.hidden=!model.visible||distance>220;if(!model.visible)continue;
-   model.position.set(p.x,p.y,p.z);model.rotation.set(-p.pitch,p.heading,p.roll,'YXZ');
+   label.hidden=!model.visible||distance>220;if(!model.visible){if(entry.spray){entry.spray.dispose();entry.spray=null;}continue;}
+   const sink=r.combat?.sinking||0;model.position.set(p.x,p.y-(sink?Math.min(3,(6-sink)*.65):0),p.z);model.rotation.set(-p.pitch,p.heading,p.roll,'YXZ');
    if(model.userData.handlebars)model.userData.handlebars.rotation.y=-p.steer*.43;
    for(const part of [model.userData.motor,model.userData.nozzle])if(part)part.rotation.set(p.trimAngle,-p.steeringAngle,0,'YXZ');
-   const v={...p,trimDegrees:p.trim,animationTime:now/1000,drive:{rpm:p.rpm},airTricks:{pose:p.pose,blend:p.pose?1:0}};
+   const v={...p,config:VEHICLES[p.type],slip:p.vx*Math.cos(p.heading)-p.vz*Math.sin(p.heading),yawRate:p.steer*.8,trimDegrees:p.trim,animationTime:now/1000,drive:{rpm:p.rpm,neutral:p.throttle<.08,flow:(isJet(p.type)?.16:1.2)*Math.max(0,p.throttle),exitSpeed:isJet(p.type)?24:8,wetness:1,reverse:p.throttle<0?1:0,trimAngle:p.trimAngle,steeringAngle:p.steeringAngle},airTricks:{pose:p.pose,blend:p.pose?1:0}};
+   // Legacy backends strip source arrays. Reconstruct a visual-only fallback
+   // until the owner installs the exact-source/shared-hit SQL update.
+   if(!Array.isArray(v.spray))v.spray=packSpray(v,localView.time??now/1000,p.active&&!sink);
+   if(distance<240){if(!entry.spray)entry.spray=new Spray(entry.effects,{...QUALITY.Low,particles:72,wakeSamples:32,plumeDensity:.2,plumeCapacity:280});entry.spray.update(dt,v,localView.time??now/1000,p.active&&!sink,{remote:true});entry.spray.resize(innerHeight,camera.fov,Math.min(devicePixelRatio,1));}else if(entry.spray){entry.spray.dispose();entry.spray=null;}
    const rider=model.userData.rider;
    if(p.type==='cruiser'){rider.position.set(p.deck?p.deckX:0,p.deck?1.02:3.25,p.deck?p.deckZ:-.25);rider.rotation.y=p.deck?p.deckHeading:0;rider.userData.animate(now/1000,0,false,!p.deck);}
    else rider?.userData.update?.(v,dt,model.userData);
