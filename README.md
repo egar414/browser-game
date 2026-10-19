@@ -672,8 +672,8 @@ cloud/day blending in `atmosphere.js`, and terrain scale in
 
 ### Continuous tinny bounce, contact spray and rear view
 
-The Tender Rat 225 bounces under powered straight cruising too, with a stronger
-shafting bounce. Sharp turns blend into the existing catch/rebound response.
+The Tender Rat 225 has an added bounce only during shafting. Ordinary cruising
+and turns follow the waves without a separate bounce cycle.
 It settles off throttle; idle and airborne boats do not receive this support
 oscillation. A shafting downstroke can briefly touch the stern against the
 visible wave surface; the hull-contact constraint bounds penetration rather
@@ -691,3 +691,14 @@ saved camera choice. On phones, hold **REAR**. Blur/pause clears the held input.
 Tune bounce and contact thresholds in `src/vehicles/tinny-bounce.js`, shafting
 clearance in `shafting.js`, and rear framing in `src/systems/camera.js`.
 These are assisted arcade reactions, not measured tender hydrodynamics.
+
+
+### Shaft-only bounce and broader contact spray
+
+Added spray sprite size is increased by 14% through `SPRAY_VISUAL_SCALE`,
+without enlarging the pools or altering spray trajectories/flooding reach.
+Shafting touchdown checks all hull samples independently. Every wet, closing
+sample emits from its own location, with a per-point cooldown; a stronger
+contact no longer suppresses its neighbours. Splash particles are distributed
+across those points inside a bounded burst budget. The previous continuous
+cruising/turn-bounce cycle is disabled; real wave following remains.

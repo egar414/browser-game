@@ -499,3 +499,16 @@ included). This is software-renderer inspection, not a hardware-GPU FPS claim.
 - Linux Chromium with SwiftShader software WebGL, desktop 1100×720 / 960×640
   and landscape phone emulation 844×390. No physical phone or user laptop was
   available; these checks do not establish a device frame-rate guarantee.
+
+## Shaft-only bounce and contact spray — 2026-10-19
+
+127 Node checks and production build passed. Updated old bounce expectations
+for the requested stance-only behaviour: ordinary cruising and turns have no
+added bounce, while shafting still bounces at 30/60/120 Hz without phasing
+through waves. Tests verify every touching sample is reported, separate
+cooldowns, and a bounded rendered splash covers every supplied contact point.
+The existing actual Chromium shaft/rear-camera flow passed with a new ordinary
+cruising check before LIFT; inspected the contact-spray rear-view capture.
+The spray size change is visual (+14%); shared physical trajectories and
+particle capacities are retained. Test environment remains software Chromium;
+no physical laptop/mobile performance claim.

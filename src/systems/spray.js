@@ -2,7 +2,7 @@ import{isJet}from'../config.js';
 import * as THREE from 'three';
 import { JetPlume } from './jet-plume.js';
 import { waveHeight } from '../config.js';
-import { clamp, sprayState, launchSpray, pumpDischarge, stepDroplet, SPRAY_TUNING, SIDE_SPRAY, jetPlumeSource } from './spray-model.js';
+import { clamp, sprayState, launchSpray, pumpDischarge, stepDroplet, SPRAY_TUNING, SIDE_SPRAY, SPRAY_VISUAL_SCALE, jetPlumeSource } from './spray-model.js';
 
 function foamTexture() {
   const size=128,data=new Uint8Array(size*size*4);
@@ -136,16 +136,16 @@ export class Spray {
     this.state={left:0,right:0,rate:0};this.time=0;this.waterImpacts=0;this.impactBudget=0;
   }
   clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.current=null;fan.mesh.visible=false;}}
-  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,secondary:false,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65,kind});}
+  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,secondary:false,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:SPRAY_VISUAL_SCALE*(kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65),kind});}
   impact(x,z,strength){
     if(this.impactBudget<=0)return;this.impactBudget--;this.waterImpacts++;
     this.wake.returns.push({x,z,time:this.time,strength:clamp(strength,.25,.8)});
     for(let j=0;j<3;j++){const a=j*Math.PI*2/3+Math.random(),s=.7+Math.random()*1.1;this.emit({x,y:waveHeight(x,z,this.time)+.035,z,vx:Math.sin(a)*s,vy:.7+Math.random()*.9,vz:Math.cos(a)*s,lifetime:.35+Math.random()*.15,secondary:true},2);}
   }
-  splash(v,impact) {
-    const count=Math.min(this.count*.4,40+impact*13);
-    for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:v.x,y:waveHeight(v.x,v.z,this.time)+.1,z:v.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},i%8===0?1:0);}
-    this.wake.splash(v,impact,this.time);
+  splash(v,impact,contacts=null) {
+    const count=contacts?.length?Math.max(contacts.length,Math.min(this.count*.25,contacts.length*8)):Math.min(this.count*.4,40+impact*13);
+    for(let i=0;i<count;i++){const point=contacts?.[i%contacts.length]||v,angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:point.x,y:waveHeight(point.x,point.z,this.time)+.1,z:point.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},i%8===0?1:0);}
+    for(const point of contacts||[v])this.wake.splash(point,impact,this.time);
   }
   update(dt,v,time,active=true,controls={}) {
     this.time=time;this.impactBudget=dt>0?6:0;this.state=sprayState(v,false,time);

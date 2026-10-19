@@ -101,14 +101,14 @@ test('the pontoon approach gives the tender enough run-up to land a powered side
  }
 });
 
-test('loaded tender turns kick the stern, bounce on the water and settle when Shift is released',()=>{
+test('loaded tender turns kick the stern and settle without a separate turn-bounce cycle',()=>{
  setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;advance(v,6,{throttle:1});const h=v.heading;let low=Infinity,high=-Infinity,maxSlip=0;
  for(let i=0;i<240;i++){
   v.update(1/60,{...input,throttle:1,steer:1,freestyle:true},6+i/60);maxSlip=Math.max(maxSlip,Math.abs(v.slip));assert(!v.airborne&&!v.wipeout);
   if(i>60){const pivot=Math.sin(Math.max(0,v.pitch))*v.config.length*TINNY_HANDLING.sternSupport*Math.max(0,Math.min(1,(v.pitch-.18)/.4)),heave=v.y-waveHeight(v.x,v.z,6+i/60)-v.config.rideHeight-pivot;low=Math.min(low,heave);high=Math.max(high,heave);}
  }
  // More visible catch/drop travel is intentional in the supplied video reference.
- assert(v.heading-h>6);assert(maxSlip>10);assert(high-low>.25&&high-low<.65);assert(v.sprayTurnLoad>.2);
+ assert(v.heading-h>6);assert(maxSlip>10);assert(high-low>.25&&high-low<.65);assert(v.sprayTurnLoad<.01);
  advance(v,2,{throttle:1},10);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.slip)<1.5);assert(Math.abs(v.roll)<.15);assert(!v.airborne&&!v.wipeout);
 });
 test('tender bounce needs powered wet steering load; idle, gentle steering and airtime cannot trigger it',()=>{
@@ -152,10 +152,8 @@ test('Thundercat loaded turns catch and rock without acquiring tender-like insta
  advance(v,3,{throttle:1},10);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.roll)<.2);assert(Math.abs(v.slip)<1.5);
 });
 
-test('ordinary sharp tinny turns dip first, rebound and return to a straight plane',()=>{
- setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;advance(v,6,{throttle:1});
- const heights=[],pitches=[];
- for(let i=0;i<180;i++){const t=6+i/60;v.update(1/60,{...input,throttle:1,steer:1},t);heights.push(v.y-waveHeight(v.x,v.z,t)-v.config.rideHeight);pitches.push(v.pitch);assert(!v.wipeout&&!v.airborne);}
- const dip=heights.findIndex(h=>h<-.03);assert(dip>=0&&dip<60,'hull loads into water first');assert(heights.slice(dip+1).some(h=>h>.06),'buoyancy rebounds above the plane');assert(Math.min(...pitches)<-.06,'bow dips rather than visual-only shaking');
- advance(v,4,{throttle:1},9);assert(v.sprayTurnLoad<.001);assert(Math.abs(v.pitch)<.15);assert(Math.abs(v.roll)<.15);assert(Math.abs(v.slip)<1);assert(!v.wipeout);
+test('ordinary sharp tinny turns retain powered steering without artificial bounce',()=>{
+ setSeaState('calm',0,true);const v=new VehiclePhysics('tinny');v.x=-200;v.z=-1000;v.heading=0;advance(v,6,{throttle:1});const heading=v.heading;
+ for(let i=0;i<180;i++){v.update(1/60,{...input,throttle:1,steer:1},6+i/60);assert.equal(v.bounceLoad,0);assert.equal(v.sprayTurnLoad,0);assert(!v.wipeout&&!v.airborne);}
+ assert(v.heading-heading>2);advance(v,4,{throttle:1},9);assert(Math.abs(v.pitch)<.15);assert(Math.abs(v.roll)<.15);assert(Math.abs(v.slip)<1);
 });

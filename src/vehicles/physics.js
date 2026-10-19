@@ -30,7 +30,7 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldown:0,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;

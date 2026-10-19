@@ -111,3 +111,7 @@ test('rider shifts weight smoothly through a bow-ride countersteer and keeps the
   rider.traverse(o=>{assert([...o.position,...o.scale,...o.quaternion].every(Number.isFinite));});
   assert(Math.abs(run(idle).lean)<.01);
 });
+test('multi-point touchdown distributes a bounded splash across all supplied contact positions',()=>{
+ const s=new Spray(new THREE.Scene(),QUALITY.Low),v=boat('tinny'),contacts=[{x:-.5,z:-1},{x:.5,z:-1},{x:0,z:.7}];s.splash(v,2,contacts);
+ const drops=s.particles.filter(p=>p.life>0);assert(drops.length<=s.count*.25+1);for(const point of contacts)assert(drops.some(p=>p.x===point.x&&p.z===point.z));s.dispose();
+});

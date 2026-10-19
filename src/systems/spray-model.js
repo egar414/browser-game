@@ -1,3 +1,4 @@
+export const SPRAY_VISUAL_SCALE=1.14;
 import{isJet}from'../config.js';
 import { waveHeight } from '../config.js';
 import { bodyPoint, bodyVector, propulsionPose, hullImmersion } from '../vehicles/propulsion.js';

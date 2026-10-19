@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { waveHeight } from '../config.js';
-import { JET_PLUME, clamp } from './spray-model.js';
+import { JET_PLUME, SPRAY_VISUAL_SCALE, clamp } from './spray-model.js';
 // A packet remains in world space after leaving the nozzle. Its water follows
 // a ballistic trajectory with drag, including the falling half of the plume.
 export function plumeTrajectory(p,age){
@@ -54,7 +54,7 @@ export class JetPlume {
         if(q.vy<0&&age>0.15&&!p.fine)this.impacts.push({x:q.x,z:q.z,time,strength:.1+p.power*.13});p.active=false;continue;
       }
       if(q.vy<0)this.falling++;
-      const size=Math.min(p.fine?JET_PLUME.mistRadius:JET_PLUME.coreRadius,p.size+age*(p.fine?1.2:JET_PLUME.coreGrowth)*(1+p.loaded*.3)),fade=clamp(age/.025)*clamp((JET_PLUME.lifetime-age)/.3);
+      const size=SPRAY_VISUAL_SCALE*Math.min(p.fine?JET_PLUME.mistRadius:JET_PLUME.coreRadius,p.size+age*(p.fine?1.2:JET_PLUME.coreGrowth)*(1+p.loaded*.3)),fade=clamp(age/.025)*clamp((JET_PLUME.lifetime-age)/.3);
       aCenter.setXYZ(n,q.x,q.y,q.z);aSize.setXY(n,p.seed>JET_PLUME.streakThreshold?.028+age*.02:size*(p.fine?2.8:2.05),p.seed>JET_PLUME.streakThreshold?.16+Math.abs(q.vy)*.03:size*(p.fine?2.3:2.65));
       aAlpha.setX(n,fade*p.power*(p.seed>JET_PLUME.streakThreshold?.9:p.fine?JET_PLUME.mistOpacity:JET_PLUME.coreOpacity)*clamp((q.y-water+.14)/.18));aSeed.setX(n,p.seed);aVelocity.setXYZ(n,q.vx,q.vy,q.vz);n++;
     }

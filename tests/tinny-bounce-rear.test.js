@@ -1,12 +1,12 @@
 import test from'node:test';import assert from'node:assert/strict';import * as THREE from'three';
 import{VehiclePhysics}from'../src/vehicles/physics.js';import{setSeaState}from'../src/config.js';import{minimumHullClearance}from'../src/vehicles/shafting.js';import{tinnyBounce}from'../src/vehicles/tinny-bounce.js';import{ChaseCamera}from'../src/systems/camera.js';
-test('tinny bounces straight ahead, shafts with contact splashes at the hull, and settles off power',()=>{
+test('tinny stays steady cruising, bounces only shafting with hull splashes, and settles off power',()=>{
  setSeaState('calm',0,true);
  for(const freestyle of [false,true])for(const hz of [30,60,120]){
  const events=[],v=new VehiclePhysics('tinny',()=>null,e=>events.push({...e,boatX:v.x,boatZ:v.z}));v.x=-200;v.z=-1000;v.heading=0;let low=Infinity,high=-Infinity,clear=Infinity;
  for(let i=0;i<hz*12;i++){v.update(1/hz,{throttle:1,steer:0,trim:0,freestyle},i/hz);assert(!v.wipeout&&!v.airborne);if(i>hz*5){low=Math.min(low,v.pitch);high=Math.max(high,v.pitch);clear=Math.min(clear,minimumHullClearance(v,i/hz));}}
- assert(high-low>(freestyle?.07:.035));if(freestyle)assert(clear>-.07&&clear<.04,'stern touches without phasing the hull under waves');
- const contacts=events.filter(e=>e.contact);assert(contacts.length>4&&contacts.length<32);assert(contacts.every(e=>Math.hypot(e.x-e.boatX,e.z-e.boatZ)<1.5&&e.impact>.25&&e.impact<=4));
+ if(freestyle)assert(high-low>.07);else{assert(high-low<.025);assert.equal(v.bounceLoad,0);assert.equal(v.hullHits,0);}if(freestyle)assert(clear>-.07&&clear<.04,'stern touches without phasing the hull under waves');
+ const contacts=events.filter(e=>e.contact);if(freestyle)assert(contacts.length>4&&contacts.length<180);else assert.equal(contacts.length,0);assert(contacts.every(e=>Math.hypot(e.x-e.boatX,e.z-e.boatZ)<1.5&&e.impact>.25&&e.impact<=4));
  for(let i=0;i<hz*5;i++)v.update(1/hz,{throttle:0,steer:0,trim:0,freestyle:false},12+i/hz);assert(v.bounceLoad<.02);v.recover();assert.equal(v.hullHits,0);assert.equal(v.contactDepths,null);
  }
 });
@@ -21,4 +21,11 @@ test('held rear view reverses camera direction and restores chase/first person i
 });
 test('sportfisher rear chase camera stays outside the longer bow',()=>{
  const camera=new THREE.PerspectiveCamera(),chase=new ChaseCamera(camera),v={type:'cruiser',x:1040,y:1,z:-1770,heading:0,speed:10},input={orbit:0,held:()=>true};chase.update(1/60,v,input,0);assert(camera.position.z-v.z>12);assert(camera.position.y-v.y>=10);
+});
+test('shaft touchdown reports every contacting hull sample, with separate cooldowns',async()=>{
+ const {hullContactSplash}=await import('../src/vehicles/tinny-bounce.js'),{clearancePoints}=await import('../src/vehicles/shafting.js'),{bodyPoint}=await import('../src/vehicles/propulsion.js'),{waveHeight}=await import('../src/config.js');setSeaState('calm',0,true);
+ const events=[],v={type:'tinny',x:-200,z:-1000,y:.12,pitch:0,roll:0,heading:0,speed:10,shaftLoad:1,contactDepths:Array(18).fill(.5),onEvent:e=>events.push(e)};
+ const expected=clearancePoints(v).map(p=>bodyPoint(v,p)).filter(p=>p.y-waveHeight(p.x,p.z,0)<=.035);
+ hullContactSplash(v,1/60,0);assert.equal(events.length,1);assert.equal(events[0].contacts.length,expected.length);assert(expected.length>3);for(const p of expected)assert(events[0].contacts.some(q=>q.x===p.x&&q.z===p.z));
+ hullContactSplash(v,1/60,0);assert.equal(events.length,1,'held contact does not emit repeatedly while stationary');
 });

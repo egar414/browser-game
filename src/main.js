@@ -42,7 +42,7 @@ const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,6500);
 const chase=new ChaseCamera(camera),audio=new GameAudio(settings);
 const vehicle=new VehiclePhysics(settings.vehicle,collision,event=>{
   activities?.event(event);
-  if(event.type==='splash'){spray?.splash(event.contact?{...vehicle,x:event.x,z:event.z}:vehicle,event.impact);audio.splash(event.impact);}
+  if(event.type==='splash'){spray?.splash(event.contact?{...vehicle,x:event.x,z:event.z}:vehicle,event.impact,event.contacts);audio.splash(event.impact);}
   if(event.type==='wipeout')spray?.splash(vehicle,8);
   if(event.type==='bump'||event.type==='boundary')ui?.toast(event.label);
 });
