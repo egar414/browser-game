@@ -107,7 +107,7 @@ class SprayFan {
         float edges=pow(max(sin(vUv.x*3.14159),0.),.45)*(1.-smoothstep(.85,1.,vUv.y));
         edges*=smoothstep(.01,.08,min(vUv.x,1.-vUv.x)+(detail-.5)*.08);
         float broken=smoothstep(.18,.78,noise*.5+detail*.22+grain*.28);
-        float alpha=edges*(.2+broken*.8)*(.55+grain*.45)*min(uStrength,1.3)*vWet;
+        float alpha=edges*(.2+broken*.8)*(.55+grain*.45)*min(uStrength,1.3)*vWet*.65;
         if(alpha<.006)discard;
         gl_FragColor=vec4(mix(vec3(.68,.82,.8),vec3(.98,.99,.95),broken),alpha);
         #include <tonemapping_fragment>
@@ -183,10 +183,10 @@ export class Spray {
     this.positions=new Float32Array(this.count*3);this.sizes=new Float32Array(this.count);this.alphas=new Float32Array(this.count);this.kinds=new Float32Array(this.count);
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(this.positions,3));g.setAttribute('aSize',new THREE.BufferAttribute(this.sizes,1));g.setAttribute('aAlpha',new THREE.BufferAttribute(this.alphas,1));g.setAttribute('aKind',new THREE.BufferAttribute(this.kinds,1));
     this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uScale:{value:600},uNoise:{value:this.texture}},
-      vertexShader:`attribute float aSize;attribute float aAlpha;attribute float aKind;varying float vAlpha;varying float vKind;uniform float uScale;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uScale/max(1.,-mv.z),1.,(aKind<.5||aKind>1.5)?52.:112.);vAlpha=aAlpha;vKind=aKind;}`,
-      fragmentShader:`uniform sampler2D uNoise;varying float vAlpha;varying float vKind;void main(){vec2 q=gl_PointCoord-.5;float d=length(q*vec2((vKind<.5||vKind>1.5)?1.5:1.,1.));if(d>.5)discard;
-        float noise=texture2D(uNoise,gl_PointCoord*1.7).r;float alpha=(vKind<.5||vKind>1.5)?(1.-smoothstep(.2,.5,d)):(1.-smoothstep(.08,.5,d))*(.2+noise*.34);
-        gl_FragColor=vec4(mix(vec3(.69,.88,.91),vec3(.98,1.,.95),1.-d),alpha*vAlpha*(vKind>1.5?(.25+noise*.75):1.));
+      vertexShader:`attribute float aSize;attribute float aAlpha;attribute float aKind;varying float vAlpha;varying float vKind;varying float vSeed;uniform float uScale;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uScale/max(1.,-mv.z),1.,(aKind<.5||aKind>1.5)?52.:112.);vAlpha=aAlpha;vKind=aKind;vSeed=fract(position.x*.17+position.z*.137);}`,
+      fragmentShader:`uniform sampler2D uNoise;varying float vAlpha;varying float vKind;varying float vSeed;void main(){vec2 q=gl_PointCoord-.5;float d=length(q*vec2((vKind<.5||vKind>1.5)?1.5:1.,1.));if(d>.5)discard;
+        float noise=texture2D(uNoise,gl_PointCoord*1.7+vSeed*8.).r;float alpha=(vKind<.5||vKind>1.5)?(1.-smoothstep(.2,.5,d)):(1.-smoothstep(.25,.5,d))*(.45+noise*.4);
+        vec3 colour=vKind>.5&&vKind<1.5?mix(vec3(.50,.67,.69),vec3(1.04,1.04,.99),smoothstep(.15,.8,noise)):mix(vec3(.69,.88,.91),vec3(.98,1.,.95),1.-d);gl_FragColor=vec4(colour,alpha*vAlpha*(vKind>1.5?(.25+noise*.75):1.));
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`});

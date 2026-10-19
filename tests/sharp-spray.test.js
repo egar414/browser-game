@@ -1,9 +1,9 @@
 import test from'node:test';import assert from'node:assert/strict';import * as THREE from'three';
 import{sprayState,jetPlumeSource}from'../src/systems/spray-model.js';import{Spray}from'../src/systems/spray.js';import{VEHICLES,QUALITY,setSeaState}from'../src/config.js';import{createMooredTinnies}from'../src/systems/moored-boats.js';
 const craft=type=>({type,config:VEHICLES[type],x:0,y:.14,z:0,heading:0,speed:18,vx:0,vz:18,throttle:1,steer:0,yawRate:0,slip:0,pitch:0,drive:{flow:.16,wetness:1,neutral:false,trimAngle:0,steeringAngle:0},airborne:false,wipeout:0});
-test('big sprays need a sharp loaded turn; straight runs and gentle steering retain only wake',()=>{
+test('big sprays need a sharp loaded turn; straight runs and gentle steering retain wake and normal rear jet',()=>{
  setSeaState('calm',0,true);for(const type of ['ski','seago','cat','tinny']){const v=craft(type);assert.equal(sprayState(v).rate,0);assert.equal(sprayState({...v,steer:.15,yawRate:.1,slip:.3}).rate,0);const turn=sprayState({...v,steer:1,yawRate:1,slip:-6});assert(turn.rate>30);assert(turn.turnGate>.8);}
- const v=craft('ski'),d={origin:{x:0,y:.1,z:-1.5},velocity:{x:0,y:2,z:-20},flow:.16,reverse:0};assert.equal(jetPlumeSource(v,d,0,sprayState(v)),null);assert(jetPlumeSource(v,d,0,sprayState({...v,steer:1,yawRate:1,slip:-6})));
+ const v=craft('ski'),d={origin:{x:0,y:.1,z:-1.5},velocity:{x:0,y:2,z:-20},flow:.16,reverse:0};assert(jetPlumeSource(v,d,0,sprayState(v)),'normal rear jet remains active while cruising');assert(jetPlumeSource(v,d,0,sprayState({...v,steer:1,yawRate:1,slip:-6})));
 });
 test('falling fan droplets make bounded impact rings and rebound drops, then settle',()=>{
  const s=new Spray(new THREE.Scene(),QUALITY.Low),v={...craft('cat'),steer:1,yawRate:1,slip:-6};let rebounds=0,rings=0;

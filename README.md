@@ -588,9 +588,9 @@ to show that gap. Release LIFT to settle, or steer into the lower spray slide.
 
 ### Sharp-turn spray and distant visibility
 
-Large side sprays and the jet-ski rear plume now require a sharp powered turn
-with actual yaw/slip load. Straight cruising, gentle steering and straight tinny
-shafting keep a normal wake and low pump/prop wash. Already-emitted spray remains
+Large side sprays require a sharp powered turn
+with actual yaw/slip load. Straight cruising and gentle steering keep the normal jet-ski rear plume,
+wake and low outboard wash. Straight tinny shafting produces low prop wash. Already-emitted spray remains
 in world space and falls; sampled water impacts add short rebound droplets and
 expanding foam rings from bounded pools, without an endless splash chain.
 
@@ -607,3 +607,21 @@ measured 17 ms with the former 1,664-packet allocation and 6 ms with zero jet
 packets. This isolated timing does not measure overall browser FPS. Gameplay
 checks use Linux Chromium software WebGL; real laptop/phone speed remains
 hardware-dependent.
+
+
+### Laptop performance and restored rear spray
+
+The normal jet-ski rear plume runs under throttle again; sharp-turn side fans
+keep their separate trigger. Side mist uses the rear plume's soft, grainy blue-white
+look, with falling droplets and water impacts retained. Auto starts on Low and
+reduces render resolution toward 0.45 pixel ratio if the frame rate stays low;
+manual settings remain selectable. Low batches opaque scenery by material,
+simplifies wall bevels/foliage, and keeps the mapped land/buildings present.
+Distant shore/jetty segments are rejected before exact collision-distance tests.
+
+A matched 960×640 Linux Chromium software-WebGL test with local boaters enabled
+reported 862 draw calls before and 215 after scene batching. Triangle counts
+were 1.67 million and 1.83 million respectively because larger batches retain
+more distant geometry. This is a reduction in submissions, not a claim of a
+particular laptop frame rate; software-renderer FPS is not representative of
+hardware-accelerated Chrome.

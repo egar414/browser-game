@@ -33,8 +33,8 @@ export const VEHICLES = {
 };
 export { WAVES,WAVE_FIELD,SEA_STATES,OCEAN_SWELL,OCEAN_TUNING,waveChop,waveHeight,seaAmplitude,setSeaState,setWeatherClock,hourlyForecast,oceanReport,oceanExposure } from './ocean.js';
 export const QUALITY = {
-  Low: { pixelRatio: .75, waterSegments: 100, particles: 600, plumeDensity:.65, wakeSamples: 125, fanSegments: 8, reflectionSize: 0, reflectionHz:0, shadowSize:512, shadowExtent:56, shadows: false, trees: 0.5 },
-  Medium: { pixelRatio: 1.25, waterSegments: 160, particles: 1400, plumeDensity:.75, wakeSamples: 180, fanSegments: 12, reflectionSize: 384, reflectionHz:8, shadowSize:1024, shadowExtent:64, shadows: true, trees: 0.75 },
+  Low: { pixelRatio: .65, waterSegments: 72, particles: 600, plumeDensity:.65, wakeSamples: 125, fanSegments: 8, reflectionSize: 0, reflectionHz:0, shadowSize:512, shadowExtent:56, shadows: false, trees: 0.4 },
+  Medium: { pixelRatio: 1.0, waterSegments: 160, particles: 1400, plumeDensity:.75, wakeSamples: 180, fanSegments: 12, reflectionSize: 384, reflectionHz:8, shadowSize:1024, shadowExtent:64, shadows: true, trees: 0.75 },
   High: { pixelRatio: 1.65, waterSegments: 220, particles: 2400, plumeDensity:.85, wakeSamples: 230, fanSegments: 16, reflectionSize: 768, reflectionHz:30, shadowSize:2048, shadowExtent:80, shadows: true, trees: 1 },
 };
 export const RACE = mapData.race;

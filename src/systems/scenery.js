@@ -29,7 +29,7 @@ export function buildEstuaryScenery(scene,quality,solids){
   const sand=groundMaterial(ART.sand,'sand'),grass=groundMaterial(ART.grass,'grass'),park=groundMaterial(ART.park,'grass'),road=material(ART.road);
   const concrete=material('#c3c4b6'),timber=material('#92836c'),navy=material('#263e4f');
   const walls=ART.walls.map(material),roofs=ART.roofs.map(roofMaterial);
-  walls.forEach(m=>m.userData.stylizedWall=true);
+  walls.forEach(m=>m.userData.stylizedWall=quality.trees>.6);
   const garden=material(ART.garden),fence=material(ART.fence),homeGlass=facadeWindowMaterial();
   const windows=new THREE.MeshStandardMaterial({color:'#38636e',roughness:.22,metalness:.32});
   for(const land of lands){
@@ -168,9 +168,9 @@ export function buildEstuaryScenery(scene,quality,solids){
   }
   for(const p of trunks)contacts.push({x:p[0],z:p[2],y:p[1]-3*p[3],w:1.5*p[3],d:1.5*p[3]});
   const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),q=new THREE.Quaternion();
-  const trunkGeo=new THREE.CylinderGeometry(.23,.5,6,7),canopy=coastalCanopy(),crownGeo=canopy.geometry,foliageMat=canopy.material;
+  const trunkGeo=new THREE.CylinderGeometry(.23,.5,6,7),canopy=coastalCanopy(quality.trees<.6),crownGeo=canopy.geometry,foliageMat=canopy.material;
   const tiles=new Map();
-  trunks.forEach((p,i)=>{const key=`${Math.floor(p[0]/250)}:${Math.floor(p[2]/250)}`;if(!tiles.has(key))tiles.set(key,[]);tiles.get(key).push(i);});
+  trunks.forEach((p,i)=>{const key=`${Math.floor(p[0]/(quality.trees<.6?1000:250))}:${Math.floor(p[2]/(quality.trees<.6?1000:250))}`;if(!tiles.has(key))tiles.set(key,[]);tiles.get(key).push(i);});
   for(const indices of tiles.values()){
     const tmesh=new THREE.InstancedMesh(trunkGeo,timber,indices.length),cmesh=new THREE.InstancedMesh(crownGeo,foliageMat,indices.length);
     indices.forEach((i,j)=>{let p=trunks[i];position.set(p[0],p[1],p[2]);scale.setScalar(p[3]);matrix.compose(position,q,scale);tmesh.setMatrixAt(j,matrix);
@@ -289,7 +289,7 @@ export function buildEstuaryScenery(scene,quality,solids){
     if(!mesh.isMesh||mesh.isInstancedMesh||mesh.userData.dynamic||Array.isArray(mesh.material))return;
     const m=mesh.material;
     let g=mesh.geometry.clone();if(g.index)g=g.toNonIndexed();g.applyMatrix4(mesh.matrixWorld);g.computeBoundingSphere();
-    const sphere=g.boundingSphere,tile=sphere.radius<150?`${Math.floor(sphere.center.x/400)}:${Math.floor(sphere.center.z/400)}`:'large';
+    const sphere=g.boundingSphere,tile=quality.trees<.6&&!m.transparent?'low-opaque':sphere.radius<150?`${Math.floor(sphere.center.x/400)}:${Math.floor(sphere.center.z/400)}`:'large';
     const key=[tile,m.type,m.roughness,m.metalness,m.map?.uuid,m.normalMap?.uuid,m.alphaTest,m.transparent,m.opacity,m.side].join(':');
     const colour=m.color||new THREE.Color('white'),colours=new Float32Array(g.attributes.position.count*3);for(let i=0;i<g.attributes.position.count;i++){const facade=mesh.userData.facade,shade=facade ? .78+.22*THREE.MathUtils.clamp((g.attributes.position.getY(i)-facade.base)/(facade.top-facade.base),0,1) : 1;colours.set([colour.r*shade,colour.g*shade,colour.b*shade],i*3);}g.setAttribute('color',new THREE.BufferAttribute(colours,3));
     if(!batches.has(key)){const mergedMaterial=m.clone();mergedMaterial.vertexColors=true;mergedMaterial.color.set('#ffffff');batches.set(key,{material:mergedMaterial,geometries:[]});}
