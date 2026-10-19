@@ -71,8 +71,9 @@ export class VehiclePhysics {
     const mode=RIDE_MODES[this.rideMode],driveConfig=PROPULSION[this.type],hydro=HYDRODYNAMICS[this.type];
     this.trickCooldown = Math.max(0, this.trickCooldown - dt);
     this.throttle = damp(this.throttle, input.throttle, mode.throttleResponse, dt);
+    const apexSpeed=this.type==='hyper'?clamp((this.speed-APEX_HANDLING.highSpeedStart)/(APEX_HANDLING.highSpeedEnd-APEX_HANDLING.highSpeedStart),0,1):0;
     const handling=this.type==='tinny'?TINNY_HANDLING:this.type==='cat'?CAT_HANDLING:null;
-    this.steer = damp(this.steer, input.steer, this.type==='hyper'?APEX_HANDLING.steerResponse:handling?.steerResponse||c.steerResponse||6, dt);
+    this.steer = damp(this.steer, input.steer, this.type==='hyper'?APEX_HANDLING.steerResponse+(APEX_HANDLING.highSpeedSteerResponse-APEX_HANDLING.steerResponse)*apexSpeed:handling?.steerResponse||c.steerResponse||6, dt);
     if(!this.airborne){
       if(input.trimStep){
         if(isJet(this.type))this.trimDegrees=jetTrimPositions(this.type)[clamp(this.trimIndex+input.trimStep,0,jetTrimPositions(this.type).length-1)];
@@ -95,7 +96,7 @@ export class VehiclePhysics {
       const forwardForce=forceX*fx+forceZ*fz;
       if((forward>c.maxSpeed&&forwardForce>0)||(forward<-c.reverseMax&&forwardForce<0)){forceX-=fx*forwardForce;forceZ-=fz*forwardForce;}
       this.vx+=forceX/driveConfig.effectiveMass*dt;this.vz+=forceZ/driveConfig.effectiveMass*dt;
-      const grip = TUNING[this.tuning].grip*(input.freestyle ? c.slideGrip : c.lateralGrip)*(1-.18*this.planing);
+      const grip = TUNING[this.tuning].grip*(input.freestyle ? c.slideGrip : c.lateralGrip)*(1-.18*this.planing)*(1+apexSpeed*(APEX_HANDLING.highSpeedGrip-1)*(input.freestyle?.35:1));
       const lateral = (this.vx * fz - this.vz * fx) * (1 - Math.exp(-grip * dt));
       this.vx -= fz * lateral; this.vz += fx * lateral;
       this.lateralAcceleration=damp(this.lateralAcceleration,-lateral/dt,10,dt);
@@ -110,11 +111,11 @@ export class VehiclePhysics {
       const resistance=immersed*coastDrag*trimDrag*planeDrag*bowDrag*(driveConfig.linearResistance+this.speed*driveConfig.quadraticResistance)/driveConfig.effectiveMass+(1-immersed)*this.speed*.0015;
       const drag = Math.exp(-resistance*dt);
       this.vx *= drag; this.vz *= drag;
-      const yawDamping=hydro.yawDamping+Math.abs(forward)*hydro.yawSpeedDamping;
+      const yawDamping=hydro.yawDamping+Math.abs(forward)*hydro.yawSpeedDamping+apexSpeed*APEX_HANDLING.highSpeedYawDamping;
       const sliding=input.freestyle?.72:1;
       const decay=Math.exp(-yawDamping*sliding*dt);
       const torque=(this.drive.yawMoment||0)*sprayTurn.yawGain;
-      const yawLimit=this.type==='hyper'?APEX_HANDLING.yawLimit/(1+this.speed/APEX_HANDLING.turnSpeedScale):sprayTurn.yawLimit;
+      const yawLimit=this.type==='hyper'?APEX_HANDLING.yawLimit/(1+this.speed/APEX_HANDLING.turnSpeedScale)*(1-apexSpeed*(1-APEX_HANDLING.highSpeedYawScale))*(1-apexSpeed*.75*(1-Math.abs(this.steer))):sprayTurn.yawLimit;
       this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-yawLimit,yawLimit);
       if(this.type==='hyper'){
         const magnitude=Math.hypot(this.vx,this.vz),cap=forward<0?c.reverseMax:c.maxSpeed;

@@ -87,12 +87,13 @@ export class UI {
     this.show('battle-status',battle.active);
     document.getElementById('battle-status').innerHTML=battle.active?`<strong>${Math.ceil(battle.remaining)}s · ${battle.sinks} SWAMPED</strong><span>WATER ABOARD <b>${Math.round(battle.water)}%</b></span><meter min="0" max="100" value="${battle.water}"></meter><small>Rivals ${battle.targets.map((t,i)=>`${i+1}: ${Math.round(t.water)}%`).join(' · ')} · R / RESET to bail out</small>`:'';
     if(sea)document.getElementById('sea-report').textContent=`Simulated ocean swell ~${sea.height.toFixed(1)} m · ${sea.period} s sets${sea.mode==='changing'?` · next hourly forecast in ${Math.ceil(sea.nextChange/60)} min`:''} · canals stay sheltered`;
-    const moored=moorings.filter(t=>Math.hypot(t.x-v.x,t.z-v.z)<32).sort((a,b)=>Math.hypot(a.x-v.x,a.z-v.z)-Math.hypot(b.x-v.x,b.z-v.z))[0];
+    const moored=moorings.filter(t=>Math.hypot(t.x-v.x,t.z-v.z)<(t.rearWater>0?120:32)).sort((a,b)=>Math.hypot(a.x-v.x,a.z-v.z)-Math.hypot(b.x-v.x,b.z-v.z))[0];
     const nearby=targets.filter(t=>Math.hypot(t.x-v.x,t.z-v.z)<80).sort((a,b)=>Math.hypot(a.x-v.x,a.z-v.z)-Math.hypot(b.x-v.x,b.z-v.z))[0];
-    const local=locals?.enabled?locals.boats.filter(b=>Math.hypot(b.x-v.x,b.z-v.z)<38).sort((a,b)=>Math.hypot(a.x-v.x,a.z-v.z)-Math.hypot(b.x-v.x,b.z-v.z))[0]:null;
-    const large=sportfishers?.enabled?sportfishers.boats.filter(b=>Math.hypot(b.x-v.x,b.z-v.z)<100).sort((a,b)=>Math.hypot(a.x-v.x,a.z-v.z)-Math.hypot(b.x-v.x,b.z-v.z))[0]:null;
+    const local=locals?.enabled?locals.boats.filter(b=>Math.hypot(b.x-v.x,b.z-v.z)<(b.rearWater>0?140:38)).sort((a,b)=>Math.hypot(a.x-v.x,a.z-v.z)-Math.hypot(b.x-v.x,b.z-v.z))[0]:null;
+    const large=sportfishers?.enabled?sportfishers.boats.filter(b=>Math.hypot(b.x-v.x,b.z-v.z)<(b.rearWater>0?260:100)).sort((a,b)=>Math.hypot(a.x-v.x,a.z-v.z)-Math.hypot(b.x-v.x,b.z-v.z))[0]:null;
     this.show('target-hint',!!(nearby||moored||local||large)&&!a.race&&!battle.active);
     document.getElementById('target-hint').textContent=large?`${large.name.toUpperCase()} · ${large.resetIn?'SINKING · RESETS IN '+Math.ceil(large.resetIn)+'s':Math.round(large.water)+'% WATER · HIT OPEN REAR COCKPIT'}`:local?`${local.name.toUpperCase()} · LOCAL ${local.type==='cat'?'THUNDERCAT':'TINNY'} · ${local.sinking?'SWAMPED · RELAUNCHING':`${Math.round(local.water)}% WATER ABOARD · CRUISE & SPRAY`}`:moored?moored.resetIn?`TENDER SWAMPED · RESETS IN ${Math.ceil(moored.resetIn)}s`:`PONTOON TENDER · ${Math.round(moored.water)}% WATER ABOARD · LAND SPRAY INSIDE`:nearby?nearby.armed?`SPRAY TARGET · ${Math.round(nearby.soak*100)}% SOAKED · CARVE ALONGSIDE`:'TARGET SOAKED · FIND THE NEXT BULLSEYE':'';
+    const receiving=large||local||moored;if(receiving?.rearWater>.05&&!receiving.resetIn&&!receiving.sinking)document.getElementById('target-hint').textContent+=' · REAR JET WATER COUNTED';
     this.show('bar-hint',!!bar&&(bar.active||bar.arrived)&&!a.race&&!battle.active);
     if(bar){document.getElementById('bar-waves').setAttribute('aria-pressed',String(bar.active));
       document.getElementById('bar-arrow').style.transform=`rotate(${-bar.bearing}rad)`;

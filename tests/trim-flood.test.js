@@ -29,3 +29,8 @@ test('normal Apex drive passes can accumulate enough rear-plume water to sink a 
  for(let pass=0;pass<12&&!events.length;pass++){v.respawnAt(traffic.meetPosition(v),time);traffic.flood.clearSpray();for(let i=0;i<540;i++){v.update(1/60,{throttle:i<120?1:0,steer:0,trim:0},time);traffic.update(1/60,v,time);time+=1/60;}}
  assert(events.some(e=>e.label.includes('swamped')));assert(traffic.boats.some(b=>b.flood.sinks>0));assert(traffic.flood.packets.length<=1024);
 });
+
+test('trim spray collects across its wet core, contributes identifiable water and resets that contribution',async()=>{
+ const {sprayCapture}=await import('../src/systems/mooring-flood.js');const target={x:0,z:0,heading:0};assert(sprayCapture(.6,0,target,.65)>0);assert(sprayCapture(.6,0,target,.65)<1);assert.equal(sprayCapture(3,0,target,.65),0);
+ setSeaState('calm',0,true);for(const type of['ski','seago','hyper']){const v=sourceCraft(type),hit=landing(v),f=new MooringFlood([{x:hit.x,z:hit.z,heading:0,deckY:1.45,width:3.2,length:3.8}]);for(let i=0;i<600&&!f.boats[0].sinks;i++)f.update(1/60,v,i/60);assert(f.boats[0].rearWater>0,type);assert.equal(f.boats[0].sinks,1);for(let i=0;i<17*60;i++)f.update(1/60,{...v,throttle:0,drive:{flow:0}},10+i/60);assert.equal(f.boats[0].rearWater,0);}
+});

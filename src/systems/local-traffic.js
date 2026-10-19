@@ -51,7 +51,7 @@ export class LocalTraffic{
   this.boats.forEach((b,i)=>{b.flood=this.flood.boats[i];});
  }
  get colliders(){return this.boats.map(b=>b.collider);}
- get status(){return{enabled:this.enabled,boats:this.boats.map(b=>({id:b.id,name:b.name,type:b.type,x:b.v.x,z:b.v.z,heading:b.v.heading,speed:b.v.speed,water:b.flood.water/55*100,sinking:b.flood.sinking,reaction:b.reaction,recoveries:b.recoveries}))};}
+ get status(){return{enabled:this.enabled,boats:this.boats.map(b=>({id:b.id,name:b.name,type:b.type,x:b.v.x,z:b.v.z,heading:b.v.heading,speed:b.v.speed,water:b.flood.water/55*100,rearWater:b.flood.rearWater,sinking:b.flood.sinking,reaction:b.reaction,recoveries:b.recoveries}))};}
  setEnabled(enabled){
   if(this.enabled!==enabled)this.flood.clearSpray();this.enabled=enabled;
   for(const b of this.boats)b.collider.disabled=!enabled||b.flood.sinking>.35;

@@ -962,3 +962,32 @@ both the guard and the existing one-account grant. Role access remains an
 account unlock, not authoritative simulation or protection against modifying
 a private copy of the browser client. Do not grant Creator to another account
 unless it should also receive these development craft.
+
+## Apex high-speed stability and rear-jet flooding
+
+At high speed, Apex steering progressively uses slower input response, more
+lateral grip, additional yaw damping and an input-sensitive turn limit. This
+keeps small corrections gentle and reduces the sideways skid and opposite
+fishtail after release. Low-speed manoeuvring, its 300 km/h gameplay ceiling,
+extended trim and exclusive Creator access remain. Tune the high-speed values
+in `APEX_HANDLING` in `src/config.js`. At a 60 Hz calm-water simulation, the same
+two-second full powered turn from 300 km/h retained about 260 km/h instead of
+210, with peak lateral slip roughly 10.6 m/s instead of 19.3. These are arcade
+simulation values, not real-world craft measurements or laptop FPS claims.
+
+Rear trim spray already contributed to flooding; capture now samples the dense
+wet core of the visible plume rather than only a packet's centre. Rear strands
+also sample the interior of the plume over time, reducing gaps over small
+cockpits. Only the portion crossing an open cockpit on the downward arc adds
+water; misses, rising water, cabin roofs and dry intakes still do not. The
+rear gameplay contribution increases from 260 to 360 litres per unit power per
+second. This deliberately scaled quantity is not a real pump-flow measurement.
+
+Sparkplug, Seago and Apex rear hits feed the same moored tender, cruising local
+boat and sportfisher flooding systems. A receiving boat's hint says REAR JET
+WATER COUNTED, and diagnostics expose cumulative `rearWater` litres until its
+next relaunch. Falling packets keep working after throttle release. Capture is
+independent of visual quality and retains the existing 1,024-packet pool; no
+extra visual particles were added. Tune `MOORING_FLOOD` and `sprayCapture` in
+`src/systems/mooring-flood.js`. Online player craft remain outside the local AI
+flooding simulation and cannot be sunk by another player in this release.

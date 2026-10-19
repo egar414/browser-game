@@ -41,7 +41,7 @@ export class SportfishingTraffic{
  }
  get colliders(){return this.boats.map(b=>b.collider);}
  setEnabled(enabled){this.enabled=enabled;for(const b of this.boats)b.collider.disabled=!enabled||b.flood.sinking>.2;}
- get status(){return{enabled:this.enabled,boats:this.boats.map(({id,name,x,y,z,heading,speed,flood:f})=>({id,name,x,y,z,heading,speed,water:f.water/floodCapacity(f)*100,sinking:f.sinking,resetIn:f.resetIn,sinks:f.sinks}))};}
+ get status(){return{enabled:this.enabled,boats:this.boats.map(({id,name,x,y,z,heading,speed,flood:f})=>({id,name,x,y,z,heading,speed,water:f.water/floodCapacity(f)*100,rearWater:f.rearWater,sinking:f.sinking,resetIn:f.resetIn,sinks:f.sinks}))};}
  update(dt,player,time){
   if(!this.enabled)return;
   for(const b of this.boats){

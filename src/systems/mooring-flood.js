@@ -1,10 +1,10 @@
 import {plumeTrajectory} from './jet-plume.js';
-import {waveHeight} from '../config.js';
+import {isJet,waveHeight} from '../config.js';
 import {sprayState,launchSpray,stepDroplet,pumpDischarge,jetPlumeSource,JET_PLUME} from './spray-model.js';
 
 // Gameplay-scaled capture volume: reward clean spray hits while keeping water
 // aboard between passes. Receiving geometry and sinking/reset timing stay fixed.
-export const MOORING_FLOOD={capacityLitres:55,drainLitresPerSecond:.02,sinkSeconds:4,resetSeconds:16,emissionHz:24,maxPackets:1024,fanStrands:5,sideLitresPerLoad:480,rearLitresPerPower:260,rearStrands:3};
+export const MOORING_FLOOD={capacityLitres:55,drainLitresPerSecond:.02,sinkSeconds:4,resetSeconds:16,emissionHz:24,maxPackets:1024,fanStrands:5,sideLitresPerLoad:480,rearLitresPerPower:360,rearStrands:3};
 export const floodCapacity=b=>b.capacityLitres??MOORING_FLOOD.capacityLitres;
 export function insideTender(x,z,target){
   if(target.captureRect){const dx=x-target.x,dz=z-target.z,right=dx*Math.cos(target.heading)-dz*Math.sin(target.heading),forward=dx*Math.sin(target.heading)+dz*Math.cos(target.heading),r=target.captureRect;return right>=r.minX&&right<=r.maxX&&forward>=r.minZ&&forward<=r.maxZ;}
@@ -12,21 +12,29 @@ export function insideTender(x,z,target){
   const width=forward>.25?.50-(forward-.25)*.5:.50;
   return forward>-.96&&forward<1.04&&Math.abs(right)<width;
 }
+// Sample the dense wet core, rather than requiring the centre of a thick
+// visible packet to land inside the cockpit. Mist outside this core adds no water.
+export function sprayCapture(x,z,target,radius=0){
+ if(radius<=0)return insideTender(x,z,target)?1:0;
+ let hit=insideTender(x,z,target)?2:0;
+ for(let i=0;i<8;i++){const angle=i*Math.PI/4;if(insideTender(x+Math.cos(angle)*radius*.7,z+Math.sin(angle)*radius*.7,target))hit++;}
+ return hit/10;
+}
 export class MooringFlood {
   constructor(sites,onEvent=()=>{}){
-    this.boats=sites.map((p,i)=>({...p,id:p.id||`marina-${i}`,water:0,sinking:0,resetIn:0,sinks:0,scoreCooldown:0}));this.onEvent=onEvent;
+    this.boats=sites.map((p,i)=>({...p,id:p.id||`marina-${i}`,water:0,rearWater:0,sinking:0,resetIn:0,sinks:0,scoreCooldown:0}));this.onEvent=onEvent;
     this.packets=Array.from({length:MOORING_FLOOD.maxPackets},()=>({life:0}));this.cursor=0;this.emission=0;this.serial=0;
     this.cells=new Map();this.reindex();
   }
   reindex(){this.cells.clear();for(const b of this.boats){const key=this.key(b.x,b.z);if(!this.cells.has(key))this.cells.set(key,[]);this.cells.get(key).push(b);}}
   key(x,z){return `${Math.floor(x/8)}:${Math.floor(z/8)}`;}
-  emit(p,litres){const packet=this.packets[this.cursor++%this.packets.length];Object.assign(packet,{ballistic:null,age:0},p,{life:p.lifetime||4.8,litres});}
+  emit(p,litres){const packet=this.packets[this.cursor++%this.packets.length];Object.assign(packet,{ballistic:null,age:0,source:null},p,{life:p.lifetime||4.8,litres});}
   clearSpray(){for(const p of this.packets)p.life=0;this.emission=0;}
-  get status(){return this.boats.map(b=>({id:b.id,x:b.x,z:b.z,heading:b.heading,water:b.water/floodCapacity(b)*100,sinking:b.sinking,resetIn:b.resetIn,sinks:b.sinks}));}
+  get status(){return this.boats.map(b=>({id:b.id,x:b.x,z:b.z,heading:b.heading,water:b.water/floodCapacity(b)*100,rearWater:b.rearWater,sinking:b.sinking,resetIn:b.resetIn,sinks:b.sinks}));}
   update(dt,player,time,allowSpray=true){
     for(const b of this.boats){
       b.scoreCooldown=Math.max(0,b.scoreCooldown-dt);
-      if(b.resetIn>0){b.resetIn=Math.max(0,b.resetIn-dt);b.sinking=Math.min(1,b.sinking+dt/(b.sinkSeconds??MOORING_FLOOD.sinkSeconds));if(!b.resetIn){b.water=0;b.sinking=0;}if(b.collider)b.collider.disabled=b.sinking>.35;continue;}
+      if(b.resetIn>0){b.resetIn=Math.max(0,b.resetIn-dt);b.sinking=Math.min(1,b.sinking+dt/(b.sinkSeconds??MOORING_FLOOD.sinkSeconds));if(!b.resetIn){b.water=0;b.rearWater=0;b.sinking=0;}if(b.collider)b.collider.disabled=b.sinking>.35;continue;}
       b.water=Math.max(0,b.water-(b.drainLitresPerSecond??MOORING_FLOOD.drainLitresPerSecond)*dt);
     }
     const reach=player.type==='hyper'?200:player.type==='racer'?150:100;
@@ -45,10 +53,10 @@ export class MooringFlood {
           if(jet){
             const origins=jet.origins||[jet.origin];
             for(const origin of origins)for(let strand=0;strand<MOORING_FLOOD.rearStrands;strand++){
-              const spread=(strand/(MOORING_FLOOD.rearStrands-1)-.5)*(1.8+(jet.loaded||0)*2),initial={...origin,vx:jet.velocity.x+Math.cos(player.heading)*spread,vy:jet.velocity.y,vz:jet.velocity.z-Math.sin(player.heading)*spread,drag:JET_PLUME.drag};
+              const spread=(strand/(MOORING_FLOOD.rearStrands-1)-.5)*(1.8+(jet.loaded||0)*2)*(strand===1?1:.2+.8*fraction),initial={...origin,vx:jet.velocity.x+Math.cos(player.heading)*spread,vy:jet.velocity.y,vz:jet.velocity.z-Math.sin(player.heading)*spread,drag:JET_PLUME.drag};
               // Use the SAME linear-drag/gravity path as the visible rear plume.
               // A detached plume continues to fall after steering or releasing power.
-              this.emit({...initial,ballistic:initial,lifetime:JET_PLUME.lifetime},jet.power*MOORING_FLOOD.rearLitresPerPower/MOORING_FLOOD.emissionHz/MOORING_FLOOD.rearStrands/origins.length);
+              this.emit({...initial,ballistic:initial,lifetime:JET_PLUME.lifetime,source:isJet(player.type)?'trim':'wash'},jet.power*MOORING_FLOOD.rearLitresPerPower/MOORING_FLOOD.emissionHz/MOORING_FLOOD.rearStrands/origins.length);
             }
           }
         }
@@ -65,8 +73,8 @@ export class MooringFlood {
         const deck=(b.deckY??(waveHeight(b.x,b.z,time)+.46))-b.water/floodCapacity(b)*(b.fillDrop??.26);
         if(p.vy<0&&before.y>=deck&&p.y<=deck){
           const crossing=(before.y-deck)/(before.y-p.y),x=before.x+(p.x-before.x)*crossing,z=before.z+(p.z-before.z)*crossing;
-          if(!insideTender(x,z,b))continue;
-          b.water=Math.min(floodCapacity(b),b.water+p.litres);p.life=0;
+          const fraction=sprayCapture(x,z,b,p.source==='trim'?Math.min(.65,.15+p.age*.25):0);if(!fraction)continue;
+          const captured=Math.min(floodCapacity(b)-b.water,p.litres*fraction);b.water+=captured;if(p.source==='trim')b.rearWater+=captured;p.life=0;
           if(b.water>=floodCapacity(b)){
             b.resetIn=b.resetSeconds??MOORING_FLOOD.resetSeconds;b.sinks++;
             this.onEvent({type:'moored-sink',boatId:b.id,label:b.sinkLabel||'Tender swamped',detail:b.sinkDetail||'Pontoon tender is sinking. It resets shortly.',points:b.scoreCooldown?0:150});b.scoreCooldown=60;
