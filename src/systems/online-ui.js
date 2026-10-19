@@ -22,7 +22,7 @@ export class OnlineUI{
   }
   this.onOpen=open;this.onClose=close;
   this.root.querySelector('form').addEventListener('submit',event=>{event.preventDefault();this.run(async()=>{await client.signIn(this.value('email'),this.value('password'));this.root.querySelector('#online-password').value='';});});
-  const perks=document.createElement('p');perks.id='online-creator-perks';perks.className='creator-perks';perks.hidden=true;perks.textContent='★ CREATOR · All garage designs and tuning unlocked · 2× garage XP';this.root.querySelector('#online-signed-in').prepend(perks);
+  const perks=document.createElement('p');perks.id='online-creator-perks';perks.className='creator-perks';perks.hidden=true;perks.textContent='★ CREATOR · Apex 300 development access · All garage designs and tuning unlocked · 2× garage XP';this.root.querySelector('#online-signed-in').prepend(perks);
   const refresh=document.createElement('button');refresh.className='secondary';refresh.textContent='REFRESH ACCOUNT';refresh.addEventListener('click',()=>this.run(()=>client.refreshPerks()));this.root.querySelector('#online-signed-in').append(refresh);
   const nameField=this.root.querySelector('#online-name');nameField.addEventListener('input',()=>{this.nameDirty=true;});
   const saveName=document.createElement('button');saveName.id='online-save-name';saveName.className='secondary';saveName.textContent='SAVE NAME';saveName.addEventListener('click',()=>{if(!nameField.reportValidity())return;this.run(async()=>{await client.saveName(nameField.value);this.nameDirty=false;this.render(client.status);});});nameField.parentElement.after(saveName);
@@ -34,7 +34,7 @@ export class OnlineUI{
    try{await navigator.clipboard.writeText(sql);this.message('Creator setup copied. Paste it into your Supabase SQL Editor, click Run, then Refresh Account.');}
    catch{let field=creatorHelp.querySelector('textarea');if(!field){field=document.createElement('textarea');field.readOnly=true;field.setAttribute('aria-label','Your Creator setup SQL');creatorHelp.append(field);}field.value=sql;field.focus();field.select();this.message('Copy the selected Creator setup with Ctrl+C / Command+C, run it in Supabase SQL Editor, then Refresh Account.');}
   }));
-  creatorHelp.querySelector('#online-copy-sole').addEventListener('click',()=>this.run(async()=>{const response=await fetch(`${import.meta.env?.BASE_URL||'/'}sole-account-creator.sql`,{cache:'no-cache'});if(!response.ok)throw Error('Could not load single-account setup');const sql=await response.text();try{await navigator.clipboard.writeText(sql);this.message('Single-account setup copied. In Supabase SQL Editor, select all existing text, replace it with this setup and click Run. Look for Creator enabled, then Refresh Account here.');}catch{let field=creatorHelp.querySelector('textarea');if(!field){field=document.createElement('textarea');field.readOnly=true;creatorHelp.append(field);}field.value=sql;field.focus();field.select();this.message('Copy the selected single-account setup, paste ALL of it into a new Supabase SQL query and Run.');}}));
+  creatorHelp.querySelector('#online-copy-sole').addEventListener('click',()=>this.run(async()=>{const response=await fetch(`${import.meta.env?.BASE_URL||'/'}${client.creator?'creator.sql':'sole-account-creator.sql'}`,{cache:'no-cache'});if(!response.ok)throw Error('Could not load single-account setup');const sql=await response.text();try{await navigator.clipboard.writeText(sql);this.message(client.creator?'Owner database update copied. Run ALL of it in a fresh Supabase SQL query to protect Apex multiplayer access. Existing Creator grants are preserved.':'Single-account setup copied. In Supabase SQL Editor, select all existing text, replace it with this setup and click Run. Look for Creator enabled, then Refresh Account here.');}catch{let field=creatorHelp.querySelector('textarea');if(!field){field=document.createElement('textarea');field.readOnly=true;creatorHelp.append(field);}field.value=sql;field.focus();field.select();this.message('Copy the selected single-account setup, paste ALL of it into a new Supabase SQL query and Run.');}}));
   creatorHelp.querySelector('#online-copy-id').addEventListener('click',()=>this.run(async()=>{const id=client.status.accountId;if(!id)return;try{await navigator.clipboard.writeText(id);this.message('Account ID copied. You can share this ID; keep your password private.');}catch{this.message('Account ID: '+id+' — select and copy the ID above.');}}));
   this.root.querySelectorAll('[data-online]').forEach(button=>button.addEventListener('click',()=>{
    const action=button.dataset.online;
@@ -72,8 +72,9 @@ export class OnlineUI{
   this.root.querySelector('#online-account-id').textContent=s.accountId||'';
   this.root.querySelector('#online-creator-help').hidden=!s.signedIn;
   this.root.querySelector('#online-copy-creator').hidden=!!s.creator;
-  this.root.querySelector('#online-copy-sole').hidden=!!s.creator;
-  this.root.querySelector('#online-creator-help a').hidden=!!s.creator;
+  this.root.querySelector('#online-copy-sole').hidden=false;
+  this.root.querySelector('#online-copy-sole').textContent=s.creator?'COPY OWNER DATABASE UPDATE':'COPY SINGLE-ACCOUNT SETUP';
+  this.root.querySelector('#online-creator-help a').hidden=false;
   const guide=this.root.querySelector('a[href*="multiplayer-setup"]');guide.href=`./multiplayer-setup.html${s.accountId?'#creator='+encodeURIComponent(s.accountId):''}`;
   guide.textContent=s.signedIn?'OWNER SETUP / CREATOR TAG ↗':'OWNER SETUP GUIDE ↗';
  }

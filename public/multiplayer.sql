@@ -164,6 +164,23 @@ begin
 end $$;
 revoke all on function public.er_snapshot() from public,anon,authenticated;
 grant execute on function public.er_snapshot() to authenticated;
+-- Enforce the private development craft even when an older client sends it.
+create or replace function public.er_check_creator_craft() returns trigger
+ language plpgsql security definer set search_path='' as $$
+begin
+ if new.pose->>'type'='hyper' and not exists(select 1 from public.er_creators c where c.user_id=new.user_id) then
+  raise exception 'Apex 300 is a Creator-only development craft';
+ end if;
+ return new;
+end $$;
+revoke all on function public.er_check_creator_craft() from public,anon,authenticated;
+-- Retire old unauthorised Apex snapshots before enabling the guard.
+update public.er_players p set pose=jsonb_set(p.pose,'{type}','"ski"'::jsonb)
+ where p.pose->>'type'='hyper' and not exists(select 1 from public.er_creators c where c.user_id=p.user_id);
+drop trigger if exists er_creator_craft on public.er_players;
+create trigger er_creator_craft before insert or update of pose,user_id on public.er_players
+ for each row execute function public.er_check_creator_craft();
+
 notify pgrst,'reload schema';
 commit;
 -- The owner's setup page appends a grant for your signed-in account UUID.

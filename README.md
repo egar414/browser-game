@@ -939,3 +939,26 @@ SINGLE-ACCOUNT SETUP. If more accounts exist, COPY MY CREATOR SETUP generates th
 existing signed-in-account-specific grant instead. A public publishable key
 cannot run either owner-only grant; this change does not itself assign a role
 in the production database.
+
+## Private Apex 300 development craft
+
+Apex is reserved for the server-verified Creator role. The garage hides it for
+other accounts and signed-out players, rejects direct button activation, and
+ignores saved Apex/role flags until the real account is verified. An authorised
+saved Apex is restored after sign-in. Signing out or losing the role switches
+to the regular ski at the current position. The private craft's physics,
+trim, spray and trick tuning remain in `src/config.js` and its model remains
+editable in `src/vehicles/apex-model.js`.
+
+Remote Apex craft are rendered only for Creator-marked server roster entries.
+The updated Creator SQL also installs a database trigger rejecting Apex pose
+writes for accounts without the role, including older clients. Existing
+production projects must apply `public/creator.sql` once to install this server
+check; frontend publication cannot migrate a Supabase database. A signed-in
+Creator can use COPY OWNER DATABASE UPDATE in Online / Account, run the entire
+script in the Supabase SQL Editor, then Refresh Account. Existing grants are
+preserved. For an unassigned sole account, COPY SINGLE-ACCOUNT SETUP installs
+both the guard and the existing one-account grant. Role access remains an
+account unlock, not authoritative simulation or protection against modifying
+a private copy of the browser client. Do not grant Creator to another account
+unless it should also receive these development craft.

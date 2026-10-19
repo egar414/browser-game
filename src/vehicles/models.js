@@ -56,7 +56,7 @@ function inflatable(parent,material){
 }
 export function makeVehicle(type, colour, design='classic',access={}) {
   if(type==='ski')return access.creator===true?makeSpark(colour,design):makeStandardSpark(colour,design);
-  if(type==='hyper')return makeApex(colour);
+  if(type==='hyper')return access.creator===true?makeApex(colour):makeStandardSpark(colour,design);
   if(type==='racer')return makeRacingCat(colour);
   if(type==='cruiser'){const root=makeSportfisher('Reef Runner',colour,false),rider=makeDeckCharacter();rider.position.set(0,3.25,-.25);root.add(rider);rider.userData.update=(v,dt)=>rider.userData.animate(v.animationTime||0,0,false);root.userData={body:root,rider};return root;}
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);

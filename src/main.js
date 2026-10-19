@@ -38,8 +38,9 @@ import {OnlineClient} from './systems/online-client.js';
 import {OnlineUI} from './systems/online-ui.js';
 import {OnlineWorld} from './systems/online-world.js';
 import {packPose} from './systems/network-state.js';
+import {canDriveCraft,availableCraft} from './systems/craft-access.js';
 
-const settings=loadSettings();const dayClock=new DayCycle(settings.dayMode);validLoadout(settings);setSeaState(settings.seaState,0,true);let state='home',controlsFrom='home',ready=false,renderer,model,water,spray,environment,hemi,dolphins,people,qualityName='Medium',sun;
+const settings=loadSettings();let pendingCreatorCraft=settings.vehicle==='hyper'?'hyper':null;settings.vehicle=availableCraft(settings.vehicle);const dayClock=new DayCycle(settings.dayMode);validLoadout(settings);setSeaState(settings.seaState,0,true);let state='home',controlsFrom='home',ready=false,renderer,model,water,spray,environment,hemi,dolphins,people,qualityName='Medium',sun;
 let playground,barGuide,locals,cruisers,offshore,speedRun,garageReturn=null;
 const deck=new DeckWalk();
 const fishing=new Fishing(catchInfo=>{settings.fishCaught++;if(catchInfo.kg>settings.bestFishKg){settings.bestFishKg=catchInfo.kg;settings.bestFishSpecies=catchInfo.name;}saveSettings(settings);ui.toast(`${catchInfo.name} · ${catchInfo.kg} kg`,"Catch and release · record saved on this browser");});
@@ -81,7 +82,7 @@ const input=new Input(code=>{
 const ui=new UI(settings,{
   play,resume,pause,home,toggleHelm,controls:showControls,closeControls,recover,mute,
   freeRoam(){fishing.cancel();battle.cancel();activities.cancel();resume();ui.toast('Free roam','No clock. Find your own line.');},
-  vehicle(type){deck.reset();fishing.cancel();settings.vehicle=type;saveSettings(settings);vehicle.setType(type);vehicle.setTrim(settings[trimKey(type)]);if(garageReturn)vehicle.respawnAt(garageReturn,simulationTime);replaceModel();ui.selectVehicle();chase.reset();},
+  vehicle(type){if(!canDriveCraft(type,online.creator)){ui.toast('Apex 300 · Creator testing craft','Sign in to your verified Creator account to use it.');return;}pendingCreatorCraft=null;selectCraft(type);},
   colour(index){settings.colour=index;saveSettings(settings);replaceModel();ui.selectVehicle();},
   loadout(key,value){const options=key==='design'?DESIGNS:TUNING;if(!options[value]||!hasUnlock(settings,options[value]))return;settings[key]=value;vehicle.tuning=settings.tuning;saveSettings(settings);replaceModel();ui.selectVehicle();},
   setting(key,value){if(key==='dayMode'){settings.dayMode=value;dayClock.setMode(value);fishing.hour=dayClock.hour;saveSettings(settings);ui.toast(dayClock.status.label,dayClock.status.fishing.label);return;}if(key==='seaState'){settings.seaState=value;setSeaState(value,simulationTime);saveSettings(settings);ui.toast(SEA_STATES[value].name,'Water conditions change smoothly. Faster crests can launch wave hops.');return;}if(key==='rideMode'){setRideMode(value);return;}settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
@@ -91,7 +92,10 @@ new TouchControls(input);
 let lastCreator=false;
 const online=new OnlineClient({getPose:()=>packPose(vehicle,settings,deck,state!=='home'),onChange(s){
  if(s.creator===lastCreator)return;lastCreator=s.creator;
- if(!s.creator)validLoadout(settings);vehicle.tuning=settings.tuning;replaceModel();ui.selectVehicle();saveSettings(settings);
+ if(!s.creator)validLoadout(settings);vehicle.tuning=settings.tuning;
+ if(s.creator&&pendingCreatorCraft){const type=pendingCreatorCraft;pendingCreatorCraft=null;selectCraft(type);}
+ else if(!canDriveCraft(settings.vehicle,s.creator))selectCraft('ski');
+ else{replaceModel();ui.selectVehicle();saveSettings(settings);}
  if(s.creator)ui.toast('★ Creator garage unlocked','All designs and tuning · 2× garage XP · verified gold name tag');
 }});
 // Derived from the authenticated account, never restored from local settings.
@@ -193,6 +197,9 @@ function visitWaterfront(){
  if(!ready)return;const spawn=people.approach(collision);if(!spawn){ui.toast('Explore the Wharf jetties');return;}
  people.focusId=spawn.targetId;people.focusUntil=simulationTime+40;deck.reset();fishing.cancel();battle.cancel();activities.cancel();vehicle.respawnAt(spawn,simulationTime);spray.clear();people.flood.clearSpray();locals.flood.clearSpray();people?.flood.clearSpray();chase.reset();input.clear();resume();ui.toast('Waterfront walkers','Carve alongside the jetty to send falling spray onto the deck. People get back up after a tumble.');
 }
+function selectCraft(type){
+ const position=garageReturn||(state!=='home'?vehicle.snapshot():null);deck.reset();fishing.cancel();settings.vehicle=type;vehicle.setType(type);vehicle.setTrim(settings[trimKey(type)]);if(position)vehicle.respawnAt(position,simulationTime);replaceModel();ui.selectVehicle();chase.reset();saveSettings(settings);
+}
 function replaceModel(){
   if(model){scene.remove(model);model.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material?.map)o.material.map.dispose();});}
   model=makeVehicle(settings.vehicle,VEHICLES[settings.vehicle].colours[settings.colour],settings.design,{creator:online.creator});scene.add(model);
@@ -211,6 +218,7 @@ function pause(){if(state!=='playing')return;persistTrim();state='paused';input.
 function resume(){if(!ready)return;state='playing';input.clear();audio.start();ui.show('pause',false);ui.show('controls',false);last=performance.now();}
 function play(){
   if(!ready)return;
+  if(!canDriveCraft(vehicle.type,online.creator))selectCraft('ski');
   const returning=!!garageReturn,spawn=garageReturn||(vehicle.type==='racer'?OFFSHORE_RUN.start:SPAWN);garageReturn=null;
   state='playing';vehicle.respawnAt(spawn,simulationTime);spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();people?.flood.clearSpray();chase.reset();audio.start();input.clear();ui.show('home',false);ui.show('hud',true);
   ui.toast(returning?'Back in your spot':vehicle.type==='racer'?'Offshore speed run · 500 km/h arcade':'Launched beside The Wharf',vehicle.type==='cruiser'?(isTouchDevice()?'GO drives · DECK switches to walking when stopped · FISH casts':'WASD drives · J switches helm / deck · K casts · SPACE reels'):isTouchDevice()?'Hold GO to drive · arrows steer · tap LIFT for bow rides':'WASD to drive · T riding mode · Q/E trim · H for moves');

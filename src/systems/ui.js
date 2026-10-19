@@ -1,3 +1,4 @@
+import {canDriveCraft} from './craft-access.js';
 import{DAY_MODES}from'./day-cycle.js';
 import{isJet}from'../config.js';
 import{FISHING_SPOTS}from'./fishing.js';
@@ -44,10 +45,10 @@ export class UI {
     document.body.classList.toggle('on-apex',this.settings.vehicle==='hyper');
     document.body.classList.toggle('on-racer',this.settings.vehicle==='racer');
     const c=VEHICLES[this.settings.vehicle];
-    document.querySelectorAll('[data-vehicle]').forEach(b=>b.classList.toggle('selected',b.dataset.vehicle===this.settings.vehicle));
-    document.getElementById('vehicle-number').textContent=`${Object.keys(VEHICLES).indexOf(this.settings.vehicle)+1}`.padStart(2,'0')+' / '+Object.keys(VEHICLES).length.toString().padStart(2,'0');
+    document.querySelectorAll('[data-vehicle]').forEach(b=>{const allowed=canDriveCraft(b.dataset.vehicle,this.settings.creatorAccess);b.disabled=!allowed;b.hidden=!allowed;b.classList.toggle('hidden',!allowed);b.classList.toggle('selected',b.dataset.vehicle===this.settings.vehicle);});
+    const available=Object.keys(VEHICLES).filter(type=>canDriveCraft(type,this.settings.creatorAccess));document.getElementById('vehicle-number').textContent=`${available.indexOf(this.settings.vehicle)+1}`.padStart(2,'0')+' / '+available.length.toString().padStart(2,'0');
     const ownSki=this.settings.vehicle==='ski'&&this.settings.creatorAccess;
-    document.getElementById('vehicle-name').textContent=ownSki?'★ Creator Sparkplug':c.name;document.getElementById('vehicle-description').textContent=ownSki?'Your Creator-only reference-sculpted jet ski. Custom compact hull, shaped saddle, detailed controls and extended trim.':c.description;
+    document.getElementById('vehicle-name').textContent=ownSki?'★ Creator Sparkplug':this.settings.vehicle==='hyper'?'★ Apex 300 · DEV':c.name;document.getElementById('vehicle-description').textContent=ownSki?'Your Creator-only reference-sculpted jet ski. Custom compact hull, shaped saddle, detailed controls and extended trim.':c.description;
     document.getElementById('vehicle-stats').innerHTML=this.settings.vehicle==='hyper'?'<span>ARCADE SPEED <b>300 km/h</b></span><span>EXTENDED TRIM <b>11 positions</b></span>':this.settings.vehicle==='racer'?'<span>ARCADE SPEED <b>500 km/h</b></span><span>DRIVE <b>Twin inboard</b></span>':this.settings.vehicle==='seago'?'<span>GAME SPEED <b>120 km/h</b></span><span>TRIM <b>9 positions</b></span>':this.settings.vehicle==='tinny'?'<span>TENDER <b>2.25 m</b></span><span>OUTBOARD <b>25 hp</b></span>':isJet(this.settings.vehicle)?'<span>AGILITY <b>●●●●●</b></span><span>FREESTYLE <b>●●●●●</b></span>':'<span>MOMENTUM <b>●●●●●</b></span><span>CHARACTER <b>●●●●●</b></span>';
     const swatches=document.getElementById('swatches');swatches.innerHTML='';
     c.colours.forEach((colour,i)=>{const b=document.createElement('button');b.style.background=colour;b.className=i===this.settings.colour?'selected':'';b.setAttribute('aria-label',`Colour ${i+1}`);b.addEventListener('click',()=>this.actions.colour(i));swatches.appendChild(b);});

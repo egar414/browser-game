@@ -39,3 +39,13 @@ test('sole-account owner setup grants the only account and refuses to guess amon
  await f.db.query('delete from auth.users where id<>$1',[users[0]]);await f.owner(script);assert.equal(await rpc(f,users[0],'er_my_perks'),true);await f.owner(script);assert.equal(await rpc(f,users[0],'er_my_perks'),true);
  }finally{await f.db.close();}
 });
+
+test('database guard rejects forged Apex packets for normal accounts and accepts the granted Creator',async()=>{
+ const f=await database();const [a,b]=users;try{
+ await rpc(f,a,'er_join',{p_name:'Ewan',p_code:'PUBLIC'});await rpc(f,b,'er_join',{p_name:'Ewan',p_code:'PUBLIC'});
+ const pose=packPose({type:'hyper',drive:{}},{colour:0,design:'classic',creatorAccess:true},{},true);
+ await assert.rejects(rpc(f,b,'er_exchange',{p_pose:{...pose,creator:true},p_seq:1}),/Creator-only/);
+ await f.db.query('insert into public.er_creators(user_id) values($1)',[a]);const room=await rpc(f,a,'er_exchange',{p_pose:pose,p_seq:1});assert.equal(room.players.find(p=>p.id===a).pose.type,'hyper');
+ await f.db.query('delete from public.er_creators where user_id=$1',[a]);await f.db.query("update public.er_players set pose_at=now()-interval '1 second' where user_id=$1",[a]);await assert.rejects(rpc(f,a,'er_exchange',{p_pose:pose,p_seq:2}),/Creator-only/);
+ }finally{await f.db.close();}
+});
