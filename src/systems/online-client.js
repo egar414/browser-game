@@ -1,4 +1,4 @@
-import {RemoteStates} from './network-state.js';
+import {RemoteStates,nextSequence} from './network-state.js';
 
 export function publicConfig(config){
  try{
@@ -45,7 +45,7 @@ export class OnlineClient{
   // Wait for a previous-room exchange so it cannot overwrite the new roster.
   this.generation=(this.generation||0)+1;await this.pending;
   const room=await this.rpc('er_join',{p_name:name,p_code:code,p_create:create});
-  this.remote.clear();this.room=room;this.seq=0;this.failures=0;this.next=0;this.changed(room.public?'Public world joined.':'Private room ready. Share the room code with friends.');
+  this.remote.clear();this.room=room;this.failures=0;this.next=0;this.changed(room.public?'Public world joined.':'Private room ready. Share the room code with friends.');
  }
  clearRoom(){this.generation=(this.generation||0)+1;this.room=null;this.remote.clear();}
  async leave(){this.clearRoom();await this.pending;if(this.client&&this.session)await this.rpc('er_leave');this.changed('Left online world. Single player continues.');}
@@ -53,7 +53,7 @@ export class OnlineClient{
   if(!this.room||!this.session||this.pending||now<this.next)return;
   const generation=this.generation||0;
   this.next=now+(document.hidden?10000:333);
-  this.pending=this.rpc('er_exchange',{p_pose:this.getPose(),p_seq:++this.seq}).then(room=>{
+  this.pending=this.rpc('er_exchange',{p_pose:this.getPose(),p_seq:this.seq=nextSequence(this.seq)}).then(room=>{
    if(generation!==(this.generation||0))return;
    this.room=room;this.remote.accept(room.players,this.session.user.id,performance.now());this.failures=0;this.changed();
   }).catch(error=>{

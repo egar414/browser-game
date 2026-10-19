@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {database,rpc,users,migration} from './multiplayer-fixture.js';
-import {packPose,RemoteStates} from '../src/systems/network-state.js';
+import {packPose,RemoteStates,nextSequence} from '../src/systems/network-state.js';
 import {publicConfig} from '../src/systems/online-client.js';
 const [a,b,c]=users;
 const pose=(x=50)=>packPose({type:'ski',x,y:1,z:20,heading:3.1,drive:{}},{colour:0,design:'classic'},{},true);
@@ -35,6 +35,7 @@ test('multiplayer SQL preserves room privacy, enforces capacity, owns identities
   await assert.rejects(rpc(f,a,'er_exchange',{p_pose:pose(),p_seq:5}),/expired/);
   assert.equal((await rpc(f,c,'er_join',{p_name:'Replacement',p_code:'PUBLIC'})).players.length,8);
   assert.equal(await readFile(new URL('../public/multiplayer.sql',import.meta.url),'utf8'),migration);
+  const fresh=nextSequence(0);const exchange=await rpc(f,c,'er_exchange',{p_pose:pose(),p_seq:fresh});assert.equal(exchange.players.find(p=>p.id===c).seq,fresh);
  }finally{await f.db.close();}
 });
 test('remote smoothing wraps headings, bounds extrapolation, drops stale packets and removes departed craft',()=>{
@@ -48,4 +49,5 @@ test('remote smoothing wraps headings, bounds extrapolation, drops stale packets
  assert.equal(publicConfig({url:'https://test.supabase.co',publishableKey:'sb_secret_no'}),null);
  assert.equal(publicConfig({url:'https://evil.test',publishableKey:'sb_publishable_a'}),null);
  assert(publicConfig({url:'https://test.supabase.co',publishableKey:token('anon')}));
+ const old=nextSequence(0,1000);assert(nextSequence(0,1001)>old);assert.equal(nextSequence(old,999),old+1);
 });
