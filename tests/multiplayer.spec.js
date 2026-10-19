@@ -87,18 +87,21 @@ test('creator title sits above the local player name, follows driving and hides 
  }finally{await f.db.close();}
 });
 test('Ewan stays saved across reload and login; an unassigned Creator tag has a direct account-specific setup',async({page:p,context})=>{
- test.setTimeout(180000);const f=await database();const errors=[];p.on('pageerror',e=>errors.push(e.message));
+ test.setTimeout(240000);const f=await database();const errors=[];p.on('pageerror',e=>errors.push(e.message));
  try{
+  await f.db.query('delete from auth.users where id<>$1',[users[0]]);
   await context.grantPermissions(['clipboard-read','clipboard-write']);await boot(p,f,users[0],'ewan@example.test');
-  await expect(p.locator('#online-creator-status')).toContainText('not assigned');
+  await expect(p.locator('#online-creator-status')).toContainText('not assigned');expect((await status(p)).detailedCraft).toBe(false);
   await p.locator('#online-name').fill('Ewan');await p.locator('#online-save-name').click();await expect.poll(()=>f.metadata.get(users[0])?.game_name).toBe('Ewan');
-  await p.locator('#online-copy-creator').click();await expect(p.locator('#online-message')).toContainText('Creator setup copied');const grant=await p.evaluate(()=>navigator.clipboard.readText());expect(grant).toContain(`values ('${users[0]}')`);
+  await p.locator('#online-copy-creator').click();await expect(p.locator('#online-message')).toContainText('Creator setup copied');const grant=await p.evaluate(()=>navigator.clipboard.readText());expect(grant).toContain(`values ('${users[0]}')`);await p.locator('#online-copy-sole').click();await expect(p.locator('#online-message')).toContainText('Single-account setup copied');const soleGrant=await p.evaluate(()=>navigator.clipboard.readText());expect(soleGrant).toContain('Expected exactly one game account');
   await p.reload();await p.waitForFunction(()=>window.__ESTUARY__?.status.ready);await p.locator('.launch-card').getByRole('button',{name:'ONLINE / ACCOUNT',exact:true}).click();await expect(p.locator('#online-name')).toHaveValue('Ewan');
   // Owner applies exactly the copy button's script, then the player refreshes.
-  await f.owner(grant);await p.getByRole('button',{name:'REFRESH ACCOUNT',exact:true}).click();await expect(p.locator('#online-creator-perks')).toBeVisible();
+  await f.owner(soleGrant);await p.getByRole('button',{name:'REFRESH ACCOUNT',exact:true}).click();await expect(p.locator('#online-creator-perks')).toBeVisible();expect((await status(p)).detailedCraft).toBe(true);
   await p.getByRole('button',{name:'JOIN PUBLIC WORLD',exact:true}).click();await p.locator('[data-online="drive"]').click();await expect(p.locator('#local-player-name .player-name')).toHaveText('Ewan');await expect(p.locator('#local-player-name .player-title')).toBeVisible();
   await p.screenshot({path:'test-results/ewan-saved-creator-tag.png'});
-  await p.locator('#online-status').click();await p.getByRole('button',{name:'SIGN OUT',exact:true}).click();await p.locator('#online-email').fill('ewan@example.test');await p.locator('#online-password').fill('Fixture-password-123');await p.locator('#online-account').getByRole('button',{name:'SIGN IN',exact:true}).click();await expect(p.locator('#online-name')).toHaveValue('Ewan');expect(errors).toEqual([]);
+  await p.reload();await p.waitForFunction(()=>window.__ESTUARY__?.status.ready&&window.__ESTUARY__.status.online.creator,null,{timeout:60000});await p.locator('#play').click();await expect(p.locator('#local-player-name .player-name')).toHaveText('Ewan');await expect(p.locator('#local-player-name .player-title')).toBeVisible();
+  await p.locator('#online-status').click();await expect(p.locator('#online-account-id')).toHaveText(users[0]);await p.locator('#online-copy-id').click();await expect(p.locator('#online-message')).toContainText('Account ID copied');expect(await p.evaluate(()=>navigator.clipboard.readText())).toBe(users[0]);await p.locator('[data-online="close"]').click();
+  await p.locator('#online-status').click();await p.getByRole('button',{name:'SIGN OUT',exact:true}).click();await expect.poll(async()=>(await status(p)).detailedCraft,{timeout:15000}).toBe(false);await p.locator('#online-email').fill('ewan@example.test');await p.locator('#online-password').fill('Fixture-password-123');await p.locator('#online-account').getByRole('button',{name:'SIGN IN',exact:true}).click();await expect(p.locator('#online-name')).toHaveValue('Ewan');expect(errors).toEqual([]);
  }finally{await f.db.close();}
 });
 test('missing database explains setup and allows normal free roam',async({page:p})=>{

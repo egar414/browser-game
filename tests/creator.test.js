@@ -31,3 +31,11 @@ test('creator cosmetics and garage XP use transient account access; email quota 
  assert.match(accountError({code:'over_email_send_rate_limit',message:'email rate limit exceeded'}),/Confirm email/);
  assert.match(accountError({code:'email_not_confirmed',message:'Email not confirmed'}),/confirmation email/);
 });
+
+test('sole-account owner setup grants the only account and refuses to guess among multiple users',async()=>{
+ const f=await database();try{
+ const script=await readFile(new URL('../public/sole-account-creator.sql',import.meta.url),'utf8');assert(script.startsWith(creatorMigration));
+ await assert.rejects(f.owner(script),/exactly one game account/);for(const id of users)assert.equal(await rpc(f,id,'er_my_perks'),false);
+ await f.db.query('delete from auth.users where id<>$1',[users[0]]);await f.owner(script);assert.equal(await rpc(f,users[0],'er_my_perks'),true);await f.owner(script);assert.equal(await rpc(f,users[0],'er_my_perks'),true);
+ }finally{await f.db.close();}
+});

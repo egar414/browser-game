@@ -21,3 +21,9 @@ test('batching preserves separate steering, trim, reverse gate and rider attachm
  for(const side of[-1,1]){const grip=new THREE.Vector3(side*.3,0,-.12).applyAxisAngle(new THREE.Vector3(0,1,0),-.43).add(p.handlebars.position);const hand=p.rider.getObjectByName(side===1?'right-hand':'left-hand');assert(hand.position.distanceTo(grip)<1e-6);const foot=p.rider.getObjectByName(side===1?'right-foot':'left-foot');assert(Math.abs(foot.position.x-side*.44)<1e-6);assert.equal(foot.position.y,.32);}
  const other=makeSpark('#ed522d');assert.notEqual(other.userData.nozzle,p.nozzle);assert.equal(other.userData.nozzle.rotation.x,0);
 });
+
+test('reference-sculpted Spark is selected only for verified Creator access, never a name or saved flag',async()=>{
+ const {makeVehicle}=await import('../src/vehicles/models.js');
+ for(const access of[undefined,{}, {creator:false},{creator:'true'},{name:'Ewan'},{creatorAccess:true}])assert.equal(makeVehicle('ski','#1679e8','classic',access).userData.modelSource,'standard-spark');
+ assert.equal(makeVehicle('ski','#1679e8','classic',{creator:true}).userData.modelSource,'original-reference-sculpt');
+});

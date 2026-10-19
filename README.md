@@ -914,3 +914,28 @@ vertical smoothing. Horizontal position stays with the interpolated craft, so
 acceleration cannot pull the camera backwards through the rider. Mouse drag
 looks around; U looks behind. Tune the eye and view in `JET_RIDING_VIEW` in
 `src/systems/camera.js`. Other boat cockpit views retain their existing anchors.
+
+## Creator Sparkplug and restored account badge
+
+The reference-sculpted compact Sparkplug is now a verified Creator-account perk.
+Other accounts and signed-out players receive the regular procedural jet ski;
+all players retain the improved steering and first-person controls. The local
+model follows the server-checked role. Remote models use the role in the server
+roster, never a name or a client pose flag. Signing out removes the personal
+model. This is an account unlock in the ordinary game; browser assets and local
+physics are not protected against someone modifying their own client.
+
+Saved accounts now restore at launch without opening Online / Account. Creator
+access is checked with the authenticated server RPC before unlocking the craft
+and badge; no role is restored from local preferences. An unavailable backend
+leaves solo play usable and exposes a retry message in Online / Account.
+
+For an owner who has exactly one Auth account, `public/sole-account-creator.sql`
+installs the badge functions and grants that one account. It refuses to choose
+between multiple users, is safe to rerun and returns a **Creator enabled** result.
+Copy **all** of it into a fresh Supabase SQL Editor query, click Run as project
+owner, then click REFRESH ACCOUNT in the game. The game also offers COPY
+SINGLE-ACCOUNT SETUP. If more accounts exist, COPY MY CREATOR SETUP generates the
+existing signed-in-account-specific grant instead. A public publishable key
+cannot run either owner-only grant; this change does not itself assign a role
+in the production database.

@@ -17,6 +17,12 @@ export class OnlineClient{
  }
  changed(message){if(message)this.message=message;this.onChange(this.status);}
  get status(){return {configured:!!this.client,connected:!!this.room&&this.failures===0,signedIn:!!this.session,accountId:this.session?.user.id||null,playerName:savedPlayerName(this.session?.user),creator:this.creator,creatorState:this.creatorState,creatorError:this.creatorError,room:this.room?{id:this.room.id,code:this.room.code,public:this.room.public,players:this.room.players?.length||0,capacity:8}:null,message:this.message,remotePlayers:this.remote.players.size};}
+ async restoreSession(storage){
+  // A stored session is only a reason to contact Auth, never proof of a role.
+  try{storage??=globalThis.localStorage;if(!storage?.getItem('estuary-rats-auth-v1'))return false;}catch{return false;}
+  try{await this.initialize();if(!this.session)return false;await this.refreshPerks();return true;}
+  catch{this.changed('Saved account could not reconnect. Open Online / Account to retry.');return false;}
+ }
  async initialize(){
   if(this.client)return;
   if(this.initializing)return this.initializing;

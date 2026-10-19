@@ -91,7 +91,7 @@ new TouchControls(input);
 let lastCreator=false;
 const online=new OnlineClient({getPose:()=>packPose(vehicle,settings,deck,state!=='home'),onChange(s){
  if(s.creator===lastCreator)return;lastCreator=s.creator;
- if(!s.creator)validLoadout(settings);vehicle.tuning=settings.tuning;replaceModel();ui.updateGarage();saveSettings(settings);
+ if(!s.creator)validLoadout(settings);vehicle.tuning=settings.tuning;replaceModel();ui.selectVehicle();saveSettings(settings);
  if(s.creator)ui.toast('★ Creator garage unlocked','All designs and tuning · 2× garage XP · verified gold name tag');
 }});
 // Derived from the authenticated account, never restored from local settings.
@@ -195,7 +195,7 @@ function visitWaterfront(){
 }
 function replaceModel(){
   if(model){scene.remove(model);model.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material?.map)o.material.map.dispose();});}
-  model=makeVehicle(settings.vehicle,VEHICLES[settings.vehicle].colours[settings.colour],settings.design);scene.add(model);
+  model=makeVehicle(settings.vehicle,VEHICLES[settings.vehicle].colours[settings.colour],settings.design,{creator:online.creator});scene.add(model);
 }
 // Start Auto conservatively on laptops; higher detail remains selectable.
 // Lower resolution and fewer scene submissions preserve responsive driving.
@@ -235,6 +235,8 @@ try {
   applyQuality();environment=buildEnvironment(scene,QUALITY[qualityName]);environment.userData.moorings.onEvent=e=>{if(e.points)activities.event({type:'score',label:e.label,points:e.points});ui.toast(e.label,e.detail);};playground=new CanalPlayground(scene,solids,e=>activities.event(e));barGuide=new BarGuide(scene,solids);water=new Water(scene,QUALITY[qualityName]);spray=new Spray(scene,QUALITY[qualityName]);locals=new LocalBoaters(scene,collision,e=>ui.toast(e.label,e.detail));solids.push(...locals.colliders);cruisers=new SportfishingTraffic(collision,e=>ui.toast(e.label,e.detail));solids.push(...cruisers.colliders);offshore=new OffshoreView(scene,cruisers,fishing);speedRun=new SpeedRun(scene);dolphins=new Dolphins(scene,visitLabel('DOLPHIN POD ↓'));people=new WaterfrontPeople(scene,e=>ui.toast(e.label,e.detail));replaceModel();
   document.getElementById('loading').textContent='Loading coastal textures and watercraft…';
   Promise.all([loadCraftAssets(),loadSurfaceTextures().then(report=>{atmosphere.refreshEnvironment();if(report.failed.length)console.warn('Surface texture fallback:',report.failed.join(', '));})]).then(()=>{replaceModel();ready=true;ui.ready();}).catch(error=>{console.warn('Detailed craft load failed',error);ready=true;ui.ready();ui.toast('Lightweight craft loaded','The detailed model could not load. Reload to try again.');});
+  // Restore existing accounts without opening the menu or blocking solo launch.
+  void online.restoreSession();
   const canvas=document.querySelector('#game');canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();pause();ui.error('The graphics connection was lost. Reload to relaunch. Try Low quality if this repeats.');});
   function frame(now){
     requestAnimationFrame(frame);if(document.hidden){last=now;return;}setWeatherClock(Date.now()/1000);

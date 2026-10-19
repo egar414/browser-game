@@ -18,3 +18,12 @@ test('role diagnostics distinguish unassigned accounts and unavailable setup; le
  client.rpc=async()=>({id:'room',players:[{id:'a',name:'Ewan'}],creator:false,public:true});await client.join('Ewan');assert.equal(client.creator,false);
  assert.equal(await readFile(new URL('../public/creator-setup.js',import.meta.url),'utf8'),await readFile(new URL('../src/systems/creator-grant.js',import.meta.url),'utf8'));
 });
+
+test('saved sessions restore and verify Creator access without opening Online; storage never grants roles',async()=>{
+ const c=new OnlineClient();let calls=0,checked=0;c.initialize=async()=>{calls++;c.session={user:{id:'a'}};};c.rpc=async()=>{checked++;return true;};
+ assert.equal(await c.restoreSession({getItem:()=>null}),false);assert.equal(calls,0);
+ assert.equal(await c.restoreSession({getItem(){throw Error('blocked');}}),false);assert.equal(calls,0);
+ assert.equal(await c.restoreSession({getItem:()=>'{"creator":true}'}),true);assert.equal(calls,1);assert.equal(checked,1);assert.equal(c.creator,true);
+ c.rpc=async()=>false;await c.restoreSession({getItem:()=>'{"creator":true}'});assert.equal(c.creator,false);assert.equal(c.creatorState,'inactive');
+ c.initialize=async()=>{throw Error('offline');};assert.equal(await c.restoreSession({getItem:()=>'{"creator":true}'}),false);assert.match(c.status.message,/could not reconnect/);
+});

@@ -5,6 +5,7 @@ import{makeSportfisher}from'../systems/offshore-view.js';
 import{makeDeckCharacter}from'./wardrobe.js';
 import * as THREE from 'three';
 import {makeSpark} from './spark-model.js';
+import {makeStandardSpark} from './standard-spark.js';
 import { makeRider } from './rider.js';
 import { buildTender } from './tender.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -53,8 +54,8 @@ function inflatable(parent,material){
   for(let j=0;j<sections.length-1;j++)for(let i=0;i<segments;i++){const a=j*(segments+1)+i,b=a+segments+1;indices.push(a,b,a+1,a+1,b,b+1);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.castShadow=m.receiveShadow=true;parent.add(m);
 }
-export function makeVehicle(type, colour, design='classic') {
-  if(type==='ski')return makeSpark(colour,design);
+export function makeVehicle(type, colour, design='classic',access={}) {
+  if(type==='ski')return access.creator===true?makeSpark(colour,design):makeStandardSpark(colour,design);
   if(type==='hyper')return makeApex(colour);
   if(type==='racer')return makeRacingCat(colour);
   if(type==='cruiser'){const root=makeSportfisher('Reef Runner',colour,false),rider=makeDeckCharacter();rider.position.set(0,3.25,-.25);root.add(rider);rider.userData.update=(v,dt)=>rider.userData.animate(v.animationTime||0,0,false);root.userData={body:root,rider};return root;}

@@ -35,11 +35,11 @@ export class OnlineWorld{
   for(const id of this.models.keys())if(!states.players.has(id))this.remove(id);
   for(const [id,r]of states.players){
    const p=states.sample(r,now);if(!p)continue;
-   let entry=this.models.get(id);const key=`${p.type}:${p.colour}:${p.design}`;
+   let entry=this.models.get(id);const key=`${p.type}:${p.colour}:${p.design}:${r.creator===true}`;
    if(entry?.key!==key){this.remove(id);entry=null;}
    if(!entry){
     // At most seven remote models, made only when a player/paint changes.
-    const model=makeVehicle(p.type,VEHICLES[p.type].colours[p.colour],p.design),clones=new Map();
+    const model=makeVehicle(p.type,VEHICLES[p.type].colours[p.colour],p.design,{creator:r.creator===true}),clones=new Map();
     const own=resource=>{if(!clones.has(resource))clones.set(resource,resource.clone());return clones.get(resource);};
     model.traverse(o=>{o.castShadow=false;if(o.geometry)o.geometry=own(o.geometry);if(o.material){const materials=Array.isArray(o.material)?o.material:[o.material];const copies=materials.map(m=>{const copy=own(m);for(const k of Object.keys(copy))if(m[k]?.isTexture)copy[k]=own(m[k]);return copy;});o.material=Array.isArray(o.material)?copies:copies[0];}});
     const plate=nameplate();this.scene.add(model);entry={key,model,...plate,resources:new Set(clones.values())};this.models.set(id,entry);

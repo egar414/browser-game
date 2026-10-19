@@ -62,3 +62,9 @@ close/first-person/rear cameras, and verified no GLB request or page error.
 Screenshots were visually inspected. This runner uses Linux Chromium with
 SwiftShader software rendering at Low quality; it is not a laptop GPU benchmark.
 The rebuild targets Sparkplug only; Seago and Apex retain their existing models.
+
+The reference-sculpted version is now the Creator Sparkplug. The regular craft
+uses the original procedural shape in `src/vehicles/standard-spark.js`, batched
+by `rigid-model.js`. Local access follows verified account perks; online craft
+appearance follows the server's Creator flag. Shared steering/camera fixes
+remain available on both craft.

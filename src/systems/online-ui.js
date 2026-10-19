@@ -26,14 +26,16 @@ export class OnlineUI{
   const refresh=document.createElement('button');refresh.className='secondary';refresh.textContent='REFRESH ACCOUNT';refresh.addEventListener('click',()=>this.run(()=>client.refreshPerks()));this.root.querySelector('#online-signed-in').append(refresh);
   const nameField=this.root.querySelector('#online-name');nameField.addEventListener('input',()=>{this.nameDirty=true;});
   const saveName=document.createElement('button');saveName.id='online-save-name';saveName.className='secondary';saveName.textContent='SAVE NAME';saveName.addEventListener('click',()=>{if(!nameField.reportValidity())return;this.run(async()=>{await client.saveName(nameField.value);this.nameDirty=false;this.render(client.status);});});nameField.parentElement.after(saveName);
-  const creatorHelp=document.createElement('div');creatorHelp.id='online-creator-help';creatorHelp.innerHTML='<p id="online-creator-status" role="status"></p><p class="fine-print">Account ID: <span id="online-account-id"></span></p><button id="online-copy-creator" class="secondary">COPY MY CREATOR SETUP</button> <a class="secondary" href="https://supabase.com/dashboard/project/tqvgqtgxwgxdxpbvuatf/sql/new" target="_blank" rel="noopener">OPEN SUPABASE SQL EDITOR ↗</a><p class="fine-print">Project owner only: copy the setup, paste into SQL Editor, click Run, then Refresh Account. The public game key cannot assign badges.</p>';
+  const creatorHelp=document.createElement('div');creatorHelp.id='online-creator-help';creatorHelp.innerHTML='<p id="online-creator-status" role="status"></p><p class="fine-print">Account ID: <span id="online-account-id"></span> <button id="online-copy-id" class="secondary">COPY ACCOUNT ID</button></p><button id="online-copy-creator" class="secondary">COPY MY CREATOR SETUP</button> <button id="online-copy-sole" class="secondary">COPY SINGLE-ACCOUNT SETUP</button> <a class="secondary" href="https://supabase.com/dashboard/project/tqvgqtgxwgxdxpbvuatf/sql/new" target="_blank" rel="noopener">OPEN SUPABASE SQL EDITOR ↗</a><p class="fine-print">Project owner only: copy the setup, paste into SQL Editor, click Run, then Refresh Account. The public game key cannot assign badges.</p>';
   this.root.querySelector('#online-signed-in').append(creatorHelp);
-  creatorHelp.querySelector('button').addEventListener('click',()=>this.run(async()=>{
+  creatorHelp.querySelector('#online-copy-creator').addEventListener('click',()=>this.run(async()=>{
    const response=await fetch(`${import.meta.env?.BASE_URL||'/'}creator.sql`,{cache:'no-cache'});if(!response.ok)throw Error('Could not load Creator setup. Please reload and try again.');
    const sql=creatorSetupSQL(await response.text(),client.status.accountId);
    try{await navigator.clipboard.writeText(sql);this.message('Creator setup copied. Paste it into your Supabase SQL Editor, click Run, then Refresh Account.');}
    catch{let field=creatorHelp.querySelector('textarea');if(!field){field=document.createElement('textarea');field.readOnly=true;field.setAttribute('aria-label','Your Creator setup SQL');creatorHelp.append(field);}field.value=sql;field.focus();field.select();this.message('Copy the selected Creator setup with Ctrl+C / Command+C, run it in Supabase SQL Editor, then Refresh Account.');}
   }));
+  creatorHelp.querySelector('#online-copy-sole').addEventListener('click',()=>this.run(async()=>{const response=await fetch(`${import.meta.env?.BASE_URL||'/'}sole-account-creator.sql`,{cache:'no-cache'});if(!response.ok)throw Error('Could not load single-account setup');const sql=await response.text();try{await navigator.clipboard.writeText(sql);this.message('Single-account setup copied. In Supabase SQL Editor, select all existing text, replace it with this setup and click Run. Look for Creator enabled, then Refresh Account here.');}catch{let field=creatorHelp.querySelector('textarea');if(!field){field=document.createElement('textarea');field.readOnly=true;creatorHelp.append(field);}field.value=sql;field.focus();field.select();this.message('Copy the selected single-account setup, paste ALL of it into a new Supabase SQL query and Run.');}}));
+  creatorHelp.querySelector('#online-copy-id').addEventListener('click',()=>this.run(async()=>{const id=client.status.accountId;if(!id)return;try{await navigator.clipboard.writeText(id);this.message('Account ID copied. You can share this ID; keep your password private.');}catch{this.message('Account ID: '+id+' — select and copy the ID above.');}}));
   this.root.querySelectorAll('[data-online]').forEach(button=>button.addEventListener('click',()=>{
    const action=button.dataset.online;
    if(action==='close'){this.hide();return;}
@@ -66,9 +68,12 @@ export class OnlineUI{
   this.statusButton.classList.toggle('is-creator',s.creator);if(s.creator)this.statusButton.textContent='★ CREATOR · '+this.statusButton.textContent;
   this.root.querySelector('#online-creator-perks').hidden=!s.creator;
   const messages={active:'★ Creator tag active on this account. It appears above your saved name in chase view.',inactive:'Creator tag is not assigned to this account yet. Use the owner setup below.',missing:'The Creator database update is not installed yet. Use the owner setup below.',checking:'Checking your account’s Creator tag…',error:'Could not check your Creator tag. Check your connection and press Refresh Account.'};
-  this.root.querySelector('#online-creator-status').textContent=messages[s.creatorState]||'Sign in to check your Creator tag.';
+  this.root.querySelector('#online-creator-status').textContent=(messages[s.creatorState]||'Sign in to check your Creator tag.')+(s.creatorState==='error'&&s.creatorError?' '+s.creatorError:'');
   this.root.querySelector('#online-account-id').textContent=s.accountId||'';
-  this.root.querySelector('#online-creator-help').hidden=!s.signedIn||s.creator;
+  this.root.querySelector('#online-creator-help').hidden=!s.signedIn;
+  this.root.querySelector('#online-copy-creator').hidden=!!s.creator;
+  this.root.querySelector('#online-copy-sole').hidden=!!s.creator;
+  this.root.querySelector('#online-creator-help a').hidden=!!s.creator;
   const guide=this.root.querySelector('a[href*="multiplayer-setup"]');guide.href=`./multiplayer-setup.html${s.accountId?'#creator='+encodeURIComponent(s.accountId):''}`;
   guide.textContent=s.signedIn?'OWNER SETUP / CREATOR TAG ↗':'OWNER SETUP GUIDE ↗';
  }

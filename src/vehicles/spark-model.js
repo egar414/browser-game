@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
-import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {batchRigidAssembly} from './rigid-model.js';
 import {makeRider} from './rider.js';
 import {PROPULSION} from '../config.js';
 
@@ -90,12 +90,7 @@ export function makeSpark(colour='#1679e8',design='classic'){
  if(design!=='classic')for(const side of[-1,1])tube([[side*.46,.33,-.9],[side*.48,.39,-.20],[side*.40,.52,.4],[side*.28,.52,.89]],design==='race'?.012:.02,material(design==='race'?'#f5e9c5':'#efad4c',.45),body,18);
  const rider=makeRider(body,'ski');rider.userData.dynamic=true;
  // Batch each rigid assembly separately; steering, trim, gate and IK stay live.
- function batch(group){
-  group.updateWorldMatrix(true,true);const inverse=group.matrixWorld.clone().invert(),groups=new Map(),remove=[];
-  group.traverse(o=>{if(!o.isMesh)return;for(let p=o.parent;p&&p!==group;p=p.parent)if(p.userData.dynamic)return;const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse,o.matrixWorld));if(!g.attributes.uv)g.setAttribute('uv',new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count*2),2));if(!groups.has(o.material))groups.set(o.material,[]);groups.get(o.material).push(g);remove.push(o);});
-  for(const[m,gs]of groups){const mesh=add(mergeGeometries(gs),m,group);mesh.name='Batched Spark assembly';gs.forEach(g=>g.dispose());}for(const o of remove){o.removeFromParent();o.geometry.dispose();}
- }
- for(const group of[body,handlebars,nozzle,bucket])batch(group);
+ for(const group of[body,handlebars,nozzle,bucket])batchRigidAssembly(group);
  root.userData={body,rider,handlebars,nozzle,bucket,detailedModel:true,modelSource:'original-reference-sculpt',modelRevision:'compact-spark-2'};
  rider.userData.update({riderAft:0,steer:0,surgeAcceleration:0},1,root.userData);
  return root;
