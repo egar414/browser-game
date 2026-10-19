@@ -544,13 +544,13 @@ Tune daylight and bite periods in `src/systems/day-cycle.js`, Seago's drive/hull
 
 ### Tinny shaft balance and finding wildlife
 
-Hold Shift / phone LIFT once moving, then pulse W / GO using the top-right
-SPEED UP / SLOW DOWN meter. Full throttle can loop the boat. Release LIFT to
+Hold W + Shift / phone GO + LIFT once moving. The lower 50–60° stance is
+bounded so held throttle does not loop the tinny. Release LIFT to
 settle; steering transitions to a lower spray slide. Two crew ride the tender:
 the passenger moves forward during takeoff and aft when planing. Dry-hull bow
 rides keep the alloy hull clear of the surface, with the lower unit and propeller
 immersed. The smaller falling spray comes from that wet motor contact.
-This is a deliberately difficult arcade stance, not a validated real-world model.
+This is an assisted arcade stance, not a validated real-world model.
 
 P / phone EYES directly toggles first person; C / VIEW still cycles three views.
 O or Pause → DOLPHIN WATCH places you behind the offshore pod. Dolphins show
@@ -563,7 +563,7 @@ bounce in `TINNY_HANDLING` and flotation in `HYDRODYNAMICS` (`src/config.js`),
 and motor wash in `TINNY_SPRAY` (`src/systems/spray-model.js`).
 
 
-The photo-inspired tinny shaft uses a roughly 70° balance target and a bounded
+The photo-inspired tinny shaft uses a roughly 52° balance target and a bounded
 quarter lean from prop torque/crew weight. Crew sit lower and aft; water-contact
 constraints keep the hull clear. Shaft prop wash is low and narrow, starts at
 the wet lower unit and trails aft into falling droplets and foam. Normal powered
@@ -578,3 +578,10 @@ proportions. Shape extensions, deck limits and hull length are shared in
 framing follow the revised hull. The third-person deck camera stays aft of the
 cabin so walking and fishing have a clear view. This is an original game boat,
 not a scale model.
+
+
+The 225 now holds its shaft on continuous W + Shift / GO + LIFT, using a
+roughly 50–60° supported stance instead of a near-vertical throttle balance.
+Held throttle does not cause a backflip. The hull stays visibly clear with the
+lower unit/propeller immersed; the chase camera moves closer and slightly aside
+to show that gap. Release LIFT to settle, or steer into the lower spray slide.

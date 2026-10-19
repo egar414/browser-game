@@ -127,7 +127,7 @@ test('clip-inspired outboards lift early, hold a stern-supported bow and retain 
  setSeaState('calm',0,true);
  for(const type of ['tinny','cat']){
   const v=new VehiclePhysics(type);v.x=-200;v.z=-1000;v.heading=0;
-  if(type==='tinny')balancedBow(v,3);else advance(v,3,{throttle:1,freestyle:true});assert(v.pitch>(type==='tinny'?1.05:.90),`${type}: early bow lift`);
+  if(type==='tinny')balancedBow(v,3);else advance(v,3,{throttle:1,freestyle:true});assert(v.pitch>(type==='tinny'?.85:.90),`${type}: early bow lift`);
   for(let i=0;i<900;i++){
    if(type==='tinny')balancedBow(v,1/60,3+i/60);else v.update(1/60,{...input,throttle:1,freestyle:true},3+i/60);
    assert(!v.airborne&&!v.wipeout);assert(v.pitch>.65&&v.pitch<v.config.wipeoutAngle);
