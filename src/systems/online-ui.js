@@ -21,6 +21,8 @@ export class OnlineUI{
   }
   this.onOpen=open;this.onClose=close;
   this.root.querySelector('form').addEventListener('submit',event=>{event.preventDefault();this.run(async()=>{await client.signIn(this.value('email'),this.value('password'));this.root.querySelector('#online-password').value='';});});
+  const perks=document.createElement('p');perks.id='online-creator-perks';perks.className='creator-perks';perks.hidden=true;perks.textContent='★ CREATOR · All garage designs and tuning unlocked · 2× garage XP';this.root.querySelector('#online-signed-in').prepend(perks);
+  const refresh=document.createElement('button');refresh.className='secondary';refresh.textContent='REFRESH ACCOUNT';refresh.addEventListener('click',()=>this.run(()=>client.refreshPerks()));this.root.querySelector('#online-signed-in').append(refresh);
   this.root.querySelectorAll('[data-online]').forEach(button=>button.addEventListener('click',()=>{
    const action=button.dataset.online;
    if(action==='close'){this.hide();return;}
@@ -37,10 +39,10 @@ export class OnlineUI{
     if(action==='leave')await client.leave();if(action==='logout')await client.signOut();
    });
   }));
-  client.onChange=status=>this.render(status);this.render(client.status);
+  const previous=client.onChange;client.onChange=status=>{previous(status);this.render(status);};this.render(client.status);
  }
  value(id){return this.root.querySelector(`#online-${id}`).value;}
- async run(action){if(this.busy)return;this.busy=true;this.root.querySelectorAll('button:not([data-online="close"])').forEach(b=>b.disabled=true);try{await action();}catch(e){this.message(e.message);}finally{this.busy=false;this.root.querySelectorAll('button').forEach(b=>b.disabled=false);}}
+ async run(action){if(this.busy)return;this.busy=true;this.root.querySelectorAll('button:not([data-online="close"])').forEach(b=>b.disabled=true);try{await action();}catch(e){this.message(accountError(e));}finally{this.busy=false;this.root.querySelectorAll('button').forEach(b=>b.disabled=false);}}
  message(text){this.root.querySelector('#online-message').textContent=text;}
  render(s){
   // Keep an error visible until the next deliberate action instead of clearing it at 3 Hz.
@@ -49,7 +51,16 @@ export class OnlineUI{
   this.root.querySelector('#online-room').textContent=s.room?`${s.room.public?'PUBLIC WORLD':'ROOM '+s.room.code} · ${s.room.players}/8 players${s.connected?'':' · reconnecting'}`:'';
   for(const a of ['drive','leave'])this.root.querySelector(`[data-online="${a}"]`).hidden=!s.room;
   this.statusButton.textContent=s.room?`${s.room.public?'PUBLIC':s.room.code} · ${s.room.players}/8${s.connected?'':' · RETRYING'}`:'ONLINE / ACCOUNT';
+  this.statusButton.classList.toggle('is-creator',s.creator);if(s.creator)this.statusButton.textContent='★ CREATOR · '+this.statusButton.textContent;
+  this.root.querySelector('#online-creator-perks').hidden=!s.creator;
+  const guide=this.root.querySelector('a[href*="multiplayer-setup"]');guide.href=`./multiplayer-setup.html${s.accountId?'#creator='+encodeURIComponent(s.accountId):''}`;
+  guide.textContent=s.signedIn?'OWNER SETUP / CREATOR TAG ↗':'OWNER SETUP GUIDE ↗';
  }
  async show(){this.onOpen();this.root.classList.remove('hidden');this.root.querySelector('[data-online="close"]').focus();await this.run(()=>this.client.readiness());}
  hide(){this.root.classList.add('hidden');this.onClose();}
+}
+export function accountError(error){
+ if(error.code==='over_email_send_rate_limit'||/email.*rate.*limit|email.*limit.*exceed/i.test(error.message))return 'Supabase email sending limit reached. Please stop retrying for now. The project owner can turn off Confirm email (addresses will not be verified), or configure a custom SMTP sender in Supabase. See the Owner Setup Guide → Email problems.';
+ if(error.code==='email_not_confirmed'||/email not confirmed/i.test(error.message))return 'Your email is not confirmed yet. Open the confirmation email. If email sending is limited, see Owner Setup Guide → Email problems.';
+ return error.message||'Could not complete that action. Please try again.';
 }

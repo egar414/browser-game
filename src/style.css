@@ -93,6 +93,7 @@
 
 /* Optional multiplayer stays independent of the driving HUD. */
 .online-dialog a{color:#f5c566;text-decoration:none}
+.creator-perks,.online-player-name.is-creator,#online-status.is-creator{color:#ffe7a1;background:#4c3517;border:1px solid #edbd53}.creator-perks{padding:12px;border-radius:6px}
 #online-status{position:fixed;z-index:7;right:76px;top:22px;font-size:11px;padding:10px 12px;pointer-events:auto}
 #online-panel{z-index:30;background:rgba(8,29,35,.82)}
 .online-dialog{width:min(620px,94vw);text-align:left}.online-dialog label{display:grid;gap:7px;margin:14px 0;color:#f3ebd4;font-size:13px}.online-dialog input{box-sizing:border-box;width:100%;padding:12px;border:1px solid #68898c;border-radius:6px;background:#153940;color:white;font:inherit}.online-actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.online-actions .play-button{width:auto;font-size:13px;padding:12px 18px}.online-dialog [hidden]{display:none!important}#online-message{padding:12px;border-left:3px solid #f2bd58;background:#163c42;min-height:24px}.online-player-name{position:fixed;left:0;top:0;z-index:3;pointer-events:none;padding:4px 8px;border-radius:4px;background:#10383cdd;color:white;font:12px sans-serif}.online-player-name[hidden]{display:none}

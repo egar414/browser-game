@@ -88,7 +88,14 @@ const ui=new UI(settings,{
   race(){if(['cruiser','racer'].includes(vehicle.type)){ui.toast('Choose a smaller craft for canal racing');return;}if(state==='playing'){fishing.cancel();battle.cancel();activities.startRace(vehicle);}},challenge(){if(['cruiser','racer'].includes(vehicle.type)){ui.toast('Choose a smaller craft for tricks');return;}if(state==='playing'){fishing.cancel();battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,meetLocals,visitFishing,visitWaterfront,visitDolphins,visitCoast,visitSpeedRun,meetBigBoats,
 });
 new TouchControls(input);
-const online=new OnlineClient({getPose:()=>packPose(vehicle,settings,deck,state!=='home')});
+let lastCreator=false;
+const online=new OnlineClient({getPose:()=>packPose(vehicle,settings,deck,state!=='home'),onChange(s){
+ if(s.creator===lastCreator)return;lastCreator=s.creator;
+ if(!s.creator)validLoadout(settings);vehicle.tuning=settings.tuning;replaceModel();ui.updateGarage();saveSettings(settings);
+ if(s.creator)ui.toast('★ Creator garage unlocked','All designs and tuning · 2× garage XP · verified gold name tag');
+}});
+// Derived from the authenticated account, never restored from local settings.
+Object.defineProperty(settings,'creatorAccess',{get:()=>online.creator,enumerable:false});
 const onlineWorld=new OnlineWorld(scene,online);
 let onlineFrom='home';
 const onlineUI=new OnlineUI(online,{

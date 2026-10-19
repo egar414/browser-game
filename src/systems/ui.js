@@ -54,7 +54,7 @@ export class UI {
     document.getElementById('craft-label').textContent=c.name.toUpperCase();
   }
   updateGarage(){
-    const xp=this.settings.careerPoints||0;document.getElementById('career').textContent=`GARAGE · ${xp} COMBO XP`;
+    const xp=this.settings.careerPoints||0;document.getElementById('career').textContent=this.settings.creatorAccess?`★ CREATOR GARAGE · ${xp} XP · 2× XP`:`GARAGE · ${xp} COMBO XP`;
     for(const [key,options]of [['design',DESIGNS],['tuning',TUNING]]){
       const el=document.getElementById(key);el.innerHTML=Object.entries(options).map(([value,item])=>`<option value="${value}" ${hasUnlock(this.settings,item)?'':'disabled'}>${item.name}${item.points&&!hasUnlock(this.settings,item)?` · ${item.points} XP`:''}</option>`).join('');el.value=this.settings[key];
     }

@@ -11,15 +11,17 @@ asset service is required to play.
 ## Optional online worlds and accounts
 
 Open **ONLINE / ACCOUNT** from the garage, HUD or pause screen. Email/password
-accounts use Supabase Auth; confirmation emails are enabled on the connected
-project. The public world and private 8-character-code rooms each hold up to
+accounts use Supabase Auth. The connected project currently allows signup
+without email confirmation, so email addresses are unverified. A custom SMTP
+sender can restore verified-email signup later. The public world and private 8-character-code rooms each hold up to
 8 signed-in players. A private room expires after 24 hours. One account controls
 one craft; sleeping/disconnected memberships expire after 45 seconds.
 
 The owner must first follow [the multiplayer setup guide](public/multiplayer-setup.html):
-run `supabase/migrations/001_multiplayer.sql` in Supabase SQL Editor and set Auth's
+run the setup SQL in Supabase SQL Editor and set Auth's
 Site URL / allowed redirect URL to `https://egar414.github.io/browser-game/`.
-The same SQL is downloadable as `public/multiplayer.sql`; a test checks they match.
+`public/multiplayer.sql` bundles the base and Creator migrations; tests check the
+bundle and standalone Creator SQL against their canonical migrations.
 No secret/service-role key is needed or accepted by the frontend. The configured
 `public/multiplayer-config.json` contains only the intentionally public publishable
 key. Deployments can override it with `VITE_SUPABASE_URL` and
@@ -36,7 +38,31 @@ Remote boats currently have rider, trim, paint and deck animation but no extra
 particle systems, to keep the first release light on laptops. All normal
 single-player features remain available without signing in.
 
-Run `node --test tests/multiplayer.test.js` for PostgreSQL (PGlite) migration,
+### Verified Creator badge and garage perks
+
+A project owner can assign the optional Creator role to their own game account.
+Sign in, choose **OWNER SETUP / CREATOR TAG**, copy **my Creator setup** into the
+Supabase SQL Editor and run it, then **REFRESH ACCOUNT**. The guide derives the
+account UUID from the signed-in session; no email or password needs to be shared.
+The script installs `supabase/migrations/002_creator.sql` and inserts only that
+UUID into `er_creators`. Normal API clients cannot read or write the role table.
+
+Creator accounts receive a gold name tag visible to other players, every garage
+design/tuning option, and 2× local garage XP. The perk flag is session-derived and
+excluded from saved settings. Sign-out/revocation removes access to any unearned
+garage options. This gives no account-management or database privileges and
+changes no online damage rules. `tests/creator.test.js` verifies owner-only grants,
+name/pose forgery rejection, revoke behaviour, setup SQL injection rejection and
+non-persisted garage privileges. The two-browser suite checks one Creator and
+one regular account, remote gold labels, and badge removal on sign-out.
+
+If Supabase returns **email rate limit exceeded**, the UI explains the owner fix
+and does not repeat signup requests. See the setup guide's **Email problems**
+section: either turn Confirm email off (unverified addresses), or configure SMTP
+and retain verification. Disabling confirmation does not remove password reset
+email limits. Passwords and API secrets never belong in the SQL setup script.
+
+Run `node --test tests/multiplayer.test.js tests/creator.test.js` for PostgreSQL (PGlite) migration,
 permissions, privacy, capacity, input validation and smoothing checks. Run
 `NO_PROXY=127.0.0.1,localhost npx playwright test tests/multiplayer.spec.js` for
 two-browser gameplay and missing-backend fallback. That browser suite routes Auth

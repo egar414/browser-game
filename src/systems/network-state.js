@@ -21,9 +21,10 @@ export class RemoteStates{
    if(typeof p.id!=='string'||p.id===self)continue;ids.add(p.id);
    if(!validPose(p.pose)||!Number.isSafeInteger(p.seq))continue;
    let r=this.players.get(p.id);
+   if(r){r.creator=p.creator===true;r.name=String(p.name||'Boater').slice(0,20);}
    if(r&&p.seq<=r.seq){r.seen=now;continue;}
    if(!r){r={id:p.id,history:[]};this.players.set(p.id,r);}
-   r.name=String(p.name||'Boater').slice(0,20);r.seq=p.seq;r.seen=now;r.history.push({time:now,...p.pose});
+   r.name=String(p.name||'Boater').slice(0,20);r.creator=p.creator===true;r.seq=p.seq;r.seen=now;r.history.push({time:now,...p.pose});
    if(r.history.length>8)r.history.shift();
   }
   for(const [id,r]of this.players)if(!ids.has(id)||now-r.seen>12000)this.players.delete(id);

@@ -34,7 +34,7 @@ export class OnlineWorld{
    else rider?.userData.update?.(v,dt,model.userData);
    model.userData.passenger?.userData.update(v,dt);
    for(const prop of [model.userData.propeller,...(model.userData.propellers||[])])if(prop)prop.rotation.z+=p.rpm/60*Math.PI*2*dt;
-   if(!label.hidden){const point=new THREE.Vector3(p.x,p.y+(p.type==='cruiser'?6:3),p.z).project(camera);label.hidden=point.z>1||point.z< -1;label.textContent=r.name;label.style.transform=`translate(-50%,-100%) translate(${(point.x*.5+.5)*innerWidth}px,${(-point.y*.5+.5)*innerHeight}px)`;}
+   if(!label.hidden){const point=new THREE.Vector3(p.x,p.y+(p.type==='cruiser'?6:3),p.z).project(camera);label.hidden=point.z>1||point.z< -1;label.textContent=(r.creator?'★ CREATOR · ':'')+r.name;label.classList.toggle('is-creator',r.creator);label.style.transform=`translate(-50%,-100%) translate(${(point.x*.5+.5)*innerWidth}px,${(-point.y*.5+.5)*innerHeight}px)`;}
   }
  }
 }
