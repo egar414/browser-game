@@ -695,10 +695,18 @@ These are assisted arcade reactions, not measured tender hydrodynamics.
 
 ### Shaft-only bounce and broader contact spray
 
-Added spray sprite size is increased by 14% through `SPRAY_VISUAL_SCALE`,
+Added spray sprite size is increased by 45% through `SPRAY_VISUAL_SCALE`,
 without enlarging the pools or altering spray trajectories/flooding reach.
 Shafting touchdown checks all hull samples independently. Every wet, closing
 sample emits from its own location, with a per-point cooldown; a stronger
 contact no longer suppresses its neighbours. Splash particles are distributed
 across those points inside a bounded burst budget. The previous continuous
 cruising/turn-bounce cycle is disabled; real wave following remains.
+
+
+Touchdown spray now reuses the rear jet plume's soft, grainy ballistic packets
+for a denser outward fan, with a smaller set of droplets for surface detail.
+It emits from all reported hull contacts and retains their falling motion.
+Burst packets use the existing plume pool, have a shorter 2.6 s maximum life,
+and expire on water impact. Normal rear jet packets restore their own lifetime
+when a pooled slot is reused. No flat sheet meshes were reintroduced.

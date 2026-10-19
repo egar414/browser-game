@@ -115,3 +115,7 @@ test('multi-point touchdown distributes a bounded splash across all supplied con
  const s=new Spray(new THREE.Scene(),QUALITY.Low),v=boat('tinny'),contacts=[{x:-.5,z:-1},{x:.5,z:-1},{x:0,z:.7}];s.splash(v,2,contacts);
  const drops=s.particles.filter(p=>p.life>0);assert(drops.length<=s.count*.25+1);for(const point of contacts)assert(drops.some(p=>p.x===point.x&&p.z===point.z));s.dispose();
 });
+test('touchdown fan uses dense ballistic plume packets at each contact, then falls and expires',()=>{
+ const s=new Spray(new THREE.Scene(),QUALITY.Low),v=boat('tinny'),contacts=[{x:-.5,z:-1},{x:.5,z:-1},{x:0,z:.7}];s.splash(v,2,contacts);const emitted=s.plume.packets.filter(p=>p.active);assert(emitted.length>=contacts.length*12);assert(emitted.length<s.plume.packets.length*.15);for(const point of contacts)assert(emitted.some(p=>p.x===point.x&&p.z===point.z));assert(emitted.some(p=>p.vx>0)&&emitted.some(p=>p.vx<0));
+ let fell=false;for(let i=0;i<240;i++){s.update(1/60,{...v,throttle:0,speed:0,steer:0,yawRate:0,slip:0},i/60,false);fell ||= s.plume.falling>0;}assert(fell);assert(!s.plume.mesh.visible);s.dispose();
+});

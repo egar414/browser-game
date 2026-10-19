@@ -143,8 +143,9 @@ export class Spray {
     for(let j=0;j<3;j++){const a=j*Math.PI*2/3+Math.random(),s=.7+Math.random()*1.1;this.emit({x,y:waveHeight(x,z,this.time)+.035,z,vx:Math.sin(a)*s,vy:.7+Math.random()*.9,vz:Math.cos(a)*s,lifetime:.35+Math.random()*.15,secondary:true},2);}
   }
   splash(v,impact,contacts=null) {
-    const count=contacts?.length?Math.max(contacts.length,Math.min(this.count*.25,contacts.length*8)):Math.min(this.count*.4,40+impact*13);
-    for(let i=0;i<count;i++){const point=contacts?.[i%contacts.length]||v,angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:point.x,y:waveHeight(point.x,point.z,this.time)+.1,z:point.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},i%8===0?1:0);}
+    this.plume.burst(contacts?.length?contacts:[v],v,impact,this.time);
+    const count=contacts?.length?Math.max(contacts.length,Math.min(this.count*.25,contacts.length*3)):Math.min(this.count*.4,40+impact*13);
+    for(let i=0;i<count;i++){const point=contacts?.[i%contacts.length]||v,angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:point.x,y:waveHeight(point.x,point.z,this.time)+.1,z:point.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},!contacts&&i%8===0?1:0);}
     for(const point of contacts||[v])this.wake.splash(point,impact,this.time);
   }
   update(dt,v,time,active=true,controls={}) {

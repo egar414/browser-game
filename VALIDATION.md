@@ -512,3 +512,15 @@ cruising check before LIFT; inspected the contact-spray rear-view capture.
 The spray size change is visual (+14%); shared physical trajectories and
 particle capacities are retained. Test environment remains software Chromium;
 no physical laptop/mobile performance claim.
+
+## Denser touchdown fans — 2026-10-19
+
+128 Node checks, production build and the actual Chromium tinny shaft/rear-view
+flow passed. Inspected the revised rear-view spray screenshot. Added a bounded
+ballistic plume burst at every supplied hull contact, outward on both sides,
+using the same textured packet shader as the jet ski rear plume. Tests check
+contact coverage, both sides, descending water and finite expiry. The shared
+sprite scale is now 1.45 (45% above the original scale), with unchanged pool
+capacities. Core fan packets replace large circular point-mist puffs at contact
+splashes; ordinary wave/wipeout landings also use that fan. This spray refinement
+was kept separate from the pending northern coastline map changes.
