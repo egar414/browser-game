@@ -45,11 +45,11 @@ class FoamWake {
   splash(v,impact,time){this.splashes.push({x:v.x,z:v.z,time,strength:clamp(impact/10,.2,1.5)});if(this.splashes.length>3)this.splashes.shift();}
   update(dt,v,time,state) {
     const fX=Math.sin(v.heading),fZ=Math.cos(v.heading);
-    const x=v.x-fX*v.config.length*.47,z=v.z-fZ*v.config.length*.47;
+    const motor=state.contacts?.find(p=>p.motor),x=motor?motor.x:v.x-fX*v.config.length*.47,z=motor?motor.z:v.z-fZ*v.config.length*.47;
     if(this.last&&Math.hypot(x-this.last.x,z-this.last.z)>24)this.clear();
     if(dt>0&&state.rate>0&&(!this.last||Math.hypot(x-this.last.x,z-this.last.z)>SPRAY_TUNING.sampleSpacing)){
       if(this.last)this.distance+=Math.hypot(x-this.last.x,z-this.last.z);
-      this.last={x,z};this.history.unshift({x,z,fx:fX,fz:fZ,time,distance:this.distance,width:v.config.width,speed:v.speed,power:state.jet,energy:Math.max(state.left,state.right)});
+      this.last={x,z};this.history.unshift({x,z,fx:fX,fz:fZ,time,distance:this.distance,width:v.config.width*(motor?.6:1),speed:v.speed,power:state.jet,energy:Math.max(state.left,state.right)});
       if(this.history.length>this.samples)this.history.pop();
     }
     while(this.history.length&&time-this.history.at(-1).time>SPRAY_TUNING.wakeLifetime)this.history.pop();

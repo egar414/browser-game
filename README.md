@@ -561,3 +561,11 @@ WALKERS finds the jetty walkers; a gold ring and label highlight the selected pe
 Tune balance, passenger response and hull contact in `src/vehicles/shafting.js`,
 bounce in `TINNY_HANDLING` and flotation in `HYDRODYNAMICS` (`src/config.js`),
 and motor wash in `TINNY_SPRAY` (`src/systems/spray-model.js`).
+
+
+The photo-inspired tinny shaft uses a roughly 70° balance target and a bounded
+quarter lean from prop torque/crew weight. Crew sit lower and aft; water-contact
+constraints keep the hull clear. Shaft prop wash is low and narrow, starts at
+the wet lower unit and trails aft into falling droplets and foam. Normal powered
+spray turns use the broader chine fans. Tune the pose in `SHAFTING` and wash in
+`TINNY_SPRAY`; the single photo is a visual reference, not measured physics data.

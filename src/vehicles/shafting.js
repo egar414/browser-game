@@ -1,6 +1,6 @@
 import{waveHeight}from'../config.js';
 import{bodyPoint}from'./propulsion.js';
-export const SHAFTING={balancePitch:1.28,lowerPitch:.98,upperPitch:1.49,minimumSpeed:2.4,throttleBalance:.56,throttleMoment:.62,speedMoment:.045,speedTarget:7.2,sternPivot:1.10,hullClearance:.12,passengerResponse:2.4};
+export const SHAFTING={balancePitch:1.22,lowerPitch:.98,upperPitch:1.49,minimumSpeed:2.4,throttleBalance:.56,throttleMoment:.62,overThrottleMoment:.12,speedMoment:.045,speedTarget:7.2,sternPivot:1.10,hullClearance:.12,bankAngle:.30,passengerResponse:2.4};
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
 export function updatePassenger(v,dt){
@@ -13,9 +13,15 @@ export function shaftPitch(v,input,surfacePitch,dt){
  const wanted=input.freestyle&&!v.airborne&&!v.wipeout&&v.speed>SHAFTING.minimumSpeed&&v.throttle>.04&&Math.abs(v.steer)<.4;
  v.shaftLoad=damp(v.shaftLoad||0,wanted?1:0,wanted?3.2:4,dt);
  if(v.shaftLoad<.01||Math.abs(v.steer)>.4)return null;
- const speedRise=clamp((v.speed-SHAFTING.minimumSpeed)/3.4),balance=SHAFTING.balancePitch+(v.throttle-SHAFTING.throttleBalance)*SHAFTING.throttleMoment+(v.speed-SHAFTING.speedTarget)*SHAFTING.speedMoment+v.trimDegrees*.007-Math.abs(v.steer)*.35;
+ const speedRise=clamp((v.speed-SHAFTING.minimumSpeed)/3.4),balance=SHAFTING.balancePitch+(v.throttle-SHAFTING.throttleBalance)*SHAFTING.throttleMoment+clamp((v.throttle-.75)/.25)**2*SHAFTING.overThrottleMoment+(v.speed-SHAFTING.speedTarget)*SHAFTING.speedMoment+v.trimDegrees*.007-Math.abs(v.steer)*.35;
  // Weight forward helps takeoff; the second rider then moves aft on the plane.
  return (surfacePitch*.65+balance*speedRise-(1-(v.passengerAft??.35))*.08)*v.shaftLoad;
+}
+// Prop torque and crew weight cant the raised hull onto one quarter.
+// This feeds the roll spring and water contacts, rather than tilting only the mesh.
+export function shaftRoll(v){
+ if(v.type!=='tinny'||v.airborne||v.wipeout)return 0;
+ return -SHAFTING.bankAngle*(v.shaftLoad||0)*clamp((v.pitch-.7)/.4)*clamp(1-Math.abs(v.steer||0)/.5);
 }
 export function updateShaftStatus(v,dt){
  if(v.type!=='tinny')return;

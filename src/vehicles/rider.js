@@ -10,7 +10,7 @@ export const RIDER_WEIGHT = { response:7, steeringShift:.17, loadShift:.008, max
 export function riderWeightTargets(v){
   const aft=THREE.MathUtils.clamp(v.riderAft||0,0,1),bow=v.airborne?0:THREE.MathUtils.clamp(((v.pitch||0)-.3)/.6,0,1)*aft;
   const lean=THREE.MathUtils.clamp(-(v.steer||0)*RIDER_WEIGHT.steeringShift+(v.lateralAcceleration||0)*RIDER_WEIGHT.loadShift,-RIDER_WEIGHT.maximumShift,RIDER_WEIGHT.maximumShift)*(1+bow*.2);
-  return {aft,lean,bow};
+  return {aft,lean:lean+(v.type==='tinny'?-(v.roll||0)*.22*bow:0),bow};
 }
 function ball(parent,position,scale,material){const m=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),material);m.position.fromArray(position);m.scale.fromArray(scale);parent.add(m);m.castShadow=true;return m;}
 function segment(parent,radius,material){const m=new THREE.Mesh(limbGeometry,material);m.userData.radius=radius;parent.add(m);m.castShadow=true;return m;}
@@ -39,7 +39,7 @@ export function makeRider(parent,type){
   root.userData.update=(v,dt,parts)=>{
     const target=riderWeightTargets(v),blend=1-Math.exp(-dt*RIDER_WEIGHT.response);aft+=(target.aft-aft)*blend;lean+=(target.lean-lean)*blend;bow+=(target.bow-bow)*blend;
     const cat=type==='cat',tinny=type==='tinny',outboard=cat||tinny,load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6),soaked=THREE.MathUtils.clamp(v.sprayReaction||0,0,1);
-    const hip=new THREE.Vector3((tinny?-.25:cat?-.42:0)+lean*(outboard?.85:1),tinny?.53+aft*.05:cat?.74-bow*.035:.75+aft*.15,(tinny?-.57:cat?-.77:-.38)-aft*(tinny?.13:cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
+    const hip=new THREE.Vector3((tinny?-.25:cat?-.42:0)+lean*(outboard?.85:1),tinny?.53+aft*.05-bow*.05:cat?.74-bow*.035:.75+aft*.15,(tinny?-.57:cat?-.77:-.38)-aft*(tinny?.20:cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
     hip.y-=soaked*.10;
     const pose=v.airTricks?.pose,b=v.airTricks?.blend||0;
     if(pose==='hangman'){hip.x-=b*.24;hip.y+=b*.08;}
