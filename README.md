@@ -1069,3 +1069,40 @@ positions incorrectly fired remote packets far away. Regression checks exercise
 an actual sharp-turn payload through the server and verify remote packet speeds.
 Players must reload the latest game build on both devices. This correction does
 not require another SQL migration when automatic flooding is already installed.
+
+### Photo-inspired 50 hp tinnies and WOMP
+
+Two original selectable craft join the Tender Rat 225: **Dingi 200 / 50** (2.00 m
+silver alloy hull) and **Super Skua 370 / 50** (3.70 m black-and-gold racing hull).
+Both use a larger visible outboard and 37.3 kW gameplay shaft power. Hull length
+is measured without the projecting motor. These are fictional arcade rigs, not
+manufacturer-approved specifications or validated performance reproductions.
+
+**I / WOMP** is a held, water-loaded bouncing input. F remains the race key.
+Build speed with W / GO, hold I / WOMP until READY, then add Shift / LIFT to enter
+a full shaft on the two new boats, or steer sharply under power for a large
+falling fan. A sustained shaft can be carried after releasing WOMP. Womping
+requires forward speed, throttle and a wet lower unit; it cannot charge at rest,
+while airborne or during a wipeout. Its bounded heave/pitch forces drive the
+normal water-contact simulation and touchdown splashes. Both crew shift with the
+stance. The existing 225 retains its familiar Shift shaft entry and gains optional
+WOMP bouncing and spray loading. All tinny rigs sit stern-low at rest; the weight
+bias fades onto the plane. The water, land and other vehicles keep their existing
+visual style. Static hull/motor parts are batched to limit draw calls.
+
+Tune `VEHICLES.dinghy`, `VEHICLES.skua`, their `PROPULSION`/`HYDRODYNAMICS` entries,
+`vehicles/womping.js`, `tinny-bounce.js`, and `systems/spray-model.js`.
+
+For matching new hulls in online worlds, the owner runs `public/tinny-fleet.sql`
+once after the existing spray/flooding setup. `public/online-update.sql` and the
+full `public/multiplayer.sql` also include it. Until installed, the local new boat
+still drives and broadcasts a compatible 225 silhouette to older backends, rather
+than disconnecting. Server-verified Creator access is unchanged.
+
+Research limitation: public Google search returned a JavaScript challenge and
+DuckDuckGo/Bing access was blocked by the environment proxy (403), including the
+approved external retry. No authoritative definition of the regional slang
+“womping” was verified. The move therefore implements the user's clarified
+bouncing description as authored arcade physics; it is not presented as a
+research-validated real-world technique. Models use the supplied photos as visual
+references, with original hull graphics and no copied sponsor logos.

@@ -29,6 +29,7 @@ export class Input {
       steer: +this.held('KeyA', 'ArrowLeft') - +this.held('KeyD', 'ArrowRight'),
       trim: +this.held('KeyQ') - +this.held('KeyE'),
       pose:this.held('KeyY')?'heartattack':this.held('KeyZ')?'hangman':this.held('KeyX')?'nohander':this.held('KeyV')?'superman':'',
+      womp:this.held('KeyI'),
       freestyle: this.held('ShiftLeft', 'ShiftRight'),
     };
   }

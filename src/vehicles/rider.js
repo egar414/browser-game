@@ -1,3 +1,4 @@
+import {isTinny} from '../config.js';
 import{beachWear}from'./wardrobe.js';
 import * as THREE from 'three';
 const Y=new THREE.Vector3(0,1,0);
@@ -10,7 +11,7 @@ export const RIDER_WEIGHT = { response:7, steeringShift:.17, loadShift:.008, max
 export function riderWeightTargets(v){
   const aft=THREE.MathUtils.clamp(v.riderAft||0,0,1),bow=v.airborne?0:THREE.MathUtils.clamp(((v.pitch||0)-.3)/.6,0,1)*aft;
   const lean=THREE.MathUtils.clamp(-(v.steer||0)*RIDER_WEIGHT.steeringShift+(v.lateralAcceleration||0)*RIDER_WEIGHT.loadShift,-RIDER_WEIGHT.maximumShift,RIDER_WEIGHT.maximumShift)*(1+bow*.2);
-  return {aft,lean:lean+(v.type==='tinny'?-(v.roll||0)*.22*bow:0),bow};
+  return {aft,lean:lean+(isTinny(v.type)?-(v.roll||0)*.22*bow:0),bow};
 }
 function ball(parent,position,scale,material){const m=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),material);m.position.fromArray(position);m.scale.fromArray(scale);parent.add(m);m.castShadow=true;return m;}
 function segment(parent,radius,material){const m=new THREE.Mesh(limbGeometry,material);m.userData.radius=radius;parent.add(m);m.castShadow=true;return m;}
@@ -38,8 +39,9 @@ export function makeRider(parent,type){
   let aft=0,lean=0,bow=0;
   root.userData.update=(v,dt,parts)=>{
     const target=riderWeightTargets(v),blend=1-Math.exp(-dt*RIDER_WEIGHT.response);aft+=(target.aft-aft)*blend;lean+=(target.lean-lean)*blend;bow+=(target.bow-bow)*blend;
-    const cat=type==='cat',tinny=type==='tinny',outboard=cat||tinny,load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6),soaked=THREE.MathUtils.clamp(v.sprayReaction||0,0,1);
-    const hip=new THREE.Vector3((tinny?-.25:cat?-.42:0)+lean*(outboard?.85:1),tinny?.53+aft*.05-bow*.05:cat?.74-bow*.035:.75+aft*.15,(tinny?-.57:cat?-.77:-.38)-aft*(tinny?.20:cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
+    const cat=type==='cat',tinny=isTinny(type),outboard=cat||tinny,load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6),soaked=THREE.MathUtils.clamp(v.sprayReaction||0,0,1);
+    const hullScale=tinny?(v.config?.length||2.25)/2.25:1;
+    const hip=new THREE.Vector3((tinny?-.25:cat?-.42:0)+lean*(outboard?.85:1),tinny?.53+aft*.05-bow*.05:cat?.74-bow*.035:.75+aft*.15,(tinny?-.57*hullScale:cat?-.77:-.38)-aft*(tinny?.20:cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
     hip.y-=soaked*.10;
     const pose=v.airTricks?.pose,b=v.airTricks?.blend||0;
     if(pose==='hangman'){hip.x-=b*.24;hip.y+=b*.08;}
@@ -56,7 +58,7 @@ export function makeRider(parent,type){
       const shoulder=new THREE.Vector3(side*.21,.48,0).applyMatrix4(torso.matrix);
       let hand;
       if(outboard){
-        hand=side===1?(tinny?new THREE.Vector3(-.32,.27,.54):new THREE.Vector3(-.25,.45,.65)).applyEuler(parts.motor.rotation).add(parts.motor.position):(tinny?new THREE.Vector3(-.49,.43,-.26):new THREE.Vector3(-.66,.61,-.36));
+        hand=side===1?(tinny?new THREE.Vector3(-.32,.27,.54):new THREE.Vector3(-.25,.45,.65)).multiply(parts.motor.scale).applyEuler(parts.motor.rotation).add(parts.motor.position):(tinny?new THREE.Vector3(-.49,.43,-.26*hullScale):new THREE.Vector3(-.66,.61,-.36));
       }else{
         hand=new THREE.Vector3(side*.3,0,-.12).applyAxisAngle(Y,-v.steer*.43).add(parts.handlebars.position);
       }
@@ -64,7 +66,7 @@ export function makeRider(parent,type){
       const elbow=joint(shoulder,hand,.36,.39,new THREE.Vector3(side,.1,-.2));
       placeSegment(l.arm[0],shoulder,elbow);placeSegment(l.arm[1],elbow,hand);l.hand.position.copy(hand);
       const legHip=hip.clone().add(new THREE.Vector3(side*.14,0,0));
-      const foot=new THREE.Vector3(tinny?-.20+side*.22:cat?-.42+side*.23:side*.44,tinny?.04:cat?.4:.32,(tinny?-.20:cat?-.75:-.37)-aft*(outboard?.12:.48));
+      const foot=new THREE.Vector3(tinny?-.20+side*.22:cat?-.42+side*.23:side*.44,tinny?.04:cat?.4:.32,(tinny?-.20*hullScale:cat?-.75:-.37)-aft*(outboard?.12:.48));
       if(pose==='hangman')foot.lerp(new THREE.Vector3(hip.x-.55,hip.y-.25,hip.z-.35+side*.15),b);
       if(pose==='heartattack')foot.lerp(new THREE.Vector3(hip.x+side*.20,hip.y+.65,hip.z-.45),b);
       if(pose==='superman')foot.lerp(new THREE.Vector3(hip.x+side*.18,hip.y+.12,hip.z-.82),b);

@@ -34,14 +34,14 @@ export class JetPlume {
   clear(){this.history.length=0;this.packets.forEach(p=>p.active=false);this.impacts.length=0;this.accumulator=0;this.falling=0;this.mesh.visible=false;this.geometry.instanceCount=0;}
   burst(points,v,impact,time){
     if(!points?.length||!this.packets.length)return;
-    const count=Math.min(Math.floor(this.packets.length*.12),points.length*24),fx=Math.sin(v.heading||0),fz=Math.cos(v.heading||0),energy=Math.sqrt(clamp(impact,.25,10));
+    const compact=!!v.config?.wompRequired,count=Math.min(Math.floor(this.packets.length*.12),points.length*24),fx=Math.sin(v.heading||0),fz=Math.cos(v.heading||0),energy=Math.sqrt(clamp(impact,.25,10));
     for(let i=0;i<count;i++){
       const point=points[i%points.length],sideOffset=(point.x-v.x)*fz-(point.z-v.z)*fx,side=Math.abs(sideOffset)>.04?Math.sign(sideOffset):(Math.random()<.5?-1:1);
       const outward=(3+energy*2.4)*1.12*(.7+Math.random()*.6),aft=1.5+energy*.8,seed=Math.random(),fine=seed<JET_PLUME.fineFraction;
       const p=this.packets[this.next++%this.packets.length];
       Object.assign(p,{active:true,birth:time,lifetime:2.6,x:point.x,y:waveHeight(point.x,point.z,time)+.055,z:point.z,
         vx:(v.vx||0)*.45+fz*side*outward-fx*aft,vy:(2.5+energy*1.7)*1.12*(.8+Math.random()*.35),vz:(v.vz||0)*.45-fx*side*outward-fz*aft,
-        drag:fine?.8:.46,seed,fine,power:.85+clamp(impact/8)*.4,size:.24+Math.random()*.13,loaded:.5,packetScale:1});
+        drag:fine?.8:.46,seed,fine,power:.85+clamp(impact/8)*.4,size:compact?.09+Math.random()*.09:.24+Math.random()*.13,loaded:compact?.15:.5,packetScale:compact?.55:1,contact:compact});
     }
   }
   update(dt,source,time){
@@ -66,9 +66,9 @@ export class JetPlume {
         if(q.vy<0&&age>0.15&&!p.fine)this.impacts.push({x:q.x,z:q.z,time,strength:.1+p.power*.13});p.active=false;continue;
       }
       if(q.vy<0)this.falling++;
-      const size=SPRAY_VISUAL_SCALE*(p.packetScale||1)*Math.min(p.fine?JET_PLUME.mistRadius:JET_PLUME.coreRadius,p.size+age*(p.fine?1.2:JET_PLUME.coreGrowth)*(1+p.loaded*.3)),fade=clamp(age/.025)*clamp((lifetime-age)/.3);
+      const size=SPRAY_VISUAL_SCALE*(p.packetScale||1)*Math.min(p.fine?JET_PLUME.mistRadius:JET_PLUME.coreRadius,p.size+age*(p.contact?.20:p.fine?1.2:JET_PLUME.coreGrowth)*(1+p.loaded*.3)),fade=clamp(age/.025)*clamp((lifetime-age)/.3);
       aCenter.setXYZ(n,q.x,q.y,q.z);aSize.setXY(n,p.seed>JET_PLUME.streakThreshold?.028+age*.02:size*(p.fine?2.8:2.05),p.seed>JET_PLUME.streakThreshold?.16+Math.abs(q.vy)*.03:size*(p.fine?2.3:2.65));
-      aAlpha.setX(n,fade*p.power*(p.seed>JET_PLUME.streakThreshold?.9:p.fine?JET_PLUME.mistOpacity:JET_PLUME.coreOpacity)*clamp((q.y-water+.14)/.18));aSeed.setX(n,p.seed);aVelocity.setXYZ(n,q.vx,q.vy,q.vz);n++;
+      aAlpha.setX(n,fade*p.power*(p.contact?.5:1)*(p.seed>JET_PLUME.streakThreshold?.9:p.fine?JET_PLUME.mistOpacity:JET_PLUME.coreOpacity)*clamp((q.y-water+.14)/.18));aSeed.setX(n,p.seed);aVelocity.setXYZ(n,q.vx,q.vy,q.vz);n++;
     }
     this.geometry.instanceCount=n;this.mesh.visible=n>0;
     for(const name of ['aCenter','aSize','aAlpha','aSeed','aVelocity'])this.geometry.attributes[name].needsUpdate=true;

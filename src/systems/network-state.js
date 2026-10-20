@@ -1,6 +1,6 @@
 import {packSpray} from './network-spray.js';
 import {availableCraft} from './craft-access.js';
-export const ONLINE_TYPES = ['ski','cat','tinny','cruiser','seago','racer','hyper'];
+export const ONLINE_TYPES = ['ski','cat','tinny','dinghy','skua','cruiser','seago','racer','hyper'];
 const ranges={x:[-2600,9600],y:[-20,60],z:[-4700,3900],heading:[-Math.PI,Math.PI],pitch:[-25,25],roll:[-25,25],vx:[-160,160],vz:[-160,160],speed:[0,160],steer:[-1,1],throttle:[-1,1],trim:[-20,40],rpm:[0,15000],riderAft:[0,1],planing:[0,1],passengerAft:[0,1],trimAngle:[-1,1],steeringAngle:[-2,2],deckX:[-2,2],deckZ:[-8,8],deckHeading:[-Math.PI,Math.PI]};
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,Number.isFinite(v)?v:0));
 export const wrapAngle=a=>Math.atan2(Math.sin(a||0),Math.cos(a||0));

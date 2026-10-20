@@ -103,3 +103,5 @@
 #world-alert{position:absolute;right:22px;top:100px;max-width:260px;padding:8px 12px;border-radius:8px;background:#12323de0;color:#ffcd72;font-weight:800;pointer-events:none}#world-alert:empty{display:none}
 
 #police-shortcuts{position:absolute;right:22px;top:145px;display:flex;align-items:center;gap:6px;pointer-events:auto;font-size:11px;color:#b7e7ff}#police-shortcuts .secondary{padding:7px 10px;font-size:10px}@media(max-width:700px){#police-shortcuts{top:125px;right:10px}#police-nearby{display:none}}
+
+.tinny-womp{display:none!important}.tinny-active .tinny-womp{display:block!important}#womp-readout{font-size:10px;max-width:220px;color:#ffcf70;line-height:1.5}

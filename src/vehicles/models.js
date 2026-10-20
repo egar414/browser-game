@@ -1,3 +1,5 @@
+import {batchRigidAssembly} from './rigid-model.js';
+import {isTinny,VEHICLES,PROPULSION} from '../config.js';
 import{makeApex}from'./apex-model.js';
 import{makeRacingCat}from'./racing-cat.js';
 import{makeTinnyPassenger}from'./tinny-passenger.js';
@@ -89,10 +91,10 @@ export function makeVehicle(type, colour, design='classic',access={}) {
     const outlet=new THREE.Mesh(new THREE.CylinderGeometry(.14,.18,.24,18),dark);outlet.rotation.x=Math.PI/2;outlet.position.z=-.06;nozzle.add(outlet);
     bucket=new THREE.Group();bucket.position.set(0,.1,-1.81);body.add(bucket);box(bucket,.4,.15,.18,0,0,-.09,graphite,true);
     person=makeRider(body,type);
-  } else if(type==='tinny') {
-    const tender=buildTender(colour,design);body.add(tender);({motor,propeller}=tender.userData);
+  } else if(isTinny(type)) {
+    const tender=buildTender(colour,design,{length:VEHICLES[type].length,width:VEHICLES[type].width,hp:type==='tinny'?25:50,racing:type==='skua'});body.add(tender);({motor,propeller}=tender.userData);
     // Keep the motor attachment in body coordinates for the shared rider IK.
-    body.attach(motor);person=makeRider(body,type);passenger=makeTinnyPassenger(body);
+    body.attach(motor);motor.position.fromArray(PROPULSION[type].motorMount);motor.scale.setScalar(type==='tinny'?1:1.25);person=makeRider(body,type);passenger=makeTinnyPassenger(body);
   } else {
     for (const side of [-1, 1]) {
       const x = side * 0.73;
@@ -129,6 +131,7 @@ export function makeVehicle(type, colour, design='classic',access={}) {
     if(type==='cat')for(const side of [-1,1])tube(body,[[side*.94,.35,-1.5],[side*1.01,.4,0],[side*.92,.52,1.3]],design==='race'?.025:.045,stripe,16);
   }
   root.userData = { body, motor, nozzle, propeller, bucket, handlebars, passenger, rider: person };
-  person.userData.update({riderAft:0,steer:0,surgeAcceleration:0},1,root.userData);
+  person.userData.update({riderAft:0,steer:0,surgeAcceleration:0,config:VEHICLES[type]},1,root.userData);
+  if(isTinny(type)){for(const part of [person,passenger,motor])if(part)part.userData.dynamic=true;if(propeller)propeller.userData.dynamic=true;batchRigidAssembly(body);batchRigidAssembly(motor);}
   return root;
 }

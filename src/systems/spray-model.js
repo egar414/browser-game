@@ -1,3 +1,4 @@
+import {isTinny} from '../config.js';
 export const SPRAY_VISUAL_SCALE=1.75;
 import{isJet}from'../config.js';
 import { waveHeight } from '../config.js';
@@ -14,7 +15,7 @@ export function bowSprayLoad(v){return v.airborne||v.wipeout?0:clamp(((v.pitch||
 
 // Find the waterline along each physical chine/pontoon. A dry hull cannot throw water.
 export function chineContact(v,side,time=0) {
-  if(v.type==='tinny'&&(v.shaftLoad||0)>.35&&v.pitch>.8){
+  if(isTinny(v.type)&&(v.shaftLoad||0)>.35&&v.pitch>.8){
     // A dry bow cannot emit a chine sheet. Water is displaced by the wet
     // lower unit/prop wash at the transom instead.
     const prop=propulsionPose(v,v.drive?.trimAngle||0,v.drive?.steeringAngle||0).origin;
@@ -55,9 +56,9 @@ export function sprayState(v,_freestyle=false,time=0) {
   const loadHead=Math.sqrt(Math.abs(v.lateralAcceleration||0)*v.config.width);
   const turn=clamp(Math.abs(sternCrossFlow)*.20+loadHead*.13,0,3.5);
   const outside=Math.sign(sternCrossFlow);
-  const shaft=v.type==='tinny'&&(v.shaftLoad||0)>.35&&v.pitch>.8;
-  const side=sign=>(clamp(speed/(v.type==='tinny'?14:23))*.65+turn*(outside===sign?1:.1)*clamp(speed/7))*contacts[sign===-1?0:1].wet;
-  const scale=v.type==='hyper'?APEX_SPRAY.sideScale:v.type==='tinny'?TINNY_SPRAY.loadScale:1,power=shaft?clamp(v.throttle)*jet*.7:0,left=(side(-1)+power)*scale*turnGate,right=(side(1)+power)*scale*turnGate;
+  const shaft=isTinny(v.type)&&(v.shaftLoad||0)>.35&&v.pitch>.8;
+  const side=sign=>(clamp(speed/(isTinny(v.type)?14:23))*.65+turn*(outside===sign?1:.1)*clamp(speed/7))*contacts[sign===-1?0:1].wet;
+  const scale=v.type==='hyper'?APEX_SPRAY.sideScale:isTinny(v.type)?TINNY_SPRAY.loadScale*(v.config.sprayScale||1)*(1+(v.wompEnergy||0)*.75):1,power=shaft?clamp(v.throttle)*jet*.7:0,left=clamp((side(-1)+power)*scale*turnGate,0,isTinny(v.type)?6:20),right=clamp((side(1)+power)*scale*turnGate,0,isTinny(v.type)?6:20);
   return {speed,outside,left,right,rate:clamp((left+right)*135,0,680),jet,contacts,turnGate};
 }
 export function launchSpray(v,state,side,random=Math.random) {
@@ -66,13 +67,13 @@ export function launchSpray(v,state,side,random=Math.random) {
     const spread=random(),flow=RACER_SPRAY.sideSpeed*(.7+spread*.6),f=bodyVector({heading:v.heading},[side*flow,RACER_SPRAY.sideLift*(.65+Math.sin(spread*Math.PI)*.45),-Math.min(30,state.speed*.45)-flow*spread*.4]);
     return{x:p.x,y:p.y,z:p.z,vx:(v.vx||0)+f.x,vy:f.y,vz:(v.vz||0)+f.z,strength,diameter:.005,lifetime:2.8};
   }
-  if(v.type==='tinny'&&p.motor){
+  if(isTinny(v.type)&&p.motor){
     // Low, dense prop wash travels aft and falls back, as in the supplied photo.
     const spread=random(),power=clamp(v.throttle||0)*clamp(v.drive?.wetness||0),rear=state.speed*.85+power*TINNY_SPRAY.shaftRear;
     const velocity=bodyVector({heading:v.heading},[side*(.25+spread*TINNY_SPRAY.shaftSpread)*(1+strength*.35),(.65+Math.sin(spread*Math.PI)*TINNY_SPRAY.shaftRise)*(.45+power*.55),-rear]);
     return{x:p.x,y:p.y,z:p.z,vx:(v.vx||0)+velocity.x,vy:velocity.y+(v.vy||0)*.15,vz:(v.vz||0)+velocity.z,strength:strength*(1+power*.45),diameter:.004+spread*.003,lifetime:.9+spread*.4};
   }
-  const shaft=v.type==='tinny'&&p.motor,cat=v.type==='cat',bow=shaft?bowSprayLoad(v)*.35:bowSprayLoad(v),broad=shaft?TINNY_SPRAY.shaftWidth:cat?SIDE_SPRAY.catWidth:v.type==='tinny'?TINNY_SPRAY.width:1.06,lift=shaft?TINNY_SPRAY.shaftLift:cat?SIDE_SPRAY.catLift:v.type==='tinny'?TINNY_SPRAY.lift:1.32;
+  const shaft=isTinny(v.type)&&p.motor,cat=v.type==='cat',bow=shaft?bowSprayLoad(v)*.35:bowSprayLoad(v),broad=shaft?TINNY_SPRAY.shaftWidth:cat?SIDE_SPRAY.catWidth:isTinny(v.type)?TINNY_SPRAY.width:1.06,lift=shaft?TINNY_SPRAY.shaftLift:cat?SIDE_SPRAY.catLift:isTinny(v.type)?TINNY_SPRAY.lift:1.32;
   const spread=random(),angle=-.2+spread*1.45,flow=(2+strength*3.2)*broad*(v.type==='hyper'?APEX_SPRAY.sideWidth:1)*(1+bow*SIDE_SPRAY.bowReach);
   // Spray leaves the wet waterline. Rotating its up-vector with a bow-high hull
   // incorrectly aimed the entire fan underwater, cutting off a bow-ride spray.

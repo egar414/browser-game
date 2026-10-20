@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {database,rpc,users,migration,creatorMigration,combatMigration} from './multiplayer-fixture.js';
+import {database,rpc,users,migration,creatorMigration,combatMigration,fleetMigration} from './multiplayer-fixture.js';
 import {packPose,RemoteStates,nextSequence} from '../src/systems/network-state.js';
 import {publicConfig} from '../src/systems/online-client.js';
 const [a,b,c]=users;
@@ -34,7 +34,7 @@ test('multiplayer SQL preserves room privacy, enforces capacity, owns identities
   await f.db.exec("update er_players set seen_at=now()-interval '1 minute' where user_id='11111111-1111-4111-8111-111111111111'");
   await assert.rejects(rpc(f,a,'er_exchange',{p_pose:pose(),p_seq:5}),/expired/);
   assert.equal((await rpc(f,c,'er_join',{p_name:'Replacement',p_code:'PUBLIC'})).players.length,8);
-  assert.equal(await readFile(new URL('../public/multiplayer.sql',import.meta.url),'utf8'),migration+'\n'+creatorMigration+'\n'+combatMigration);
+  assert.equal(await readFile(new URL('../public/multiplayer.sql',import.meta.url),'utf8'),migration+'\n'+creatorMigration+'\n'+combatMigration+'\n'+fleetMigration);
   const fresh=nextSequence(0);const exchange=await rpc(f,c,'er_exchange',{p_pose:pose(),p_seq:fresh});assert.equal(exchange.players.find(p=>p.id===c).seq,fresh);
  }finally{await f.db.close();}
 });

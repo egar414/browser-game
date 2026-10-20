@@ -111,3 +111,14 @@ export const APEX_HANDLING={steerResponse:10,yawLimit:2.8,turnSpeedScale:45,high
 VEHICLES.hyper={...VEHICLES.seago,name:'Apex 300',subtitle:'Extreme performance freestyle jet ski',description:'Champagne hull, red shoulders and a sculpted black deck. 300 km/h arcade speed, eleven extended-trim positions, huge falling spray and the quickest aerial spins. Q trims up, Shift lifts; Y adds a Heart attack in the air. High trim trades speed for bow lift.',length:3.62,width:1.30,maxSpeed:300/3.6,reverseMax:5,lateralGrip:6.4,slideGrip:1.55,spring:62,damping:16,rideHeight:.16,airSteer:8.5,wheelieAngle:.88,wipeoutAngle:1.56,colours:['#b9b49b','#d0dce0','#414b53']};
 PROPULSION.hyper={...PROPULSION.seago,effectiveMass:390,maximumRpm:9500,hydraulicPower:850000,nozzleArea:.0075,nozzleMount:[0,-.06,-1.81],intake:[0,-.34,-1.38],fullImmersion:.12,linearResistance:16,quadraticResistance:.65,steeringAngle:.42};
 HYDRODYNAMICS.hyper={...HYDRODYNAMICS.seago,planingStart:4,planingEnd:16,yawInertia:1100,yawDamping:3.8,yawSpeedDamping:.025,pitchSpring:24,pitchDamping:10,rollSpring:29,rollDamping:10,waterFollow:.75,reserveBuoyancy:80,reserveDepth:.2,maxReserve:12};
+
+
+export const TINNY_TYPES=['tinny','dinghy','skua'];
+export const isTinny=type=>TINNY_TYPES.includes(type);
+VEHICLES.tinny.restPitch=.065;VEHICLES.tinny.restRoll=-.018;
+VEHICLES.dinghy={...VEHICLES.tinny,name:'Dingi 200 / 50',subtitle:'2.00 m alloy dinghy · 50 hp arcade',description:'Short silver alloy hull, oversized 50 hp outboard and a stern-heavy stance. I / WOMP builds the bounce; Shift carries it into a shaft or a sharp spray turn.',length:2,width:1.16,maxSpeed:22,lateralGrip:3.6,slideGrip:.65,restPitch:.14,restRoll:-.035,wompRequired:true,sprayScale:1.55,colours:['#c3c9c7','#d1d6d0','#aebdc1']};
+VEHICLES.skua={...VEHICLES.tinny,name:'Super Skua 370 / 50',subtitle:'3.70 m racing tinny · 50 hp arcade',description:'Longer black-and-gold racing alloy hull with two crew and a 50 hp outboard. Build a rhythm with I / WOMP, then lift into a shaft or carve a broad falling spray.',length:3.7,width:1.58,maxSpeed:25,lateralGrip:3.3,slideGrip:.7,spring:40,damping:12.5,restPitch:.095,restRoll:-.024,wompRequired:true,sprayScale:1.8,colours:['#252e34','#233f49','#4a3035']};
+for(const type of ['dinghy','skua']){
+ const c=VEHICLES[type];PROPULSION[type]={...PROPULSION.tinny,effectiveMass:type==='dinghy'?220:310,shaftPower:37300,maximumRpm:5600,propellerArea:.052,motorMount:[.12,.4,-c.length*.498],propeller:[0,-.8125,-.225],linearResistance:15,quadraticResistance:type==='dinghy'?1.2:1.35};
+ HYDRODYNAMICS[type]={...HYDRODYNAMICS.tinny,yawInertia:type==='dinghy'?150:280,pitchSpring:type==='dinghy'?18:14,pitchDamping:7.2,rollSpring:25,rollDamping:8};
+}

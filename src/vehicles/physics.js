@@ -1,3 +1,5 @@
+import {updateWomp} from './womping.js';
+import {isTinny} from '../config.js';
 import{updateRacer}from'./racing-physics.js';
 import{tinnyBounce,hullContactSplash}from'./tinny-bounce.js';
 import{SHAFTING,updatePassenger,shaftPitch,shaftRoll,updateShaftStatus,constrainHullWater}from'./shafting.js';
@@ -31,7 +33,7 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      wompLoad:0,wompEnergy:0,wompReady:false,womp:null,bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;
@@ -60,7 +62,8 @@ export class VehiclePhysics {
   }
   wipe(reason) {
     if (this.wipeout) return;
-    this.looping=this.type==='tinny'&&reason==='Looped the tinny';this.airTricks.reset();this.shaftLoad=0;if(this.shaft)this.shaft={...this.shaft,active:false,cue:'WIPEOUT',seconds:0};this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
+    this.wipeoutReason=reason;
+    this.looping=isTinny(this.type)&&reason==='Looped the tinny';this.airTricks.reset();this.shaftLoad=0;if(this.shaft)this.shaft={...this.shaft,active:false,cue:'WIPEOUT',seconds:0};this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
   }
   update(dt, input, time, ramps = []) {
     if(this.type==='racer')return updateRacer(this,dt,input,time);
@@ -72,7 +75,7 @@ export class VehiclePhysics {
     this.trickCooldown = Math.max(0, this.trickCooldown - dt);
     this.throttle = damp(this.throttle, input.throttle, mode.throttleResponse, dt);
     const apexSpeed=this.type==='hyper'?clamp((this.speed-APEX_HANDLING.highSpeedStart)/(APEX_HANDLING.highSpeedEnd-APEX_HANDLING.highSpeedStart),0,1):0;
-    const handling=this.type==='tinny'?TINNY_HANDLING:this.type==='cat'?CAT_HANDLING:null;
+    const handling=isTinny(this.type)?TINNY_HANDLING:this.type==='cat'?CAT_HANDLING:null;
     this.steer = damp(this.steer, input.steer, this.type==='hyper'?APEX_HANDLING.steerResponse+(APEX_HANDLING.highSpeedSteerResponse-APEX_HANDLING.steerResponse)*apexSpeed:handling?.steerResponse||c.steerResponse||6, dt);
     if(!this.airborne){
       if(input.trimStep){
@@ -90,6 +93,7 @@ export class VehiclePhysics {
     this.planing=damp(this.planing,onPlane*onPlane*(3-2*onPlane),2.5,dt);
     this.wettedFraction=1-this.planing*(1-hydro.minimumWetted);updatePassenger(this,dt);
     this.drive=this.propulsion.update(dt,this,input,time);
+    updateWomp(this,input,dt);
     const sprayTurn=tenderTurn(this,input,dt),bounce=tinnyBounce(this,dt);
     if (!this.airborne) {
       let forceX=this.drive.force.x,forceZ=this.drive.force.z;
@@ -164,24 +168,26 @@ export class VehiclePhysics {
     this.airTricks.update(dt,input.pose==='heartattack'&&this.type!=='hyper'?'':input.pose,this.airborne,this.y-water);
     if (!this.airborne) {
       const balanceMoment=1+Math.max(0,this.drive.trimAngle*180/Math.PI-6)*.018;
-      const bowWindow=handling?clamp((forward-handling.bowStart)/handling.bowRange,0,1):(forward>5?1:0);
+      const shaftEntry=c.wompRequired?Math.max(.25,this.wompReady?1:0,this.shaftLoad||0):1;
+      const bowWindow=handling?shaftEntry*clamp((forward-handling.bowStart)/handling.bowRange,0,1):(forward>5?1:0);
       const bowSpeed=handling?.bowSpeedRange?1-handling.bowSpeedLoss*clamp((forward-handling.bowSpeedStart)/handling.bowSpeedRange,0,1):1;
       const lift=input.freestyle?c.wheelieAngle*balanceMoment*this.riderAft*bowWindow*bowSpeed*clamp(this.throttle,0,1)*clamp(1-Math.abs(this.steer)*(handling?.bowSteeringLoss??.85),0,1):0;
-      const plane = !isJet(this.type) ? Math.max(0, this.throttle) * (this.type==='tinny'?.30:.24) * Math.sin(this.planing*Math.PI)*(1-this.riderAft*.7) : 0.035 * this.throttle;
+      const plane = !isJet(this.type) ? Math.max(0, this.throttle) * (isTinny(this.type)?.30:.24) * Math.sin(this.planing*Math.PI)*(1-this.riderAft*.7) : 0.035 * this.throttle;
       const trim = this.drive.trimAngle*(isJet(this.type)?.45:.65);
       // Angular inertia and damping retain a landing/chop response instead of
       // instantly following a prescribed orientation.
       const shaft=shaftPitch(this,input,surfacePitch,dt);
-      let pitchTarget=(shaft===null?surfacePitch+lift+plane+trim+sprayTurn.pitch:shaft+sprayTurn.pitch*.4)+bounce.pitch;
+      const resting=isTinny(this.type)?Math.max(0,1-this.speed/4)*(1-this.riderAft):0;
+      let pitchTarget=(shaft===null?surfacePitch+lift+plane+trim+sprayTurn.pitch+(c.restPitch||0)*resting:shaft+sprayTurn.pitch*.4)+bounce.pitch;
       if(this.type==='hyper')pitchTarget=Math.min(APEX_HANDLING.bowTargetLimit,pitchTarget);
       this.pitchRate+=((pitchTarget-this.pitch)*hydro.pitchSpring-this.pitchRate*hydro.pitchDamping)*dt;
       this.pitch+=this.pitchRate*dt;
-      const rollTarget=surfaceRoll-this.yawRate*clamp(this.speed/20,0,1)*(isJet(this.type)?.48:.24)+sprayTurn.roll+shaftRoll(this);
+      const rollTarget=surfaceRoll+(c.restRoll||0)*resting-this.yawRate*clamp(this.speed/20,0,1)*(isJet(this.type)?.48:.24)+sprayTurn.roll+shaftRoll(this);
       this.rollRate+=((rollTarget-this.roll)*hydro.rollSpring-this.rollRate*hydro.rollDamping)*dt;this.roll+=this.rollRate*dt;
       const verticalReaction=clamp(this.drive.force.y/driveConfig.effectiveMass,-3,3);
       // As the bow rises, support moves toward the stern. Raise the body origin
       // around that support instead of submerging the transom a metre deep.
-      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*(this.type==='tinny'?c.length*TINNY_HANDLING.sternSupport+(SHAFTING.sternPivot-c.length*TINNY_HANDLING.sternSupport)*(this.shaftLoad||0)*clamp(1-Math.abs(this.steer)/.5,0,1):c.length*(handling?.sternSupport??.29))*clamp((this.pitch-.18)/.4,0,1);
+      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*(isTinny(this.type)?c.length*TINNY_HANDLING.sternSupport+(c.length*.489-c.length*TINNY_HANDLING.sternSupport)*(this.shaftLoad||0)*clamp(1-Math.abs(this.steer)/.5,0,1):c.length*(handling?.sternSupport??.29))*clamp((this.pitch-.18)/.4,0,1);
       const supportError=water+sternSupportLift+sprayTurn.lift+bounce.lift-this.y;
       const followingWater=waterVelocity*sprayTurn.damping*(hydro.waterFollow||0);
       // Additional immersed volume supplies bounded reserve buoyancy as a crest
@@ -190,7 +196,7 @@ export class VehiclePhysics {
       const supportAcceleration=supportError*c.spring-this.vy*sprayTurn.damping+verticalReaction+followingWater+reserve;
       this.vy+=supportAcceleration*dt;
       this.y += this.vy * dt;constrainHullWater(this,time);hullContactSplash(this,dt,time);
-      if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe(this.type==='tinny'?'Looped the tinny':'Over the balance point');
+      if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe(isTinny(this.type)?'Looped the tinny':'Over the balance point');
       let onRamp=false;
       for (const ramp of ramps) {
         // A ramp rises toward +Z. Entering backward hits its foam-covered side instead of launching.

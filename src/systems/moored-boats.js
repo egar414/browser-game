@@ -2,7 +2,7 @@ import{distantBoats}from'./boat-lod.js';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildTender} from '../vehicles/tender.js';
-import {waveHeight} from '../config.js';
+import {VEHICLES,waveHeight} from '../config.js';
 import {MooringFlood,MOORING_FLOOD} from './mooring-flood.js';
 
 function tenderParts(colour){
@@ -35,7 +35,7 @@ export function createMooredTinnies(root,sites,onEvent,drawDistance=400){
     const poses=new Map();for(const p of visible){
       const fx=Math.sin(p.heading),fz=Math.cos(p.heading),fill=p.water/MOORING_FLOOD.capacityLitres;
       const y=waveHeight(p.x,p.z,time),front=waveHeight(p.x+fx*.8,p.z+fz*.8,time),back=waveHeight(p.x-fx*.8,p.z-fz*.8,time),left=waveHeight(p.x-fz*.5,p.z+fx*.5,time),right=waveHeight(p.x+fz*.5,p.z-fx*.5,time);
-      euler.set(-Math.atan2(front-back,1.6)*.6+p.sinking*.4,p.heading,Math.atan2(right-left,1)*.6+p.sinking*.65,'YXZ');q.setFromEuler(euler);
+      euler.set(-Math.atan2(front-back,1.6)*.6-VEHICLES.tinny.restPitch+p.sinking*.4,p.heading,Math.atan2(right-left,1)*.6+VEHICLES.tinny.restRoll+p.sinking*.65,'YXZ');q.setFromEuler(euler);
       position.set(p.x,y+.08-fill*.26-p.sinking*2.8,p.z);scale.setScalar(p.sinking>.95?.001:1);matrix.compose(position,q,scale);poses.set(p,matrix.clone());
     }
     for(const {mesh,sites}of batches){

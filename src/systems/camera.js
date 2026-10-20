@@ -1,3 +1,4 @@
+import {isTinny} from '../config.js';
 import * as THREE from 'three';
 import { collision } from './environment.js';
 import {bodyPoint} from '../vehicles/propulsion.js';
@@ -35,7 +36,7 @@ export class ChaseCamera {
       if(!this.initialized){this.camera.position.copy(target);this.look.copy(look);this.initialized=true;}
       this.camera.position.lerp(target,1-Math.exp(-dt*14));this.look.lerp(look,1-Math.exp(-dt*10));this.camera.lookAt(this.look);this.camera.fov=76;this.camera.updateProjectionMatrix();return;
     }
-    const deck=v.type==='character',shaft=v.type==='tinny'&&!menu&&(v.shaftLoad||0)>.55&&v.pitch>.7;
+    const deck=v.type==='character',shaft=isTinny(v.type)&&!menu&&(v.shaftLoad||0)>.55&&v.pitch>.7;
     // The cockpit camera stays aft of the cabin instead of following the
     // character's backward-facing heading into the superstructure.
     const orbit=deck?THREE.MathUtils.clamp(input.orbit,-1.2,1.2):input.orbit;

@@ -12,8 +12,8 @@ function marking(root,text,w,h,x,y,z,rotation){
 }
 // Original 2.25 m open alloy hull based on the supplied tender photograph.
 // The horsepower label and propulsion tuning are a gameplay specification.
-export function buildTender(colour='#bdc9cc',design='classic'){
-  const root=new THREE.Group();root.name='Tender 225';
+export function buildTender(colour='#bdc9cc',design='classic',options={}){
+  const root=new THREE.Group();root.name=options.racing?'Super Skua 370':options.hp===50?'Dingi 200':'Tender 225';
   const alloy=material(colour,.78,.39),ribs=material('#8a999b',.72,.49),rubber=material('#202a2c',.02,.86),red=material('#c93b30',.1,.42),motorPaint=material('#202c36',.3,.27);
   const sections=[[-1.08,.52,.39,-.23],[-.82,.59,.43,-.27],[.12,.58,.47,-.23],[.68,.42,.51,-.10],[1.09,.14,.55,.08],[1.17,.015,.56,.18]];
   const vertices=[],indices=[];
@@ -47,7 +47,7 @@ export function buildTender(colour='#bdc9cc',design='classic'){
   block(root,.22,.07,.18,.17,-.005,-.02,material('#ed8630'));
   block(root,.10,.09,.13,-.29,-.02,.03,red);
   for(const x of [-.10,.10])block(root,.045,.18,.1,x,.35,-1.10,motorPaint);
-  const motor=new THREE.Group();motor.name='25 hp outboard';motor.position.set(.12,.27,-1.12);root.add(motor);
+  const motor=new THREE.Group();motor.name=`${options.hp||25} hp outboard`;motor.position.set(.12,.27,-1.12);root.add(motor);
   mesh(motor,new THREE.CapsuleGeometry(.175,.20,4,12),motorPaint,0,.25,-.015).scale.set(1,.9,1.12);
   block(motor,.35,.035,.34,0,.22,-.01,red);
   block(motor,.075,.57,.10,0,-.23,0,motorPaint);
@@ -57,6 +57,6 @@ export function buildTender(colour='#bdc9cc',design='classic'){
   block(motor,.045,.065,.09,-.32,.27,.54,rubber);
   const propeller=new THREE.Group();propeller.position.set(0,-.65,-.18);motor.add(propeller);
   for(let i=0;i<3;i++){const blade=block(propeller,.055,.18,.025,Math.sin(i*Math.PI*2/3)*.07,Math.cos(i*Math.PI*2/3)*.07,0,alloy);blade.rotation.z=-i*Math.PI*2/3;blade.rotation.y=.35;}
-  marking(motor,'25',.24,.15,0,.32,-.215,Math.PI);marking(motor,'25',.24,.15,.179,.32,-.015,Math.PI/2);
-  root.userData={motor,propeller};return root;
+  marking(motor,String(options.hp||25),.24,.15,0,.32,-.215,Math.PI);marking(motor,String(options.hp||25),.24,.15,.179,.32,-.015,Math.PI/2);
+  if(options.racing){const gold=material('#e6ba46',.45,.36);for(const side of [-1,1]){rail(root,sections.slice(0,-1).map(([z,w,y])=>[side*(w+.008),y-.07,z]),.027,gold);rail(root,[[-.9*side*.6,.15,-.8],[-.25*side,.05,.05],[.20*side,.3,.55]],.018,gold);marking(root,'SKUA',.7,.17,side*.586,.24,-.2,side*Math.PI/2);}}root.scale.set((options.width||1.22)/1.22,1,(options.length||2.25)/2.25);root.userData={motor,propeller};return root;
 }
