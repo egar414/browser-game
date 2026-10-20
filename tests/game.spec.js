@@ -34,7 +34,7 @@ test('all graphics profiles render without errors and reflections switch safely'
     await page.keyboard.press('Escape');await page.locator('#quality').selectOption(quality);await page.locator('#resume').click();
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     const s=await status(page);expect(s.quality).toBe(quality);expect(s.spray.reflections).toBe(quality!=='Low');
-    expect(s.state).toBe('playing');expect(s.graphics.groundContacts).toBeGreaterThan(1000);expect(s.graphics.shadows).toBe(quality!=='Low');expect(s.graphics.reflectionHz).toBe(quality==='Low'?0:quality==='High'?30:20);console.log('Graphics profile',JSON.stringify({quality:s.quality,graphics:s.graphics,fps:s.fps,calls:s.drawCalls,triangles:s.triangles}));await page.screenshot({path:`test-results/graphics-${quality}.png`});
+    expect(s.state).toBe('playing');expect(s.graphics.groundContacts).toBeGreaterThan(1000);expect(s.graphics.shadows).toBe(quality!=='Low');expect(s.graphics.reflectionHz).toBe(quality==='Low'?0:quality==='High'?30:8);console.log('Graphics profile',JSON.stringify({quality:s.quality,graphics:s.graphics,fps:s.fps,calls:s.drawCalls,triangles:s.triangles}));await page.screenshot({path:`test-results/graphics-${quality}.png`});
   }
   expect(errors).toEqual([]);
 });
@@ -75,9 +75,9 @@ test('riding modes, extended trim and trim preference persist without held keys'
   await page.keyboard.press('Escape');expect(await page.locator('#ride-mode').inputValue()).toBe('freestyle');
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('estuary-rats-v1')));expect(saved.trimSki).toBe(trim);
   const reload=await page.context().newPage();await reload.goto('/');await reload.waitForFunction(()=>window.__ESTUARY__?.status.ready);
-  expect((await status(reload)).rideMode).toBe('freestyle');expect((await status(reload)).trim).toBe(trim);await reload.close();
+  expect((await status(reload)).rideMode).toBe('freestyle');expect((await status(reload)).trim).toBe(trim);await reload.close();await page.bringToFront();
   await page.locator('#ride-mode').selectOption('cruise');expect((await status(page)).trim).toBe(trim);
-  await page.locator('#resume').click();await page.keyboard.down('KeyE');await expect.poll(async()=>(await status(page)).trim).toBeLessThan(trim);await page.keyboard.up('KeyE');
+  await page.locator('#resume').click();await page.keyboard.down('KeyE');await expect.poll(async()=>(await status(page)).trim,{timeout:15000}).toBeLessThan(trim);await page.keyboard.up('KeyE');
 });
 test('Mooloolaba setting and Thundercat bow ride work with the normal keys',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));

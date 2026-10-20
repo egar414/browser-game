@@ -8,6 +8,58 @@ performance offshore racing cat. Cruise the Mooloolah estuary and its connected
 northern coast based on OpenStreetMap shorelines. No account, API key or external
 asset service is required to play.
 
+## Rats Reef surfing
+
+Choose **SURF REEF · YACHT / BOARDS** while playing, or from pause. The anchored
+flybridge yacht carries an original rescue ski on its stern lift. Launch and
+reload beside the yacht below 7 km/h. Choose a shortboard, bodyboard or big-wave
+gun; paddle physically from the yacht or use **LINE-UP PRACTICE**. The fictional
+outer reef has a peeling left, an exposed shelf and a roughly 6.3 m (20 ft)
+crest-to-trough game face. The yacht stays anchored; it is not a drivable boat.
+
+- **WASD:** paddle / carve / drive the rescue ski.
+- **Space:** paddle, catch the face, then pump. **Shift:** stall on a board.
+- **B:** launch from the yacht, or step off a ski/rear seat.
+- **C:** face, chase and first-person cameras. Drag to orbit.
+- **R:** recover to the safe channel. Manual resets discard unbanked wave points.
+- Landscape phones have paddle/pump, stall, steering and role buttons.
+
+A clean wave exit banks surf/barrel points and existing upgrade money. Wipeouts
+lose the current wave. Each board has distinct speed, turn and stability tuning.
+Solo step-offs hand the ski to a local support pilot. For two human players, join
+the same authenticated online room: one launches the ski, the other approaches
+and chooses **JOIN REAR SEAT** while the pilot is below 11 km/h. The passenger
+chooses **STEP OFF** and surfs while the pilot continues. One human rear seat and
+one shared pilot are allowed. Disconnects recover the passenger to the channel.
+
+No new SQL is needed for surfing: the existing authenticated, bounded movement
+RPC carries tagged board/ski roles and seat identity. Online wave timing uses a
+shared wall clock. Movement remains client-simulated and remote poses are
+interpolated; this is not a competitive authoritative surf server. Wave rewards
+use the existing device-local account wallet. Solo helper AI is local.
+
+Tune the authored surface and GLSL together in `src/surf/break.js`, board tuning
+in `src/surf/boards.js`, handling and catches in `src/surf/session.js`, and barrel,
+foam, quality mesh density and cameras in `src/surf/view.js`. Ocean physics and
+visible water share the reef surface function. Curl geometry is an artistic
+extension of that surface, not a fluid solver or collision volume. Low quality
+reduces the reef patch mesh and keeps spray pooled. Canal signs and enforcement
+now use 35 km/h; the Wharf retains its separate approximately 22 km/h slow zone.
+
+Models, reef and rescue livery are original procedural work, informed by the
+supplied yacht reference. Plain RED BULL / REEF RESCUE lettering is a requested
+game livery, with no official logo, licensed model or implied affiliation.
+SumbaSurf's public page description was inspected for board and control ideas;
+its actual gameplay could not be inspected because the cloud browser rejected
+its certificate. This release does not claim matching graphics or wave physics.
+The reef is fictional, not a surveyed Mooloolaba surf break. No external assets
+are downloaded at play time for this feature.
+
+Validation includes real keyboard/touch interaction in Chromium, visual review,
+and a two-account browser test against the existing SQL migrations in local
+PGlite. Cloud graphics use software SwiftShader, so those tests cannot establish
+60 fps on a laptop or performance on a physical phone.
+
 ## Optional online worlds and accounts
 
 Player names are saved per account on the device and synchronized to Auth
@@ -39,8 +91,7 @@ network errors remove stale craft and retry with backoff. There is no arbitrary
 client Broadcast, direct table access, public account email list or password table.
 This is not an authoritative anti-cheat server. Player hull collisions and flooding,
 AI traffic, races, scoring, fishing and selected weather are not synchronized.
-Remote boats currently have rider, trim, paint and deck animation but no extra
-particle systems, to keep the first release light on laptops. All normal
+Remote boats have rider, trim, paint, deck animation and pooled spray effects. All normal
 single-player features remain available without signing in.
 
 ### Verified Creator badge and garage perks

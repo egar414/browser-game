@@ -10,10 +10,10 @@ export const UPGRADES=[
 export const BEST_CREATOR_PARTS={engine:'pro-engine',handling:'pro-steering',ride:'ride'};
 const number=x=>Number.isFinite(x)?Math.max(0,Math.min(1e9,Math.floor(x))):0;
 const fresh=()=>({balance:0,earned:0,moves:{},tricks:{},boats:{},catchBox:[],fishSold:0});
-const kind=label=>label==='Bow rider'?'bow':label==='Rooster tail donut'?'donut':label==='Spray carve'?'carve':/landed$|^Clean air$/.test(label)?'air':null;
+const kind=label=>label==='Surf ride'?'surf':label==='Barrel ride'?'barrel':label==='Bow rider'?'bow':label==='Rooster tail donut'?'donut':label==='Spray carve'?'carve':/landed$|^Clean air$/.test(label)?'air':null;
 function clean(raw){
  const data=fresh();data.catchBox=(Array.isArray(raw?.catchBox)?raw.catchBox:[]).filter(id=>REEF_SPECIES.some(s=>s.id===id)).slice(0,20);data.fishSold=number(raw?.fishSold);data.balance=number(raw?.balance);data.earned=Math.max(data.balance,number(raw?.earned));
- for(const k of ['bow','donut','carve','air'])data.moves[k]=number(raw?.moves?.[k]);
+ for(const k of ['bow','donut','carve','air','surf','barrel'])data.moves[k]=number(raw?.moves?.[k]);
  for(const label of Object.keys(raw?.tricks||{}).slice(0,20))if(label.length<=48&&kind(label))data.tricks[label]=number(raw.tricks[label]);
  for(const type of Object.keys(VEHICLES)){const b=raw?.boats?.[type];if(!b)continue;const owned=UPGRADES.filter(u=>Array.isArray(b.owned)&&b.owned.includes(u.id)).map(u=>u.id),active={};for(const slot of ['engine','handling','ride'])if(owned.includes(b.active?.[slot])&&UPGRADES.some(u=>u.id===b.active[slot]&&u.slot===slot))active[slot]=b.active[slot];data.boats[type]={owned,active,creatorPreset:b.creatorPreset===true};}return data;
 }

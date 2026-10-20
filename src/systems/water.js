@@ -1,3 +1,4 @@
+import {SURF_GLSL,surfClock} from '../surf/break.js';
 import * as THREE from 'three';
 import {surfaceTexture,SKY_TEXTURE_GLSL} from './surface-textures.js';
 import{COASTAL_STYLE as ART,glslColour}from'./art-direction.js';
@@ -46,7 +47,7 @@ export class Water {
     field.minFilter=field.magFilter=THREE.LinearFilter;field.needsUpdate=true;
     this.material=new THREE.ShaderMaterial({side:THREE.DoubleSide,
       uniforms:{
-        uSurface:{value:surfaceTexture('water')},uSkyPhoto:{value:surfaceTexture('sky')},uSurfaceReady:{value:0},uSkyReady:{value:0},uDaylight:{value:1},uSkyHorizon:{value:new THREE.Color(ART.skyHorizon)},uSkyZenith:{value:new THREE.Color(ART.skyZenith)},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(bounds.minX,bounds.minZ,width,depth)},uWaveBounds:{value:new THREE.Vector4(WAVE_FIELD.bounds.minX,WAVE_FIELD.bounds.minZ,WAVE_FIELD.bounds.maxX-WAVE_FIELD.bounds.minX,WAVE_FIELD.bounds.maxZ-WAVE_FIELD.bounds.minZ)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
+        uSurface:{value:surfaceTexture('water')},uSkyPhoto:{value:surfaceTexture('sky')},uSurfaceReady:{value:0},uSkyReady:{value:0},uDaylight:{value:1},uSkyHorizon:{value:new THREE.Color(ART.skyHorizon)},uSkyZenith:{value:new THREE.Color(ART.skyZenith)},uSurfPatch:{value:0},uSurfTime:{value:0},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(bounds.minX,bounds.minZ,width,depth)},uWaveBounds:{value:new THREE.Vector4(WAVE_FIELD.bounds.minX,WAVE_FIELD.bounds.minZ,WAVE_FIELD.bounds.maxX-WAVE_FIELD.bounds.minX,WAVE_FIELD.bounds.maxZ-WAVE_FIELD.bounds.minZ)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
         uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
         uReflection:{value:null},uReflectionMatrix:{value:new THREE.Matrix4()},uReflect:{value:0},
         uHull:{value:new THREE.Vector4(0,0,1,2)},uHeading:{value:0},uContact:{value:1},
@@ -55,11 +56,12 @@ export class Water {
         uniform float uSea;uniform float uTime;uniform vec4 uMapBounds;uniform vec4 uWaveBounds;uniform sampler2D uWaveField;uniform vec2 uCenter;uniform mat4 uReflectionMatrix;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;
         ${WAVE_GLSL}
+${SURF_GLSL}
         void main(){
           vec3 p=position;p.xz+=uCenter;
           vec2 uv=(clamp((p.xz-uWaveBounds.xy)/uWaveBounds.zw,0.,1.)*${WAVE_FIELD.size-1}.+.5)/${WAVE_FIELD.size}.;
           float chop=texture2D(uWaveField,uv).r;vOcean=smoothstep(.48,.94,chop);
-          vec3 w=oceanWave(p.xz,uTime,uSea,chop);vBank=entranceShoal(p.xz);p.y=w.x;
+          vec3 w=oceanWave(p.xz,uTime,uSea,chop);vBank=entranceShoal(p.xz);w=mix(w,reefSurfWave(p.xz),reefSurfMask(p.xz));p.y=w.x;
           vWorld=p;vNormal=normalize(vec3(-w.y,1.,-w.z));
           vReflection=uReflectionMatrix*vec4(p.x,-p.z,0.,1.);
           gl_Position=projectionMatrix*viewMatrix*vec4(p,1.);
@@ -67,11 +69,11 @@ export class Water {
       fragmentShader:`
         uniform sampler2D uSurface;uniform sampler2D uSkyPhoto;uniform float uSurfaceReady;uniform float uSkyReady;
         ${SKY_TEXTURE_GLSL}
-        uniform float uDaylight;uniform vec3 uSkyHorizon;uniform vec3 uSkyZenith;uniform float uTime;uniform vec4 uMapBounds;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
+        uniform float uSurfTime;uniform float uSurfPatch;uniform float uDaylight;uniform vec3 uSkyHorizon;uniform vec3 uSkyZenith;uniform float uTime;uniform vec4 uMapBounds;uniform vec3 uSun;uniform sampler2D uShore;uniform sampler2D uRipples;
         uniform sampler2D uReflection;uniform float uReflect;uniform vec4 uHull;uniform float uHeading;uniform float uContact;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;
         void main(){
-          vec2 p=vWorld.xz;float distanceToEye=length(cameraPosition-vWorld);
+          vec2 p=vWorld.xz;bool reefPatch=abs(p.x-3400.)<200.&&abs(p.y+3100.)<150.;if((uSurfPatch<.5&&reefPatch)||(uSurfPatch>.5&&!reefPatch))discard;float distanceToEye=length(cameraPosition-vWorld);
           vec3 view=normalize(cameraPosition-vWorld);
           vec3 r1=texture2D(uRipples,p*.055+vec2(uTime*.013,-uTime*.009)).rgb;
           vec3 r2=texture2D(uRipples,p*.16+vec2(-uTime*.019,uTime*.011)).rgb;
@@ -125,6 +127,7 @@ export class Water {
           vec2 hullSpace=vec2(local.x*c-local.y*s,local.x*s+local.y*c);
           float shadow=exp(-dot(hullSpace/uHull.zw,hullSpace/uHull.zw)*2.4)*uContact;
           colour*=1.-shadow*.42;
+          float surfMask=(1.-smoothstep(145.,205.,abs(p.x-3400.)))*(1.-smoothstep(95.,160.,abs(p.y+3100.)));vec3 faceColour=mix(vec3(.025,.24,.29),vec3(.16,.59,.62),clamp((vWorld.y+3.)/7.,0.,1.));colour=mix(colour,faceColour,surfMask*.62);
           float fog=1.-exp(-distanceToEye*.00095);
           colour=mix(colour,uSkyHorizon,fog);
           gl_FragColor=vec4(colour,1.);
@@ -151,15 +154,15 @@ export class Water {
     this.material.uniforms.uReflect.value=0;
   }
   update(t,x,z,v) {
-    const u=this.material.uniforms;u.uSurfaceReady.value=u.uSurface.value.userData.loaded?1:0;u.uSkyReady.value=u.uSkyPhoto.value.userData.loaded?1:0;u.uTime.value=t;u.uSea.value=seaAmplitude(t);u.uCenter.value.set(x,z);
+    const u=this.material.uniforms;u.uSurfaceReady.value=u.uSurface.value.userData.loaded?1:0;u.uSkyReady.value=u.uSkyPhoto.value.userData.loaded?1:0;u.uTime.value=t;u.uSurfTime.value=surfClock(t);u.uSea.value=seaAmplitude(t);u.uCenter.value.set(x,z);
     if(v){u.uHull.value.set(x,z,v.config.width*.72,v.config.length*.62);u.uHeading.value=v.heading;u.uContact.value=v.airborne?Math.max(0,1-v.y/4):1;}
   }
   setDay(day){const u=this.material.uniforms;u.uDaylight.value=day.daylight;u.uSkyHorizon.value.set(day.horizon);u.uSkyZenith.value.set(day.zenith);}
   reflect(renderer,camera) {
     if(!this.reflector)return;
     const now=performance.now()/1000;if(now-this.lastReflection<1/Math.max(1,this.reflectionHz))return;this.lastReflection=now;
-    camera.updateMatrixWorld();this.mesh.visible=false;
+    camera.updateMatrixWorld();this.mesh.visible=false;const surfVisible=this.surfPatch?.visible;if(this.surfPatch)this.surfPatch.visible=false;
     try{this.reflector.onBeforeRender(renderer,this.scene,camera);this.material.uniforms.uReflect.value=1;this.reflectionCaptures++;}
-    finally{this.mesh.visible=true;}
+    finally{this.mesh.visible=true;if(this.surfPatch)this.surfPatch.visible=surfVisible;}
   }
 }

@@ -1,9 +1,10 @@
 import {mapData,edgeDistance} from './geography.js';
 import {RACE,SPAWN} from '../config.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+export const CANAL_SPEED_LIMIT=35/3.6;
 export function policeSpeedLimit(p){
  if(Math.hypot(p.x-SPAWN.x,p.z-SPAWN.z)<200)return 6; // gameplay no-wake zone
- for(const c of mapData.channels)if(c.name!=='Mooloolah River')for(let i=1;i<c.points.length;i++)if(edgeDistance(p.x,p.z,c.points[i-1],c.points[i])<42)return 6;
+ for(const c of mapData.channels)if(c.name!=='Mooloolah River')for(let i=1;i<c.points.length;i++)if(edgeDistance(p.x,p.z,c.points[i-1],c.points[i])<42)return CANAL_SPEED_LIMIT;
  return Infinity;
 }
 // A small graph follows mapped channel centrelines. Edges are admitted only

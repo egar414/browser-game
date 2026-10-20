@@ -1,3 +1,4 @@
+import {surfWave,surfClock} from './surf/break.js';
 import mapData from './data/mooloolaba.json' with {type:'json'};
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a));return t*t*(3-2*t);};
@@ -56,7 +57,7 @@ export function waveHeight(x,z,time){
   const b=BAR_BREAKERS,p=x*b.kx+z*b.kz+time*b.speed;
   height+=(Math.sin(p)-b.sharpness*Math.cos(p*2))*b.amplitude*amplitude*bank*ocean;
  }
- return height;
+ const reef=surfWave(x,z,surfClock(time));return height*(1-reef.influence)+reef.height*reef.influence;
 }
 const f=n=>Number(n).toFixed(9);
 // Generated from the same coefficients/equations as CPU buoyancy. Return height

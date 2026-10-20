@@ -1,0 +1,13 @@
+import * as THREE from 'three';
+import {makeDeckCharacter} from '../vehicles/wardrobe.js';
+export const BOARDS={
+ body:{name:'Bodyboard',length:1.12,width:.55,paddle:3.1,maxSpeed:12.8,turn:1.85,stability:1.15,colour:'#ffba42'},
+ short:{name:'Shortboard',length:1.92,width:.51,paddle:2.7,maxSpeed:16,turn:1.65,stability:1,colour:'#f1eee2'},
+ gun:{name:'Big-wave gun',length:2.75,width:.49,paddle:3.5,maxSpeed:18.5,turn:1.02,stability:1.4,colour:'#e1564c'},
+};
+export function makeBoard(type='short',crew=true){const c=BOARDS[type]||BOARDS.short,g=new THREE.Group(),shape=new THREE.Shape(),L=c.length/2,w=c.width/2;shape.moveTo(0,L);shape.bezierCurveTo(w*.65,L,w,L*.5,w,-L*.65);shape.quadraticCurveTo(w*.8,-L,0,-L);shape.quadraticCurveTo(-w*.8,-L,-w,-L*.65);shape.bezierCurveTo(-w,L*.5,-w*.65,L,0,L);if(type==='body'){shape.curves=[];shape.moveTo(-w,-L*.75);shape.lineTo(-w,L*.65);shape.quadraticCurveTo(-w,L,-w*.5,L);shape.lineTo(w*.5,L);shape.quadraticCurveTo(w,L,w,L*.65);shape.lineTo(w,-L*.75);shape.quadraticCurveTo(w,-L,0,-L*.88);shape.quadraticCurveTo(-w,-L,-w,-L*.75);}const geometry=new THREE.ExtrudeGeometry(shape,{depth:type==='body'?.07:.045,bevelEnabled:true,bevelSize:.025,bevelThickness:.025,bevelSegments:2,steps:1,curveSegments:18});geometry.rotateX(Math.PI/2);const paint=new THREE.MeshStandardMaterial({color:c.colour,roughness:.32,metalness:.04}),board=new THREE.Mesh(geometry,paint);board.castShadow=true;g.add(board);const stripe=new THREE.Mesh(new THREE.BoxGeometry(.025,.005,c.length*.8),new THREE.MeshStandardMaterial({color:'#1a727f'}));stripe.position.y=.035;g.add(stripe);
+ if(type!=='body')for(const x of [-.1,.1]){const fin=new THREE.Mesh(new THREE.BoxGeometry(.012,.12,.15),new THREE.MeshStandardMaterial({color:'#17383f'}));fin.position.set(x,-.1,-L*.67);g.add(fin);}
+ if(crew){const rider=makeDeckCharacter();rider.scale.setScalar(.88);g.add(rider);g.userData.rider=rider;}
+ g.userData.boardType=type;return g;
+}
+export function poseSurfer(model,mode,time,lean=0){const r=model.userData.rider;if(!r)return;r.userData.animate(time,mode==='paddle'?.6:0,false);const prone=mode==='paddle'||model.userData.boardType==='body';r.rotation.set(prone?Math.PI/2:0,prone?0:Math.PI/2,prone?0:lean*.2);r.position.set(0,prone?.22:0,prone?(model.userData.boardType==='body'?-.85:-.45):0);if(!prone&&mode==='ride'){for(const o of r.children){if(o.name.startsWith('foot')){o.position.x=o.name.endsWith('-1')?-.3:.3;}if(o.name.startsWith('arm')){o.rotation.z=o.name.endsWith('-1')?-.55:.55;}if(o.name.startsWith('hand')){o.position.x=o.name.endsWith('-1')?-.5:.5;o.position.y=.9;}if(o.name.startsWith('leg'))o.rotation.x=-.25;}}if(mode==='wipeout'){r.rotation.z=time*3;r.position.y=.25;}}
