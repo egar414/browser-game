@@ -7,6 +7,7 @@ export const UPGRADES=[
  {id:'pro-engine',slot:'engine',name:'Clean-air power kit',price:420,detail:'15% stronger acceleration · original speed ceiling',power:1.15,base:'engine',require:{distinct:3,air:1},goal:'Bank 3 different moves, including a clean aerial landing'},
  {id:'pro-steering',slot:'handling',name:'Bow & spray steering',price:350,detail:'20% more steering authority · 8% more grip',yaw:1.20,grip:1.08,base:'steering',require:{bow:3,carve:6},goal:'Bank 3 Bow riders and 6 Spray carves'},
 ];
+export const BEST_CREATOR_PARTS={engine:'pro-engine',handling:'pro-steering',ride:'ride'};
 const number=x=>Number.isFinite(x)?Math.max(0,Math.min(1e9,Math.floor(x))):0;
 const fresh=()=>({balance:0,earned:0,moves:{},tricks:{},boats:{},catchBox:[],fishSold:0});
 const kind=label=>label==='Bow rider'?'bow':label==='Rooster tail donut'?'donut':label==='Spray carve'?'carve':/landed$|^Clean air$/.test(label)?'air':null;
@@ -14,11 +15,12 @@ function clean(raw){
  const data=fresh();data.catchBox=(Array.isArray(raw?.catchBox)?raw.catchBox:[]).filter(id=>REEF_SPECIES.some(s=>s.id===id)).slice(0,20);data.fishSold=number(raw?.fishSold);data.balance=number(raw?.balance);data.earned=Math.max(data.balance,number(raw?.earned));
  for(const k of ['bow','donut','carve','air'])data.moves[k]=number(raw?.moves?.[k]);
  for(const label of Object.keys(raw?.tricks||{}).slice(0,20))if(label.length<=48&&kind(label))data.tricks[label]=number(raw.tricks[label]);
- for(const type of Object.keys(VEHICLES)){const b=raw?.boats?.[type];if(!b)continue;const owned=UPGRADES.filter(u=>Array.isArray(b.owned)&&b.owned.includes(u.id)).map(u=>u.id),active={};for(const slot of ['engine','handling','ride'])if(owned.includes(b.active?.[slot])&&UPGRADES.some(u=>u.id===b.active[slot]&&u.slot===slot))active[slot]=b.active[slot];data.boats[type]={owned,active};}return data;
+ for(const type of Object.keys(VEHICLES)){const b=raw?.boats?.[type];if(!b)continue;const owned=UPGRADES.filter(u=>Array.isArray(b.owned)&&b.owned.includes(u.id)).map(u=>u.id),active={};for(const slot of ['engine','handling','ride'])if(owned.includes(b.active?.[slot])&&UPGRADES.some(u=>u.id===b.active[slot]&&u.slot===slot))active[slot]=b.active[slot];data.boats[type]={owned,active,creatorPreset:b.creatorPreset===true};}return data;
 }
 export class WorkshopEconomy{
  constructor(storage){this.storage=storage;this.memory=new Map();this.canSave=true;this.last=new Map();this.switchAccount(null);}
- setCreator(verified){this.creator=verified===true;}
+ setCreator(verified){this.creator=verified===true;if(!this.creator||this.account==='guest')return;for(const type of Object.keys(VEHICLES)){const b=this.boat(type);b.owned=UPGRADES.map(u=>u.id);if(!b.creatorPreset){b.active={...BEST_CREATOR_PARTS};b.creatorPreset=true;}}this.save();}
+ equipBest(){if(!this.creator||this.account==='guest')throw Error('Sign in to your verified Creator account');for(const type of Object.keys(VEHICLES)){const b=this.boat(type);b.owned=UPGRADES.map(u=>u.id);b.active={...BEST_CREATOR_PARTS};b.creatorPreset=true;}this.save();return 'Best parts installed on every boat';}
  switchAccount(id){this.creator=false;this.account=id||'guest';this.key='estuary-rats-workshop-v1:'+this.account;this.last.clear();if(this.memory.has(this.key)){this.data=this.memory.get(this.key);return;}
   try{const storage=this.storage??globalThis.localStorage;this.data=clean(JSON.parse(storage?.getItem(this.key)||'null'));}catch{this.data=fresh();this.canSave=false;}this.memory.set(this.key,this.data);
  }

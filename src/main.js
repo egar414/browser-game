@@ -115,7 +115,7 @@ const online=new OnlineClient({getPose:()=>{const pose=packPose(vehicle,settings
  if(s.creator&&pendingCreatorCraft){const type=pendingCreatorCraft;pendingCreatorCraft=null;selectCraft(type);}
  else if(!canDriveCraft(settings.vehicle,s.creator))selectCraft('ski');
  else{replaceModel();ui.selectVehicle();saveSettings(settings);}
- if(s.creator)ui.toast('★ Creator garage unlocked','All designs and tuning · 2× garage XP · verified gold name tag');
+ if(s.creator)ui.toast('★ Creator garage unlocked','All craft, designs and parts · best kits fitted · 2× garage XP · verified gold tag');
 }});
 // Derived from the authenticated account, never restored from local settings.
 Object.defineProperty(settings,'creatorAccess',{get:()=>online.creator,enumerable:false});
