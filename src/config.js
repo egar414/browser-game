@@ -122,3 +122,12 @@ for(const type of ['dinghy','skua']){
  const c=VEHICLES[type];PROPULSION[type]={...PROPULSION.tinny,effectiveMass:type==='dinghy'?220:310,shaftPower:37300,maximumRpm:5600,propellerArea:.052,motorMount:[.12,.4,-c.length*.498],propeller:[0,-.8125,-.225],linearResistance:15,quadraticResistance:type==='dinghy'?1.2:1.35};
  HYDRODYNAMICS[type]={...HYDRODYNAMICS.tinny,yawInertia:type==='dinghy'?150:280,pitchSpring:type==='dinghy'?18:14,pitchDamping:7.2,rollSpring:25,rollDamping:8};
 }
+
+// Original photo-inspired dive launches. Dimensions and handling are gameplay approximations.
+export const isDiveBoat=type=>type==='dive'||type==='rib';
+for(const [type,name,length,width,speed,height] of [
+ ['dive','Reef Buddy 28',8.6,3.0,12.5,3.5],['rib','Reef Scout 22',6.8,2.65,19,2.9]]){
+ VEHICLES[type]={...VEHICLES.cruiser,name,subtitle:type==='dive'?'Cabin dive launch':'Centre-console dive RIB',description:type==='dive'?'White cabin launch with open dive deck, tank racks, stern platform and boarding ladder. Take it to Buddy Reef to snorkel, freedive and spearfish.':'Dark inflatable tubes, teak-style deck, shaded console and rear swim platforms. A nimble launch for reef diving and selling your catch.',length,width,maxSpeed:speed,rideHeight:.1,height,colours:type==='dive'?['#27758b','#2d719d','#59a49a']:['#3b4851','#536d62','#344d68'],diveBoat:true,cruiseHandling:{forwardSpeed:speed,turnRate:type==='rib'?.68:.46,powerResponse:type==='rib'?.45:.32}};
+ PROPULSION[type]={...PROPULSION.cruiser,effectiveMass:type==='rib'?1200:3200,motorMount:[0,.35,-length*.46],propeller:[0,-.8,-.3]};
+ HYDRODYNAMICS[type]={...HYDRODYNAMICS.cruiser};
+}

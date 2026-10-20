@@ -1,3 +1,4 @@
+import {makeDiveBoat} from './dive-boats.js';
 import {batchRigidAssembly} from './rigid-model.js';
 import {isTinny,VEHICLES,PROPULSION} from '../config.js';
 import{makeApex}from'./apex-model.js';
@@ -57,6 +58,7 @@ function inflatable(parent,material){
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.castShadow=m.receiveShadow=true;parent.add(m);
 }
 export function makeVehicle(type, colour, design='classic',access={}) {
+  if(VEHICLES[type]?.diveBoat)return makeDiveBoat(type,colour);
   if(type==='ski')return access.creator===true?makeSpark(colour,design):makeStandardSpark(colour,design);
   if(type==='hyper')return access.creator===true?makeApex(colour):makeStandardSpark(colour,design);
   if(type==='racer')return makeRacingCat(colour);

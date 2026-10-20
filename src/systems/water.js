@@ -44,7 +44,7 @@ export class Water {
     for(const land of lands){ctx.beginPath();for(const ring of [land.points,...(land.holes||[])]){ring.forEach((p,i)=>ctx[i?'lineTo':'moveTo']((p[0]-bounds.minX)/width*1024,(p[1]-bounds.minZ)/depth*1024));ctx.closePath();}ctx.fill('evenodd');}
     const field=new THREE.DataTexture(new Uint8Array(WAVE_FIELD.values),WAVE_FIELD.size,WAVE_FIELD.size,THREE.RedFormat);
     field.minFilter=field.magFilter=THREE.LinearFilter;field.needsUpdate=true;
-    this.material=new THREE.ShaderMaterial({
+    this.material=new THREE.ShaderMaterial({side:THREE.DoubleSide,
       uniforms:{
         uSurface:{value:surfaceTexture('water')},uSkyPhoto:{value:surfaceTexture('sky')},uSurfaceReady:{value:0},uSkyReady:{value:0},uDaylight:{value:1},uSkyHorizon:{value:new THREE.Color(ART.skyHorizon)},uSkyZenith:{value:new THREE.Color(ART.skyZenith)},uSea:{value:1},uTime:{value:0},uMapBounds:{value:new THREE.Vector4(bounds.minX,bounds.minZ,width,depth)},uWaveBounds:{value:new THREE.Vector4(WAVE_FIELD.bounds.minX,WAVE_FIELD.bounds.minZ,WAVE_FIELD.bounds.maxX-WAVE_FIELD.bounds.minX,WAVE_FIELD.bounds.maxZ-WAVE_FIELD.bounds.minZ)},uWaveField:{value:field},uCenter:{value:new THREE.Vector2()},uSun:{value:SUN_DIRECTION},
         uShore:{value:new THREE.CanvasTexture(canvas)},uRipples:{value:makeRippleTexture()},
@@ -77,6 +77,7 @@ export class Water {
           vec3 r2=texture2D(uRipples,p*.16+vec2(-uTime*.019,uTime*.011)).rgb;
           float micro=1.-smoothstep(25.,210.,distanceToEye);
           vec2 ripples=(r1.rg*2.-1.)*.095+(r2.rg*2.-1.)*.045*micro;
+          if(!gl_FrontFacing){gl_FragColor=vec4(mix(vec3(.16,.43,.48),vec3(.53,.8,.77),pow(max(0.,dot(normalize(vNormal),normalize(-view))),4.)),1.);return;}
           vec3 n=normalize(vNormal+vec3(ripples.x,0.,ripples.y));
           float ndv=max(dot(n,view),0.);float fresnel=.025+.975*pow(1.-ndv,5.);
           float shore=texture2D(uShore,vec2((p.x-uMapBounds.x)/uMapBounds.z,1.-(p.y-uMapBounds.y)/uMapBounds.w)).r;

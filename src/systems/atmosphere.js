@@ -58,7 +58,7 @@ export function createAtmosphere(scene, renderer) {
   let environment = pmrem.fromScene(environmentScene, .06, .1, 2000, { size: 128 });
   scene.environment = environment.texture; scene.environmentIntensity = .8;
   pmrem.dispose();
-  return { refreshEnvironment(){
+  return {setUnderwater(value){dome.visible=!value;}, refreshEnvironment(){
     material.uniforms.uPhotoReady.value=material.uniforms.uPhoto.value.userData.loaded?1:0;
     const generator=new THREE.PMREMGenerator(renderer),previous=environment;
     environment=generator.fromScene(environmentScene,.06,.1,2000,{size:128});

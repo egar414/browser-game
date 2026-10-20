@@ -67,7 +67,7 @@ export class VehiclePhysics {
   }
   update(dt, input, time, ramps = []) {
     if(this.type==='racer')return updateRacer(this,dt,input,time);
-    if(this.type==='cruiser')return updateCruiser(this,dt,input,time);
+    if(this.config.diveBoat||this.type==='cruiser')return updateCruiser(this,dt,input,time);
     this.previous = this.snapshot();
     if (this.wipeout > 0) { if(this.looping){this.pitch+=SHAFTING.loopRate*dt;this.y=waveHeight(this.x,this.z,time)+.65;this.roll*=Math.exp(-3*dt);} this.wipeout -= dt; if (this.wipeout <= 0) this.recover(true); return; }
     const c = this.config;

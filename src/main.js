@@ -1,3 +1,7 @@
+import {ReefDiving,REEF,reefFish} from './systems/reef-diving.js';
+import {ReefView} from './systems/reef-view.js';
+import {ReefUI} from './systems/reef-ui.js';
+import {FisheriesPatrol} from './systems/fisheries-patrol.js';
 import {WorkshopEconomy} from './systems/workshop-economy.js';
 import {DryWharf,DRY_WHARF,wharfPoint,canDock} from './systems/dry-wharf.js';
 import {WorkshopUI} from './systems/workshop-ui.js';
@@ -47,9 +51,12 @@ import {canDriveCraft,availableCraft} from './systems/craft-access.js';
 
 const economy=new WorkshopEconomy();
 const settings=loadSettings();let pendingCreatorCraft=settings.vehicle==='hyper'?'hyper':null;settings.vehicle=availableCraft(settings.vehicle);const dayClock=new DayCycle(settings.dayMode);validLoadout(settings);setSeaState(settings.seaState,0,true);let state='home',controlsFrom='home',ready=false,renderer,model,water,spray,environment,hemi,dolphins,people,qualityName='Medium',sun;
+let reefView,reefUI,fisheriesModel,marketMarker;
 let dryWharf,workshopUI,dockHold=0,leavingWharf=false;
 let police,playground,barGuide,locals,cruisers,offshore,speedRun,garageReturn=null;
 const deck=new DeckWalk();
+const diving=new ReefDiving(ids=>economy.stowCatch(ids));
+const fisheries=new FisheriesPatrol(()=>{if(diving.active)endDive(true);const result=economy.confiscateCatch();diving.say(`Fisheries confiscated ${result.count} fish · $${result.paid} fine paid`);ui.toast('Fisheries inspection',diving.message);},message=>{diving.say(message);ui.toast('Fisheries',message);});
 const fishing=new Fishing(catchInfo=>{settings.fishCaught++;if(catchInfo.kg>settings.bestFishKg){settings.bestFishKg=catchInfo.kg;settings.bestFishSpecies=catchInfo.name;}saveSettings(settings);ui.toast(`${catchInfo.name} · ${catchInfo.kg} kg`,"Catch and release · record saved on this browser");});
 let simulationTime=0,accumulator=0,last=performance.now(),fps=60,frameCount=0,fpsTime=0,uiTime=0,lowFrames=0;
 const scene=new THREE.Scene();scene.background=new THREE.Color(ART.haze);scene.fog=new THREE.FogExp2(ART.haze,ART.hazeDensity);
@@ -62,7 +69,7 @@ const vehicle=new VehiclePhysics(settings.vehicle,collision,event=>{
   if(event.type==='bump'||event.type==='boundary')ui?.toast(event.label);
 });
 vehicle.workshop=economy.effects(vehicle.type);vehicle.tuning=settings.tuning;vehicle.setMode(settings.rideMode);vehicle.setTrim(settings[trimKey(settings.vehicle)]);
-function trimKey(type){return {ski:'trimSki',cat:'trimCat',tinny:'trimTinny',dinghy:'trimTinny',skua:'trimTinny',cruiser:'trimCruiser',seago:'trimSeago',racer:'trimRacer',hyper:'trimApex'}[type];}
+function trimKey(type){return {ski:'trimSki',cat:'trimCat',tinny:'trimTinny',dinghy:'trimTinny',skua:'trimTinny',cruiser:'trimCruiser',dive:'trimCruiser',rib:'trimCruiser',seago:'trimSeago',racer:'trimRacer',hyper:'trimApex'}[type];}
 function setRideMode(mode){vehicle.setMode(mode);settings.rideMode=vehicle.rideMode;persistTrim();saveSettings(settings);document.getElementById('ride-mode').value=mode;ui.toast(`${RIDE_MODES[mode].name} mode`,RIDE_MODES[mode].description);}
 function persistTrim(){const key=trimKey(vehicle.type);if(settings[key]!==vehicle.trimDegrees){settings[key]=vehicle.trimDegrees;saveSettings(settings);}}
 const input=new Input(code=>{
@@ -73,6 +80,8 @@ const input=new Input(code=>{
   if(code==='KeyH'){showControls();return;}
   if(code==='KeyM'){mute();return;}
   if(state!=='playing'||police?.impounded)return;
+  if(diving.active){if(code==='KeyB')toggleDive();if(code==='KeyT'){diving.setMode(diving.mode==='snorkel'?'freedive':'snorkel');input.clear();}if(code==='Space')fireSpear();if(code==='KeyR')endDive(true);return;}
+  if(code==='KeyB'&&vehicle.config.diveBoat){toggleDive();return;}
   if(code==='KeyT'){const modes=Object.keys(RIDE_MODES);setRideMode(modes[(modes.indexOf(vehicle.rideMode)+1)%modes.length]);}
   if(code==='KeyR')recover();
   if(code==='KeyL')visitWaterfront();
@@ -82,8 +91,8 @@ const input=new Input(code=>{
   if(code==='KeyK'){if(vehicle.type==='cruiser'&&!deck.active){ui.toast('Leave the helm first','Slow down and press J / DECK to fish from the cockpit.');return;}if(!battle.active&&!activities.race&&!activities.challenge){fishing.hour=dayClock.hour;fishing.action(vehicle,deck.active?{...bodyPoint(vehicle,[deck.x,1.02,deck.z]),heading:vehicle.heading+deck.heading}:null);if(!fishing.active)ui.toast(fishing.message);}}
   if(code==='KeyB')startBattle();
   if(code==='KeyN')toggleBar();
-  if(code==='KeyF'&&['cruiser','racer'].includes(vehicle.type)){ui.toast('Big boat · free roam and fishing','Choose a smaller craft for the race.');return;}
-  if(code==='KeyG'&&['cruiser','racer'].includes(vehicle.type)){ui.toast('Big boat · free roam and fishing','Choose a smaller craft for the trick session.');return;}
+  if(code==='KeyF'&&['cruiser','racer','dive','rib'].includes(vehicle.type)){ui.toast('Big boat · free roam and fishing','Choose a smaller craft for the race.');return;}
+  if(code==='KeyG'&&['cruiser','racer','dive','rib'].includes(vehicle.type)){ui.toast('Big boat · free roam and fishing','Choose a smaller craft for the trick session.');return;}
   if(code==='KeyF'){fishing.cancel();battle.cancel();activities.startRace(vehicle);}
   if(code==='KeyG'){fishing.cancel();battle.cancel();activities.startChallenge();}
 });
@@ -94,13 +103,13 @@ const ui=new UI(settings,{
   colour(index){settings.colour=index;saveSettings(settings);replaceModel();ui.selectVehicle();},
   loadout(key,value){const options=key==='design'?DESIGNS:TUNING;if(!options[value]||!hasUnlock(settings,options[value]))return;settings[key]=value;vehicle.tuning=settings.tuning;saveSettings(settings);replaceModel();ui.selectVehicle();},
   setting(key,value){if(key==='dayMode'){settings.dayMode=value;dayClock.setMode(value);fishing.hour=dayClock.hour;saveSettings(settings);ui.toast(dayClock.status.label,dayClock.status.fishing.label);return;}if(key==='seaState'){settings.seaState=value;setSeaState(value,simulationTime);saveSettings(settings);ui.toast(SEA_STATES[value].name,'Water conditions change smoothly. Faster crests can launch wave hops.');return;}if(key==='rideMode'){setRideMode(value);return;}settings[key]=value;saveSettings(settings);if(key==='quality')applyQuality();},
-  race(){if(['cruiser','racer'].includes(vehicle.type)){ui.toast('Choose a smaller craft for canal racing');return;}if(state==='playing'&&!police?.impounded){fishing.cancel();battle.cancel();activities.startRace(vehicle);}},challenge(){if(['cruiser','racer'].includes(vehicle.type)){ui.toast('Choose a smaller craft for tricks');return;}if(state==='playing'&&!police?.impounded){fishing.cancel();battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,watchPolice,meetPolice,meetLocals,visitFishing,visitWaterfront,visitDolphins,visitCoast,visitSpeedRun,meetBigBoats,
+  race(){if(diving.active)return;if(['cruiser','racer','dive','rib'].includes(vehicle.type)){ui.toast('Choose a smaller craft for canal racing');return;}if(state==='playing'&&!police?.impounded){fishing.cancel();battle.cancel();activities.startRace(vehicle);}},challenge(){if(diving.active)return;if(['cruiser','racer','dive','rib'].includes(vehicle.type)){ui.toast('Choose a smaller craft for tricks');return;}if(state==='playing'&&!police?.impounded){fishing.cancel();battle.cancel();activities.startChallenge();}},battle:startBattle,bar:toggleBar,visitBar,visitPontoons,visitUpstream,watchPolice,meetPolice,meetLocals,visitFishing,visitWaterfront,visitDolphins,visitCoast,visitSpeedRun,meetBigBoats,
 });
 new TouchControls(input);
 let lastCreator=false,onlineSinking=0,wasOnlineSinking=false;
 let economyAccount=null;
-const online=new OnlineClient({getPose:()=>{const pose=packPose(vehicle,settings,deck,state!=='home'&&state!=='workshop',simulationTime,state==='playing'&&!battle.sinking&&!onlineSinking&&!police?.impounded);if(['dinghy','skua'].includes(pose.type)&&online.room?.craftVersion!==2)pose.type='tinny';return pose;},onChange(s){
- if(s.accountId!==economyAccount){economyAccount=s.accountId;economy.switchAccount(s.accountId);vehicle.workshop=economy.effects(vehicle.type);workshopUI?.render();}
+const online=new OnlineClient({getPose:()=>{const pose=packPose(vehicle,settings,deck,state!=='home'&&state!=='workshop',simulationTime,state==='playing'&&!battle.sinking&&!onlineSinking&&!police?.impounded);if(vehicle.config.diveBoat)pose.type='cruiser';if(diving.active){pose.deck=true;pose.deckX=0;pose.deckZ=-3;pose.spray=[];}if(['dinghy','skua'].includes(pose.type)&&online.room?.craftVersion!==2)pose.type='tinny';return pose;},onChange(s){
+ if(s.accountId!==economyAccount||economy.creator!==(s.creator===true)){if(s.accountId!==economyAccount){if(diving.active)endDive(true);economyAccount=s.accountId;economy.switchAccount(s.accountId);}economy.setCreator(s.creator===true);vehicle.workshop=economy.effects(vehicle.type);workshopUI?.render();}
  if(s.creator===lastCreator)return;lastCreator=s.creator;
  if(!s.creator)validLoadout(settings);vehicle.tuning=settings.tuning;
  if(s.creator&&pendingCreatorCraft){const type=pendingCreatorCraft;pendingCreatorCraft=null;selectCraft(type);}
@@ -122,10 +131,20 @@ const onlineUI=new OnlineUI(online,{
 });
 const activities=new Activities(scene,settings,(title,subtitle)=>ui.toast(title,subtitle));
 activities.onTrick=(label,earned,time)=>economy.earn(label,earned,time);
+reefUI=new ReefUI(input,{trip:visitReef,enter:toggleDive,mode:()=>{diving.setMode(diving.mode==='snorkel'?'freedive':'snorkel');input.clear();},sell:sellReefCatch,market:visitFishMarket,fire:fireSpear});
+const aim=document.createElement('div');aim.id='reef-aim';document.getElementById('hud').append(aim);
 workshopUI=new WorkshopUI(economy,()=>vehicle.type,()=>{vehicle.workshop=economy.effects(vehicle.type);},leaveWharf);
 const wharfHud=document.createElement('div');wharfHud.id='wharf-hud';wharfHud.innerHTML='<button id="find-wharf" class="secondary">DRY WHARF</button><span id="trick-wallet"></span><small id="wharf-distance"></small>';document.getElementById('hud').append(wharfHud);document.getElementById('find-wharf').onclick=visitWharf;
 const wharfShortcut=document.createElement('button');wharfShortcut.className='secondary';wharfShortcut.id='visit-dry-wharf';wharfShortcut.textContent='DRY WHARF · UPGRADES';wharfShortcut.onclick=visitWharf;document.querySelector('.settings-footer').append(wharfShortcut);
-function visitWharf(){if(!ready||police?.impounded||state==='workshop')return;if(police?.remaining||onlineSinking){ui.toast('Get clear first','Escape the patrol and stay afloat before using the wharf.');return;}deck.reset();fishing.cancel();battle.cancel();activities.cancel();vehicle.respawnAt(dryWharf.approach,simulationTime);spray.clear();input.clear();chase.reset();resume();ui.toast('Dry wharf ahead','Drive between the gold markers. Slow below 9 km/h and stop in the centre to raise your boat.');}
+function reefTravelAllowed(){if(diving.active){ui.toast('Return to the boat first','B / BOARD at the surface, or R for rescue.');return false;}if(fisheries.state==='pursuit'){ui.toast('Fisheries inspection','Stop to be inspected or escape by driving clear.');return false;}return true;}
+function visitReef(){if(!ready||state==='workshop'||police?.impounded||!reefTravelAllowed())return;if(police.remaining||onlineSinking){ui.toast('Get clear and afloat first');return;}if(!vehicle.config.diveBoat){ui.toast('Choose a dive boat','CHANGE WATERCRAFT → REEF BUDDY or REEF SCOUT RIB');return;}deck.reset();fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;vehicle.respawnAt(REEF.launch,simulationTime);input.clear();spray.clear();chase.reset();resume();diving.say('Buddy Reef · B / ENTER WATER · snorkel or freedive · game bag limit 8');}
+function toggleDive(){if(!ready||state!=='playing'||police?.impounded||onlineSinking)return;if(diving.active){endDive(false);return;}if(police.remaining||fisheries.state==='pursuit'){ui.toast('Get clear of the patrol before diving');return;}if(diving.start(vehicle)){fishing.cancel();battle.cancel();activities.cancel();deck.reset();input.clear();input.lookPitch=-.35;vehicle.vx=vehicle.vz=vehicle.speed=vehicle.throttle=0;vehicle.previous=vehicle.snapshot();spray.clear();}else ui.toast('Reef diving',diving.message);}
+function endDive(rescue=false){if(diving.board(vehicle,rescue)){diving.rescueNeeded=false;input.clear();input.orbit=0;input.lookPitch=0;chase.reset();ui.toast('Back aboard',diving.message);}}
+function fireSpear(){if(state==='playing'&&diving.active)diving.fire(input,simulationTime,economy.status.catchCount);}
+function nearFishMarket(){return Math.hypot(vehicle.x-SPAWN.x,vehicle.z-SPAWN.z)<42&&vehicle.speed<1.5;}
+function visitFishMarket(){if(!ready||state==='workshop'||police?.impounded||!reefTravelAllowed())return;if(police.remaining||onlineSinking){ui.toast('Get clear and afloat first');return;}deck.reset();fishing.cancel();battle.cancel();activities.cancel();vehicle.respawnAt(SPAWN,simulationTime);input.clear();spray.clear();chase.reset();resume();diving.say('Wharf fish market · stop beside the marker and SELL CATCH');}
+function sellReefCatch(){if(state!=='playing'||diving.active||!nearFishMarket()||fisheries.state==='pursuit'||police?.impounded)return;const amount=economy.sellCatch();diving.say(amount?`Catch sold for $${amount} · spend it at the dry wharf`:'Catch box empty · head to Buddy Reef');if(amount)ui.toast('Catch sold',`+$${amount} upgrade money`);}
+function visitWharf(){if(!reefTravelAllowed())return;if(!ready||police?.impounded||state==='workshop')return;if(police?.remaining||onlineSinking){ui.toast('Get clear first','Escape the patrol and stay afloat before using the wharf.');return;}deck.reset();fishing.cancel();battle.cancel();activities.cancel();vehicle.respawnAt(dryWharf.approach,simulationTime);spray.clear();input.clear();chase.reset();resume();ui.toast('Dry wharf ahead','Drive between the gold markers. Slow below 9 km/h and stop in the centre to raise your boat.');}
 function enterWharf(){deck.reset();fishing.cancel();battle.cancel();activities.cancel();state='workshop';leavingWharf=false;vehicle.respawnAt(wharfPoint(0,0),simulationTime);vehicle.previous=vehicle.snapshot();input.clear();spray.clear();dryWharf.target=1;workshopUI.show();chase.reset();document.body.classList.add('in-workshop');}
 function leaveWharf(){if(state!=='workshop'||leavingWharf)return;workshopUI.hide();dryWharf.target=0;leavingWharf=true;input.clear();}
 
@@ -133,30 +152,30 @@ const battle=new SprayBattle(scene,event=>{
   if(event.type==='score')activities.event(event);
   else{if(event.type==='battle-sink'){activities.combo=0;activities.comboTime=0;input.clear();}if(event.type==='battle-recover'){input.clear();spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();people?.flood.clearSpray();}ui.toast(event.label,event.detail);}
 });
-function updateHud(dt){updateFishingHud();document.getElementById('day-clock').textContent=`${dayClock.status.clock} · ${dayClock.status.label} · ${dayClock.status.fishing.label}`;ui.update(dt,vehicle,activities,fps,qualityName,battle.status,oceanReport(simulationTime),playground.status,barGuide.status(vehicle),environment.userData.moorings.status,locals?.status,cruisers?.status,police?.status);}
-function startBattle(){
+function updateHud(dt){updateFishingHud();reefUI.update(diving.status,economy.status,vehicle,nearFishMarket(),state==='playing',fisheries.status);document.getElementById('day-clock').textContent=`${dayClock.status.clock} · ${dayClock.status.label} · ${dayClock.status.fishing.label}`;ui.update(dt,vehicle,activities,fps,qualityName,battle.status,oceanReport(simulationTime),playground.status,barGuide.status(vehicle),environment.userData.moorings.status,locals?.status,cruisers?.status,police?.status);}
+function startBattle(){if(diving.active)return;
   if(police?.impounded)return;
-  if(['cruiser','racer'].includes(vehicle.type)){ui.toast('Offshore craft · free roam','Choose a smaller craft for spray battles.');return;}
+  if(['cruiser','racer','dive','rib'].includes(vehicle.type)){ui.toast('Offshore craft · free roam','Choose a smaller craft for spray battles.');return;}
   if(state!=='playing')return;fishing.cancel();activities.cancel();battle.start(vehicle);
   // The first rival frame can compile shaders on slower devices. Show the
   // new mode and water meter immediately instead of waiting for that frame.
   updateHud(0);
 }
-function toggleBar(){
+function toggleBar(){if(diving.active)return;
   if(state!=='playing'||!barGuide)return;
   barGuide.toggle(vehicle);
   if(barGuide.active){battle.cancel();activities.cancel();if(settings.seaState==='calm'){settings.seaState='swell';setSeaState('swell',simulationTime);saveSettings(settings);document.getElementById('sea-state').value='swell';}
     ui.toast('Route to the bar marked','Follow the orange route out between the rock walls, then left outside the entrance. Calm seas switch to Rolling swell.');
   }else ui.toast('Bar guide off');
 }
-function visitBar(){
+function visitBar(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
   fishing.cancel();
   if(!ready||!barGuide)return;
   battle.cancel();activities.cancel();activities.combo=0;activities.comboTime=0;vehicle.respawnAt(BAR_LAUNCH,simulationTime);
   spray.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();people?.flood.clearSpray();chase.reset();input.clear();barGuide.active=false;resume();toggleBar();ui.toast('At the bar wave zone','Orange buoys mark the bank. Carry speed across the crests. Pause → Rolling swell for larger sets.');
 }
-function visitPontoons(){
+function visitPontoons(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
   fishing.cancel();
   if(!ready)return;
@@ -166,7 +185,7 @@ function visitPontoons(){
   battle.cancel();activities.cancel();vehicle.respawnAt(spawn,simulationTime);spray.clear();environment.userData.moorings.clearSpray();locals.flood.clearSpray();people?.flood.clearSpray();chase.reset();input.clear();resume();
   ui.toast('House pontoon run','Carve alongside and land spray inside the tender. Watch its water meter.');
 }
-function visitUpstream(){
+function visitUpstream(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
   fishing.cancel();
   if(!ready)return;
@@ -174,7 +193,7 @@ function visitUpstream(){
   vehicle.respawnAt(UPSTREAM_LAUNCH,simulationTime);spray.clear();environment.userData.moorings.clearSpray();locals.flood.clearSpray();people?.flood.clearSpray();chase.reset();input.clear();barGuide.active=false;resume();
   ui.toast('Upstream · Wyuna Canal','Explore the added canal reach and river bends. You can cruise back toward the Wharf.');
 }
-function meetLocals(){
+function meetLocals(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
   fishing.cancel();
   if(!ready)return;settings.locals=true;saveSettings(settings);document.getElementById('locals').value='on';
@@ -189,7 +208,7 @@ function toggleHelm(){
  if(!deck.toggle(vehicle)){ui.toast('Slow below 5 km/h to leave the helm');return;}
  fishing.cancel();input.clear();chase.reset();ui.toast(deck.active?'Walking the cockpit':'Back at the helm',deck.active?'WASD / arrows & GO walk · K / FISH casts · J returns to helm':'WASD drives · J leaves the helm when stopped');
 }
-function visitFishing(){
+function visitFishing(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
   if(!ready)return;fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;
   deck.reset();vehicle.respawnAt(FISHING_LAUNCH,simulationTime);spray.clear();locals.flood.clearSpray();people?.flood.clearSpray();chase.reset();input.clear();resume();
@@ -206,31 +225,32 @@ function updateFishingHud(){
   document.getElementById('fish-record').textContent=`${settings.fishCaught} released · best ${settings.bestFishKg?settings.bestFishKg+' kg '+settings.bestFishSpecies:'—'} · ${dayClock.status.fishing.label}`;
   document.getElementById('fishing-meters').classList.toggle('hidden',f.phase!=='hooked');
 }
-function meetBigBoats(){
+function meetBigBoats(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
  if(!ready)return;settings.locals=true;saveSettings(settings);document.getElementById('locals').value='on';cruisers.setEnabled(true);const spawn=cruisers.meetPosition(vehicle);if(!spawn){ui.toast('No clear big-boat approach','Try from the open estuary.');return;}
  deck.reset();fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;vehicle.respawnAt(spawn,simulationTime);spray.clear();cruisers.flood.clearSpray();chase.reset();input.clear();resume();ui.toast('Big boat spray pass','Hold U / REAR to look back. Land the falling rear plume inside the open cockpit; sharp side fans also count.');
 }
-function visitSpeedRun(){
+function visitSpeedRun(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
  if(!ready)return;deck.reset();fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;vehicle.respawnAt(OFFSHORE_RUN.start,simulationTime);spray.clear();people.flood.clearSpray();locals.flood.clearSpray();chase.reset();input.clear();resume();ui.toast('Offshore speed run','Long clear water ahead. W / GO accelerates; S / BRAKE slows down. R recovers.');
 }
-function visitCoast(id){
+function visitCoast(id){if(!reefTravelAllowed())return;
  if(police?.impounded)return;
  if(!ready)return;const place=mapData.coastalExtension.destinations.find(p=>p.id===id);if(!place||collision(place.x,place.z,9,0))return;
  deck.reset();fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;vehicle.respawnAt(place,simulationTime);spray.clear();people.flood.clearSpray();locals.flood.clearSpray();chase.reset();input.clear();resume();ui.toast(place.name,'Cruise north along the beach, or head south towards Mooloolaba and the river mouth.');
 }
-function visitDolphins(){
+function visitDolphins(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
  if(!ready)return;const spawn=dolphins.approach(simulationTime,collision);if(!spawn){ui.toast('Dolphins are beyond the bar','Visit the offshore fishing grounds.');return;}
  settings.camera=1;deck.reset();fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;vehicle.respawnAt(spawn,simulationTime);spray.clear();people.flood.clearSpray();locals.flood.clearSpray();chase.reset();input.clear();resume();ui.toast('Dolphin watch · look ahead','A pod surfaces and breaches here. Slow down and watch; O returns here, L visits waterfront walkers.');
 }
-function visitWaterfront(){
+function visitWaterfront(){if(!reefTravelAllowed())return;
   if(police?.impounded)return;
  if(!ready)return;const spawn=people.approach(collision);if(!spawn){ui.toast('Explore the Wharf jetties');return;}
  people.focusId=spawn.targetId;people.focusUntil=simulationTime+40;deck.reset();fishing.cancel();battle.cancel();activities.cancel();vehicle.respawnAt(spawn,simulationTime);spray.clear();people.flood.clearSpray();locals.flood.clearSpray();people?.flood.clearSpray();chase.reset();input.clear();resume();ui.toast('Waterfront walkers','Carve alongside the jetty to send falling spray onto the deck. People get back up after a tumble.');
 }
 function selectCraft(type){
+ if(diving.active)endDive(true);
  const position=garageReturn||(state!=='home'?vehicle.snapshot():null);deck.reset();fishing.cancel();settings.vehicle=type;vehicle.setType(type);vehicle.workshop=economy.effects(type);vehicle.setTrim(settings[trimKey(type)]);if(position)vehicle.respawnAt(position,simulationTime);replaceModel();ui.selectVehicle();chase.reset();saveSettings(settings);
 }
 function replaceModel(){
@@ -257,6 +277,7 @@ function play(){
   ui.toast(returning?'Back in your spot':vehicle.type==='racer'?'Offshore speed run · 500 km/h arcade':'Launched beside The Wharf',vehicle.type==='cruiser'?(isTouchDevice()?'GO drives · DECK switches to walking when stopped · FISH casts':'WASD drives · J switches helm / deck · K casts · SPACE reels'):isTouchDevice()?'Hold GO to drive · arrows steer · tap LIFT for bow rides':'WASD to drive · T riding mode · Q/E trim · H for moves');
 }
 function home(show=true){
+ if(diving.active)endDive(true);
   if(state==='workshop')return;
   fishing.cancel();
   if(!show)return;deck.reset();if(state!=='home')garageReturn=vehicle.snapshot();ui.updateGarage();state='home';if(barGuide)barGuide.active=false;battle.cancel();activities.cancel();input.clear();spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();people?.flood.clearSpray();chase.reset();ui.show('home',true);ui.show('hud',false);ui.show('pause',false);
@@ -265,11 +286,11 @@ function policeBoaters(){return [...online.remote.players.values()].flatMap(r=>{
 function watchPolice(){if(police?.impounded)return;meetPolice();ui.toast('Patrol watch','Police only pursue players after witnessing speeding or dangerous spray. AI boaters are not suspects.');}
 function policeEvent(e){
  ui.toast(e.label,e.detail);
- if(e.type==='impound'){input.clear();deck.reset();battle.cancel();fishing.cancel();activities.cancel();vehicle.vx=0;vehicle.vz=0;vehicle.speed=0;vehicle.throttle=0;vehicle.previous=vehicle.snapshot();spray.clear();}
+ if(e.type==='impound'){if(diving.active)endDive(true);input.clear();deck.reset();battle.cancel();fishing.cancel();activities.cancel();vehicle.vx=0;vehicle.vz=0;vehicle.speed=0;vehicle.throttle=0;vehicle.previous=vehicle.snapshot();spray.clear();}
  if(e.type==='released'){deck.reset();vehicle.respawnAt(SPAWN,simulationTime);input.clear();spray.clear();chase.reset();}
 }
-function meetPolice(){if(!ready||police?.impounded)return;const p=police.meetPosition();if(!p)return;deck.reset();fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;vehicle.respawnAt(p,simulationTime);spray.clear();input.clear();chase.reset();resume();}
-function recover(){if(police?.impounded)return;deck.reset();fishing.cancel();battle.recover();vehicle.recover(true);spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();people?.flood.clearSpray();input.clear();chase.reset();activities.combo=0;activities.comboTime=0;ui.toast('Back in safe water','Fresh start. Send it again.');if(state==='paused')resume();}
+function meetPolice(){if(!reefTravelAllowed())return;if(!ready||police?.impounded)return;const p=police.meetPosition();if(!p)return;deck.reset();fishing.cancel();battle.cancel();activities.cancel();barGuide.active=false;vehicle.respawnAt(p,simulationTime);spray.clear();input.clear();chase.reset();resume();}
+function recover(){if(diving.active){endDive(true);return;}if(police?.impounded)return;deck.reset();fishing.cancel();battle.recover();vehicle.recover(true);spray?.clear();environment?.userData.moorings?.clearSpray();locals?.flood.clearSpray();people?.flood.clearSpray();input.clear();chase.reset();activities.combo=0;activities.comboTime=0;ui.toast('Back in safe water','Fresh start. Send it again.');if(state==='paused')resume();}
 function showControls(){if(state==='controls')return;controlsFrom=state;state='controls';input.clear();ui.show('controls',true);}
 function closeControls(){ui.show('controls',false);state=controlsFrom;input.clear();last=performance.now();}
 function mute(){settings.muted=!settings.muted;saveSettings(settings);ui.toast(settings.muted?'Audio muted':'Audio on');}
@@ -282,7 +303,7 @@ try {
   const atmosphere=createAtmosphere(scene,renderer);
   hemi=new THREE.HemisphereLight('#c1dcff','#4c6950',.62);scene.add(hemi);
   sun=new THREE.DirectionalLight('#ffe4bc',3.05);sun.castShadow=true;scene.add(sun);scene.add(sun.target);
-  applyQuality();environment=buildEnvironment(scene,QUALITY[qualityName]);dryWharf=new DryWharf(scene,solids);environment.userData.moorings.onEvent=e=>{if(e.points)activities.event({type:'score',label:e.label,points:e.points});ui.toast(e.label,e.detail);};playground=new CanalPlayground(scene,solids,e=>activities.event(e));barGuide=new BarGuide(scene,solids);water=new Water(scene,QUALITY[qualityName]);spray=new Spray(scene,QUALITY[qualityName]);locals=new LocalBoaters(scene,collision,e=>ui.toast(e.label,e.detail));solids.push(...locals.colliders);police=new PoliceView(scene,collision,policeEvent);solids.push(...police.colliders);cruisers=new SportfishingTraffic(collision,e=>ui.toast(e.label,e.detail));solids.push(...cruisers.colliders);offshore=new OffshoreView(scene,cruisers,fishing);speedRun=new SpeedRun(scene);dolphins=new Dolphins(scene,visitLabel('DOLPHIN POD ↓'));people=new WaterfrontPeople(scene,e=>ui.toast(e.label,e.detail));replaceModel();
+  applyQuality();environment=buildEnvironment(scene,QUALITY[qualityName]);dryWharf=new DryWharf(scene,solids);environment.userData.moorings.onEvent=e=>{if(e.points)activities.event({type:'score',label:e.label,points:e.points});ui.toast(e.label,e.detail);};playground=new CanalPlayground(scene,solids,e=>activities.event(e));barGuide=new BarGuide(scene,solids);water=new Water(scene,QUALITY[qualityName]);spray=new Spray(scene,QUALITY[qualityName]);locals=new LocalBoaters(scene,collision,e=>ui.toast(e.label,e.detail));solids.push(...locals.colliders);police=new PoliceView(scene,collision,policeEvent);solids.push(...police.colliders);cruisers=new SportfishingTraffic(collision,e=>ui.toast(e.label,e.detail));solids.push(...cruisers.colliders);offshore=new OffshoreView(scene,cruisers,fishing);speedRun=new SpeedRun(scene);reefView=new ReefView(scene);camera.add(reefView.gun);scene.add(camera);fisheriesModel=makeVehicle('rib','#3c715f');scene.add(fisheriesModel);const fisheriesLabel=visitLabel('FISHERIES · BAG LIMIT 8');fisheriesLabel.visible=true;fisheriesLabel.position.y=3.5;fisheriesLabel.scale.set(5.5,.9,1);fisheriesModel.add(fisheriesLabel);fisheriesModel.userData.label=fisheriesLabel;marketMarker=visitLabel('WHARF FISH MARKET · SELL CATCH');marketMarker.visible=true;marketMarker.position.set(SPAWN.x,4,SPAWN.z);scene.add(marketMarker);dolphins=new Dolphins(scene,visitLabel('DOLPHIN POD ↓'));people=new WaterfrontPeople(scene,e=>ui.toast(e.label,e.detail));replaceModel();
   document.getElementById('loading').textContent='Loading coastal textures and watercraft…';
   Promise.all([loadCraftAssets(),loadSurfaceTextures().then(report=>{atmosphere.refreshEnvironment();if(report.failed.length)console.warn('Surface texture fallback:',report.failed.join(', '));})]).then(()=>{replaceModel();ready=true;ui.ready();}).catch(error=>{console.warn('Detailed craft load failed',error);ready=true;ui.ready();ui.toast('Lightweight craft loaded','The detailed model could not load. Reload to try again.');});
   // Restore existing accounts without opening the menu or blocking solo launch.
@@ -296,15 +317,15 @@ try {
     const impound=police.tickImpound();document.body.classList.toggle('impounded',impound>0);document.getElementById('impound-seconds').textContent=String(Math.ceil(impound));
     dryWharf.update(dt);
     if(state==='workshop'&&leavingWharf&&dryWharf.lift<.001){leavingWharf=false;dryWharf.cooldown=8;dockHold=0;vehicle.respawnAt({...wharfPoint(0,0),heading:DRY_WHARF.heading+Math.PI},simulationTime);document.body.classList.remove('in-workshop');state='paused';resume();chase.reset();}
-    const wallet=economy.status;document.getElementById('trick-wallet').textContent=`$${wallet.balance.toLocaleString()} TRICK MONEY`;const wharfDistance=Math.hypot(vehicle.x-DRY_WHARF.x,vehicle.z-DRY_WHARF.z);document.getElementById('wharf-distance').textContent=wharfDistance<60?'BAY ENTRY · SLOW BELOW 9 KM/H':Math.round(wharfDistance)+' m';
+    const wallet=economy.status;document.getElementById('trick-wallet').textContent=`$${wallet.balance.toLocaleString()} UPGRADE MONEY`;const wharfDistance=Math.hypot(vehicle.x-DRY_WHARF.x,vehicle.z-DRY_WHARF.z);document.getElementById('wharf-distance').textContent=wharfDistance<60?'BAY ENTRY · SLOW BELOW 9 KM/H':Math.round(wharfDistance)+' m';
     const combat=online.combat;onlineSinking=combat?.sinking||0;
-    if(onlineSinking&&!wasOnlineSinking){input.clear();activities.combo=0;activities.comboTime=0;spray.splash(vehicle,10);ui.toast('Swamped by another player','Relaunching in six seconds. Incoming spray counts automatically in online worlds.');}
+    if(onlineSinking&&!wasOnlineSinking){if(diving.active)endDive(true);input.clear();activities.combo=0;activities.comboTime=0;spray.splash(vehicle,10);ui.toast('Swamped by another player','Relaunching in six seconds. Incoming spray counts automatically in online worlds.');}
     if(!onlineSinking&&wasOnlineSinking){vehicle.recover(true);spray.clear();input.clear();chase.reset();ui.toast('Back afloat','A short shield gives you time to pull away.');}
     wasOnlineSinking=onlineSinking>0;
     document.getElementById('police-nearby').textContent=`POLICE · ${Math.round(Math.min(...police.units.map(u=>Math.hypot(u.v.x-vehicle.x,u.v.z-vehicle.z))))} m${Number.isFinite(police.status.speedLimit)?' · NO WAKE 22 KM/H':''}`;const chaseRemaining=police.remaining;document.getElementById('world-alert').textContent=impound?`IMPOUNDED · ${Math.ceil(impound)}s`:onlineSinking?`SWAMPED · relaunch ${Math.ceil(onlineSinking)}s`:combat?.shield>0?`RELAUNCH SHIELD · ${Math.ceil(combat.shield)}s`:combat?.water>1?`WATER ABOARD ${Math.round(combat.water)}%`:chaseRemaining>0?`POLICE → ${police.targetName?.toUpperCase()||'YOU'} · ${police.state==='search'?'ESCAPE IN '+Math.ceil(police.status.escapeIn)+'s':'BREAK LINE OF SIGHT'}${police.catchLoad>0?' · STOPPING RISK':''}`:'';
     if(state==='playing'){
       accumulator=Math.min(.12,accumulator+dt);
-      while(accumulator>=FIXED_STEP){simulationTime+=FIXED_STEP;dayClock.update(FIXED_STEP);fishing.hour=dayClock.hour;const controls=impound?{throttle:0,steer:0,trim:0}:input.sample(true);vehicle.deckMode=vehicle.type==='cruiser'&&deck.active;if(!battle.sinking&&!onlineSinking&&!impound)vehicle.update(FIXED_STEP,vehicle.deckMode?{throttle:0,steer:0,trim:0}:controls,simulationTime,ramps);if(vehicle.deckMode&&!impound)deck.update(FIXED_STEP,controls,fishing.active);battle.update(FIXED_STEP,vehicle,simulationTime);locals.update(FIXED_STEP,vehicle,simulationTime);police.update(FIXED_STEP,vehicle,simulationTime,policeBoaters());cruisers.update(FIXED_STEP,vehicle,simulationTime);fishing.update(FIXED_STEP,vehicle,input.held('Space'));people.update(FIXED_STEP,vehicle,simulationTime);environment.userData.moorings.update(FIXED_STEP,vehicle,simulationTime,!battle.sinking&&!vehicle.wipeout);activities.update(FIXED_STEP,vehicle);playground.update(FIXED_STEP,vehicle,simulationTime,!activities.race&&!battle.active);accumulator-=FIXED_STEP;const blocked=dryWharf.cooldown>0||police.remaining>0||impound>0||onlineSinking>0||battle.active||activities.race||activities.challenge;dockHold=canDock(vehicle,blocked)?dockHold+FIXED_STEP:0;if(dockHold>.7){enterWharf();accumulator=0;break;}}
+      while(accumulator>=FIXED_STEP){simulationTime+=FIXED_STEP;dayClock.update(FIXED_STEP);fishing.hour=dayClock.hour;const controls=impound?{throttle:0,steer:0,trim:0}:input.sample(true);vehicle.deckMode=diving.active||vehicle.type==='cruiser'&&deck.active;if(!battle.sinking&&!onlineSinking&&!impound)vehicle.update(FIXED_STEP,vehicle.deckMode?{throttle:0,steer:0,trim:0}:controls,simulationTime,ramps);if(deck.active&&!impound&&!diving.active)deck.update(FIXED_STEP,controls,fishing.active);battle.update(FIXED_STEP,vehicle,simulationTime);locals.update(FIXED_STEP,vehicle,simulationTime);police.update(FIXED_STEP,vehicle,simulationTime,policeBoaters());cruisers.update(FIXED_STEP,vehicle,simulationTime);fishing.update(FIXED_STEP,vehicle,input.held('Space'));people.update(FIXED_STEP,vehicle,simulationTime);environment.userData.moorings.update(FIXED_STEP,vehicle,simulationTime,!battle.sinking&&!vehicle.wipeout);if(!diving.active)activities.update(FIXED_STEP,vehicle);diving.update(FIXED_STEP,{...controls,orbit:input.orbit,lookPitch:input.lookPitch},simulationTime,waveHeight(diving.x||vehicle.x,diving.z||vehicle.z,simulationTime));if(diving.rescueNeeded)endDive(true);fisheries.update(FIXED_STEP,vehicle,economy.status.catchCount,diving.active,!!impound,collision);playground.update(FIXED_STEP,vehicle,simulationTime,!activities.race&&!battle.active);accumulator-=FIXED_STEP;const blocked=diving.active||fisheries.state==='pursuit'||dryWharf.cooldown>0||police.remaining>0||impound>0||onlineSinking>0||battle.active||activities.race||activities.challenge;dockHold=canDock(vehicle,blocked)?dockHold+FIXED_STEP:0;if(dockHold>.7){enterWharf();accumulator=0;break;}}
     }else if(state==='home'){simulationTime+=dt;vehicle.y=waveHeight(vehicle.x,vehicle.z,simulationTime)+vehicle.config.rideHeight;vehicle.pitch=Math.sin(simulationTime*.7)*.015+(vehicle.config.restPitch||0);vehicle.roll=Math.sin(simulationTime*.6)*.018+(vehicle.config.restRoll||0);}
     const alpha=state==='playing'?accumulator/FIXED_STEP:1,p=vehicle.previous;
     const render={...vehicle,x:THREE.MathUtils.lerp(p.x,vehicle.x,alpha),y:THREE.MathUtils.lerp(p.y,vehicle.y,alpha),z:THREE.MathUtils.lerp(p.z,vehicle.z,alpha),heading:THREE.MathUtils.lerp(p.heading,vehicle.heading,alpha),pitch:THREE.MathUtils.lerp(p.pitch,vehicle.pitch,alpha),roll:THREE.MathUtils.lerp(p.roll,vehicle.roll,alpha)};
@@ -320,7 +341,7 @@ try {
     }else model.userData.rider.userData.update(vehicle,dt,model.userData);
     model.userData.passenger?.userData.update(vehicle,dt);
     if(state==='playing'&&input.sample().trim===0)persistTrim();
-    speedRun.update(simulationTime,render);environment.userData.update?.(simulationTime,render);playground.render(simulationTime);barGuide.update(vehicle);barGuide.render(simulationTime);water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing'&&!battle.sinking&&!onlineSinking&&!police?.impounded,input.sample());battle.render(dt,simulationTime,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing');locals.render(dt,simulationTime,render,qualityName,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing',alpha);
+    speedRun.update(simulationTime,render);environment.userData.update?.(simulationTime,render);playground.render(simulationTime);barGuide.update(vehicle);barGuide.render(simulationTime);water.update(simulationTime,render.x,render.z,vehicle);spray.update(state==='playing'?dt:0,render,simulationTime,state==='playing'&&!diving.active&&!battle.sinking&&!onlineSinking&&!police?.impounded,input.sample());battle.render(dt,simulationTime,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing');locals.render(dt,simulationTime,render,qualityName,innerHeight,camera.fov,renderer.getPixelRatio(),state==='playing',alpha);
     const deckPoint=deck.active&&vehicle.type==='cruiser'?bodyPoint(render,[deck.x,1.02,deck.z]):null;
     const view=deckPoint?{...render,...deckPoint,type:'character',speed:0}:render;
     offshore.render(dt,simulationTime,deckPoint?{...view,y:view.y+.45,heading:render.heading+deck.heading}:render,qualityName,state==='playing');
@@ -330,17 +351,21 @@ try {
     const cameraView=state==='workshop'?{...view,heading:DRY_WHARF.heading+.85}:deckPoint?{...view,heading:render.heading+deck.heading,hullHeading:render.heading}:view;
     if(firstPerson&&isJet(vehicle.type))eye=jetRidingEye(render);
     else if(firstPerson&&eye){eye.x+=Math.sin(cameraView.heading)*.42;eye.z+=Math.cos(cameraView.heading)*.42;}
-    chase.update(dt,cameraView,input,state==='workshop'?0:onlineSinking?0:firstPerson?2:deckPoint?1:settings.camera,state==='home',eye,firstPerson&&fishing.active?offshore.float.position:null);
+    if(!diving.active)chase.update(dt,cameraView,input,state==='workshop'?0:onlineSinking?0:firstPerson?2:deckPoint?1:settings.camera,state==='home',eye,firstPerson&&fishing.active?offshore.float.position:null);
+    if(diving.active){const direction=diving.direction(input);camera.position.set(diving.x,diving.y,diving.z);camera.lookAt(diving.x+direction.x*10,diving.y+direction.y*10,diving.z+direction.z*10);camera.fov=82;camera.updateProjectionMatrix();}
+    atmosphere.setUnderwater(diving.active);
     const day=dayClock.status;atmosphere.update(simulationTime,camera.position,day);sun.color.set(day.sunColour);sun.intensity=day.sunIntensity;hemi.intensity=day.ambient;scene.fog.color.set(day.fog);water.setDay(day);
+    if(diving.active){scene.fog.color.set('#206b77');scene.fog.density=.032;scene.background=new THREE.Color('#206b77');hemi.intensity=Math.max(.9,day.ambient);document.getElementById('reef-aim').classList.toggle('ready',!!diving.target(input,simulationTime));}else{scene.fog.density=ART.hazeDensity;scene.background=new THREE.Color(day.fog);}
+    reefView.render(simulationTime,diving,diving.active?diving:render,waveHeight(REEF.launch.x,REEF.launch.z,simulationTime));fisheriesModel.visible=Math.hypot(vehicle.x-fisheries.x,vehicle.z-fisheries.z)<400;fisheriesModel.position.set(fisheries.x,waveHeight(fisheries.x,fisheries.z,simulationTime)+.1,fisheries.z);fisheriesModel.rotation.y=fisheries.heading;fisheriesModel.userData.label.visible=Math.hypot(vehicle.x-fisheries.x,vehicle.z-fisheries.z)>12;marketMarker.visible=state==='playing'&&!diving.active&&Math.hypot(vehicle.x-SPAWN.x,vehicle.z-SPAWN.z)<120;
     onlineWorld.update(dt,now,render,camera,{playing:state==='playing',firstPerson,eye,time:simulationTime});
     police.render(dt,simulationTime,render,state==='playing',camera);
     dolphins.render(simulationTime,render,qualityName);people.render(dt,simulationTime,render,qualityName);
     spray.resize(innerHeight,camera.fov,renderer.getPixelRatio());
     sun.position.set(vehicle.x+SUN_DIRECTION.x*400,SUN_DIRECTION.y*400,vehicle.z+SUN_DIRECTION.z*400);sun.target.position.set(vehicle.x,0,vehicle.z);
-    audio.update(vehicle,state==='playing');uiTime+=dt;if(uiTime>.09){updateHud(uiTime);uiTime=0;}
-    water.reflect(renderer,camera);renderer.render(scene,camera);
+    audio.update(vehicle,state==='playing'&&!diving.active);uiTime+=dt;if(uiTime>.09){updateHud(uiTime);uiTime=0;}
+    if(!diving.active)water.reflect(renderer,camera);renderer.render(scene,camera);
   }
   requestAnimationFrame(frame);
   // Read-only diagnostics for browser acceptance tests. No scoring or teleport cheats in the shipped game.
-  window.__ESTUARY__={get status(){return {ready,state,simulationTime,workshop:{...economy.status,type:vehicle.type,effects:economy.effects(vehicle.type),owned:[...economy.boat(vehicle.type).owned],active:{...economy.boat(vehicle.type).active},lift:dryWharf.lift,position:{x:DRY_WHARF.x,z:DRY_WHARF.z},docking:dockHold},online:{...online.status,remoteSprayMaxSpeed:Math.max(0,...[...onlineWorld.models.values()].flatMap(e=>(e.spray?.plume.packets||[]).filter(p=>p.active).map(p=>Math.hypot(p.vx,p.vz)))),visibleSprays:[...onlineWorld.models.values()].filter(e=>e.spray?.plume.mesh.visible||e.spray?.state.left>0||e.spray?.state.right>0).length,visibleCrafts:[...onlineWorld.models.values()].filter(e=>e.model.visible).length},police:police.status,features:'police-online-spray',day:dayClock.status,dolphins:{visible:dolphins.visible},pedestrians:{visible:people.visibleCount,focus:people.focusId,people:people.status},camera:{fov:camera.fov,rearView:!!chase.rearView,mode:settings.camera,position:{x:camera.position.x,y:camera.position.y,z:camera.position.z}},deck:{active:deck.active,x:deck.x,z:deck.z},fishing:fishing.status(vehicle),sportfishers:cruisers.status,locals:{...locals.status,visible:locals.visibleCount},moorings:environment.userData.moorings.status,bar:barGuide.status(vehicle),targets:playground.status,airTrick:{pose:vehicle.airTricks.pose,completed:[...vehicle.airTricks.completed]},battle:battle.status,seaState:settings.seaState,sea:oceanReport(simulationTime),scenery:environment.userData.stats,detailedCraft:!!(model?.userData.detailedModel||model?.userData.blenderShell),vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,roll:vehicle.roll,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,shaft:vehicle.shaft?{...vehicle.shaft}:null,womp:vehicle.womp,passengerAft:vehicle.passengerAft,hullCorrection:vehicle.hullCorrection,bounce:{load:vehicle.bounceLoad,compression:vehicle.bounceCompression,hits:vehicle.hullHits,lastHit:vehicle.lastHullHit},planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,waveLaunch:!!vehicle.waveLaunch,slip:vehicle.slip,wipeout:vehicle.wipeout,wipeoutReason:vehicle.wipeoutReason,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{waterImpacts:spray.waterImpacts,turnGate:spray.state.turnGate,rearPlume:spray.plume.mesh.visible,fallingPackets:spray.plume.falling,plumePackets:spray.plume.geometry.instanceCount,left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,graphics:{textures:surfaceTextureStatus(),pixelRatio:renderer.getPixelRatio(),shadows:renderer.shadowMap.enabled,shadowSize:sun.shadow.mapSize.x,reflectionHz:water.reflectionHz,reflectionCaptures:water.reflectionCaptures,groundContacts:environment.userData.stats.contactShadows},fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
+  window.__ESTUARY__={get status(){return {ready,state,simulationTime,diving:{...diving.status,fish:diving.active?Array.from({length:24},(_,i)=>({...reefFish(i,simulationTime),index:i,available:(diving.cooldowns.get(i)||0)<=simulationTime})):[],aim:{heading:diving.heading+input.orbit,pitch:input.lookPitch},target:diving.target(input,simulationTime)?{...diving.target(input,simulationTime).fish,index:diving.target(input,simulationTime).index}:null},fisheries:fisheries.status,workshop:{...economy.status,type:vehicle.type,effects:economy.effects(vehicle.type),owned:[...economy.boat(vehicle.type).owned],active:{...economy.boat(vehicle.type).active},lift:dryWharf.lift,position:{x:DRY_WHARF.x,z:DRY_WHARF.z},docking:dockHold},online:{...online.status,remoteSprayMaxSpeed:Math.max(0,...[...onlineWorld.models.values()].flatMap(e=>(e.spray?.plume.packets||[]).filter(p=>p.active).map(p=>Math.hypot(p.vx,p.vz)))),visibleSprays:[...onlineWorld.models.values()].filter(e=>e.spray?.plume.mesh.visible||e.spray?.state.left>0||e.spray?.state.right>0).length,visibleCrafts:[...onlineWorld.models.values()].filter(e=>e.model.visible).length},police:police.status,features:'police-online-spray',day:dayClock.status,dolphins:{visible:dolphins.visible},pedestrians:{visible:people.visibleCount,focus:people.focusId,people:people.status},camera:{fov:camera.fov,rearView:!!chase.rearView,mode:settings.camera,position:{x:camera.position.x,y:camera.position.y,z:camera.position.z}},deck:{active:deck.active,x:deck.x,z:deck.z},fishing:fishing.status(vehicle),sportfishers:cruisers.status,locals:{...locals.status,visible:locals.visibleCount},moorings:environment.userData.moorings.status,bar:barGuide.status(vehicle),targets:playground.status,airTrick:{pose:vehicle.airTricks.pose,completed:[...vehicle.airTricks.completed]},battle:battle.status,seaState:settings.seaState,sea:oceanReport(simulationTime),scenery:environment.userData.stats,detailedCraft:!!(model?.userData.detailedModel||model?.userData.blenderShell),vehicle:vehicle.type,position:{x:vehicle.x,y:vehicle.y,z:vehicle.z},speed:vehicle.speed,forwardSpeed:vehicle.vx*Math.sin(vehicle.heading)+vehicle.vz*Math.cos(vehicle.heading),throttle:vehicle.throttle,heading:vehicle.heading,pitch:vehicle.pitch,roll:vehicle.roll,rideMode:vehicle.rideMode,trim:vehicle.trimDegrees,trimIndex:vehicle.trimIndex,shaft:vehicle.shaft?{...vehicle.shaft}:null,womp:vehicle.womp,passengerAft:vehicle.passengerAft,hullCorrection:vehicle.hullCorrection,bounce:{load:vehicle.bounceLoad,compression:vehicle.bounceCompression,hits:vehicle.hullHits,lastHit:vehicle.lastHullHit},planing:vehicle.planing,wettedFraction:vehicle.wettedFraction,drive:{...vehicle.drive},airborne:vehicle.airborne,waveLaunch:!!vehicle.waveLaunch,slip:vehicle.slip,wipeout:vehicle.wipeout,wipeoutReason:vehicle.wipeoutReason,score:activities.score,liveParticles:spray.particles.filter(p=>p.life>0).length,spray:{waterImpacts:spray.waterImpacts,turnGate:spray.state.turnGate,rearPlume:spray.plume.mesh.visible,fallingPackets:spray.plume.falling,plumePackets:spray.plume.geometry.instanceCount,left:spray.state.left,right:spray.state.right,wakeSamples:spray.wake.history.length,reflections:!!water.reflector},race:activities.race?{...activities.race}:null,challenge:activities.challenge?{...activities.challenge}:null,quality:qualityName,graphics:{textures:surfaceTextureStatus(),pixelRatio:renderer.getPixelRatio(),shadows:renderer.shadowMap.enabled,shadowSize:sun.shadow.mapSize.x,reflectionHz:water.reflectionHz,reflectionCaptures:water.reflectionCaptures,groundContacts:environment.userData.stats.contactShadows},fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,settings:{...settings}};}};
 } catch(error){console.error(error);ui.error(`WebGL could not start: ${error.message}. Use a current Chrome, Edge, Firefox or Safari with hardware acceleration enabled.`);}
