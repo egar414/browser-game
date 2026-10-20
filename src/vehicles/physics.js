@@ -100,7 +100,7 @@ export class VehiclePhysics {
       const forwardForce=forceX*fx+forceZ*fz;
       if((forward>c.maxSpeed&&forwardForce>0)||(forward<-c.reverseMax&&forwardForce<0)){forceX-=fx*forwardForce;forceZ-=fz*forwardForce;}
       this.vx+=forceX/driveConfig.effectiveMass*dt;this.vz+=forceZ/driveConfig.effectiveMass*dt;
-      const grip = TUNING[this.tuning].grip*(input.freestyle ? c.slideGrip : c.lateralGrip)*(1-.18*this.planing)*(1+apexSpeed*(APEX_HANDLING.highSpeedGrip-1)*(input.freestyle?.35:1));
+      const grip = TUNING[this.tuning].grip*(this.workshop?.grip||1)*(input.freestyle ? c.slideGrip : c.lateralGrip)*(1-.18*this.planing)*(1+apexSpeed*(APEX_HANDLING.highSpeedGrip-1)*(input.freestyle?.35:1));
       const lateral = (this.vx * fz - this.vz * fx) * (1 - Math.exp(-grip * dt));
       this.vx -= fz * lateral; this.vz += fx * lateral;
       this.lateralAcceleration=damp(this.lateralAcceleration,-lateral/dt,10,dt);
@@ -120,7 +120,7 @@ export class VehiclePhysics {
       const decay=Math.exp(-yawDamping*sliding*dt);
       const torque=(this.drive.yawMoment||0)*sprayTurn.yawGain;
       const yawLimit=this.type==='hyper'?APEX_HANDLING.yawLimit/(1+this.speed/APEX_HANDLING.turnSpeedScale)*(1-apexSpeed*(1-APEX_HANDLING.highSpeedYawScale))*(1-apexSpeed*.75*(1-Math.abs(this.steer))):sprayTurn.yawLimit;
-      this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-yawLimit,yawLimit);
+      this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw*(this.workshop?.yaw||1)/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-yawLimit,yawLimit);
       if(this.type==='hyper'){
         const magnitude=Math.hypot(this.vx,this.vz),cap=forward<0?c.reverseMax:c.maxSpeed;
         if(magnitude>cap){this.vx*=cap/magnitude;this.vz*=cap/magnitude;}
@@ -189,11 +189,11 @@ export class VehiclePhysics {
       // around that support instead of submerging the transom a metre deep.
       const sternSupportLift=Math.sin(Math.max(0,this.pitch))*(isTinny(this.type)?c.length*TINNY_HANDLING.sternSupport+(c.length*.489-c.length*TINNY_HANDLING.sternSupport)*(this.shaftLoad||0)*clamp(1-Math.abs(this.steer)/.5,0,1):c.length*(handling?.sternSupport??.29))*clamp((this.pitch-.18)/.4,0,1);
       const supportError=water+sternSupportLift+sprayTurn.lift+bounce.lift-this.y;
-      const followingWater=waterVelocity*sprayTurn.damping*(hydro.waterFollow||0);
+      const followingWater=waterVelocity*sprayTurn.damping*(this.workshop?.damping||1)*(hydro.waterFollow||0);
       // Additional immersed volume supplies bounded reserve buoyancy as a crest
       // reaches the tube tops. This changes heave forces, not render position.
       const reserve=clamp(Math.max(0,supportError-(hydro.reserveDepth||Infinity))**2*(hydro.reserveBuoyancy||0),0,hydro.maxReserve||0);
-      const supportAcceleration=supportError*c.spring-this.vy*sprayTurn.damping+verticalReaction+followingWater+reserve;
+      const supportAcceleration=supportError*c.spring-this.vy*sprayTurn.damping*(this.workshop?.damping||1)+verticalReaction+followingWater+reserve;
       this.vy+=supportAcceleration*dt;
       this.y += this.vy * dt;constrainHullWater(this,time);hullContactSplash(this,dt,time);
       if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe(isTinny(this.type)?'Looped the tinny':'Over the balance point');

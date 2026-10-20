@@ -132,6 +132,7 @@ export class Propulsion {
         force.z=-dischargeDirection.z*thrust*dischargeScale;
       }
     }
+    for(const key of ['x','y','z'])force[key]*=v.workshop?.power||1;
     const localSide=force.x*Math.cos(v.heading)-force.z*Math.sin(v.heading);
     const mount=c.nozzleMount||c.motorMount;
     const yawMoment=mount[2]*localSide;

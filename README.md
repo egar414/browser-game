@@ -1156,3 +1156,40 @@ stay separate from static land batches so sinking moves the entire boat. Tall
 online fishing boats descend far enough to submerge their tower; local and
 remote views share that visual timing. Patrols stop searching after a remote
 suspect leaves the room.
+
+### Dry wharf and trick-money upgrades
+
+Use the **DRY WHARF** HUD button (or Pause → DRY WHARF · UPGRADES) to find the
+approach beside the Wharf. Drive between the gold markers, slow below 9 km/h
+and hold in the middle of the open bay. The lift raises the current boat onto
+its dry cradle and opens the parts menu. LOWER BOAT & LEAVE, or Escape, lowers
+the boat and faces the open exit. Driving is disabled while on the lift.
+A pursuit, impound, race, challenge, wipeout or airborne boat cannot enter.
+
+Banked vehicle tricks earn $1 of fictional trick money per 5 points, after the
+existing repeat penalty. Idle time, wipeouts, spray hits on other boats and
+repeated score messages do not generate money. The new wallet is separate from
+legacy garage XP. Basic parts improve steering, acceleration or ride damping.
+The higher power kit requires three distinct banked moves including clean air;
+the higher steering kit requires three Bow riders and six Spray carves. Both
+also need their basic part purchased first. Owned parts can be reinstalled or
+switched back to stock without another charge. Acceleration upgrades retain the
+original speed ceilings, including the Apex and Riptide arcade limits.
+
+Equipment is purchased for each craft separately. Wallets and purchases save in
+local storage per signed-in account, with a separate guest wallet. They are
+**device-local, client-managed progression**, not a server-authoritative or
+cross-device economy. Blocked storage falls back to session memory. While in
+the workshop, the boat is inactive in online rooms. No new owner SQL is needed.
+
+Video reward buttons are visibly disabled. There is no ad SDK, ad loading,
+watch-video simulation or video reward grant. Ad-based alternatives can be
+connected later after an ad provider and verified reward delivery are ready.
+Before monetising or syncing currency, move its authority to the backend.
+
+Tune prices, part effects and trick requirements in
+`src/systems/workshop-economy.js` (`UPGRADES`); adjust the bay and lift in
+`src/systems/dry-wharf.js` (`DRY_WHARF`). The desktop browser test drives into
+and out of the bay using real controls; purchase tests use a seeded wallet.
+Separate checks cover actual acceleration, trick award integration, persistent
+purchases, account isolation and landscape phone menu layout.

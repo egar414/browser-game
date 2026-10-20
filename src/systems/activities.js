@@ -34,8 +34,8 @@ export class Activities {
     this.combo=this.comboTime>0?Math.min(3,this.combo+.25):1;this.comboTime=7;
     const earned=Math.round(points*this.combo);this.score+=earned;
     if(this.challenge)this.challenge.score+=earned;
-    const unlocked=earnProgress(this.settings,earned);saveSettings(this.settings);
-    this.toast(event.label,`+${earned}  ·  ${this.combo.toFixed(2).replace(/\.00$/,'')}× combo${unlocked.length?' · Unlocked '+unlocked.join(', '):' · +garage XP'}`);
+    const unlocked=earnProgress(this.settings,earned);saveSettings(this.settings);const money=this.onTrick?.(event.label,earned,this.totalTime)||0;
+    this.toast(event.label,`+${earned}  ·  ${this.combo.toFixed(2).replace(/\.00$/,'')}× combo${unlocked.length?' · Unlocked '+unlocked.join(', '):' · +garage XP'}${money?' · +$'+money:''}`);
   }
   update(dt,v) {
     this.totalTime+=dt;this.comboTime=Math.max(0,this.comboTime-dt);if(!this.comboTime)this.combo=0;
