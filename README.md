@@ -10,55 +10,87 @@ asset service is required to play.
 
 ## Rats Reef surfing
 
-Choose **SURF REEF · YACHT / BOARDS** while playing, or from pause. The anchored
+Choose **SURF REEF · YACHT / BOARDS** in free roam or pause. The anchored
 flybridge yacht carries an original rescue ski on its stern lift. Launch and
-reload beside the yacht below 7 km/h. Choose a shortboard, bodyboard or big-wave
-gun; paddle physically from the yacht or use **LINE-UP PRACTICE**. The fictional
-outer reef has a peeling left, an exposed shelf and a roughly 6.3 m (20 ft)
-crest-to-trough game face. The yacht stays anchored; it is not a drivable boat.
+reload alongside below 7 km/h. Choose a shortboard, prone bodyboard or big-wave
+gun, paddle physically from the yacht, or use **LINE-UP PRACTICE**.
 
-- **WASD:** paddle / carve / drive the rescue ski.
-- **Space:** paddle, catch the face, then pump. **Shift:** stall on a board.
-- **B:** launch from the yacht, or step off a ski/rear seat.
-- **C:** face, chase and first-person cameras. Drag to orbit.
-- **R:** recover to the safe channel. Manual resets discard unbanked wave points.
-- Landscape phones have paddle/pump, stall, steering and role buttons.
+At the yacht, choose the nominal **2.2 m overhead** or **6.3 m big-reef** face,
+a left- or right-hand break and Forgiving / Standard / Expert assistance.
+Preferences save locally. Online rooms share the left-hand 2.2 m break so all
+clients sample matching water; personal difficulty remains adjustable.
 
-A clean wave exit banks surf/barrel points and existing upgrade money. Wipeouts
-lose the current wave. Each board has distinct speed, turn and stability tuning.
-Solo step-offs hand the ski to a local support pilot. For two human players, join
-the same authenticated online room: one launches the ski, the other approaches
-and chooses **JOIN REAR SEAT** while the pilot is below 11 km/h. The passenger
-chooses **STEP OFF** and surfs while the pilot continues. One human rear seat and
-one shared pilot are allowed. Disconnects recover the passenger to the channel.
+The fictional reef has a sequence of smoothly changing takeoff, hollow barrel,
+performance wall, softer shoulder, rebuilt pocket and air sections. Several
+continuous swells roll through a 1,060 m patch, staying broad offshore before
+shoaling into the reef. Period wrapping relabels the crests without respawning
+water. Paddling's camera faces the incoming set; **SWELL OVERVIEW** shows the
+whole approach. The exposed shelf is behind the riding area.
 
-No new SQL is needed for surfing: the existing authenticated, bounded movement
-RPC carries tagged board/ski roles and seat identity. Online wave timing uses a
-shared wall clock. Movement remains client-simulated and remote poses are
-interpolated; this is not a competitive authoritative surf server. Wave rewards
-use the existing device-local account wallet. Solo helper AI is local.
+- **WASD:** paddle / steer / drive the rescue ski. Angle down the wave after catching it.
+- **Space:** paddle and catch; tap after loading a down/up line to pump. Holding it
+  cannot repeatedly add pump energy. Pump returns are capped and require loading.
+- **Shift:** crouch and stall. Forgiving mode helps crouch inside the barrel;
+  Expert requires manual stance and has stricter landing and whitewater limits.
+- **X:** release a rail/tail; use steering for a bodyboard spin. Q/E shifts fore/aft weight on the water. In the air X rolls
+  a bodyboard, A/D controls limited yaw and Q/E controls pitch. Rotation needs a
+  suitable launch and sufficient airtime; badly aligned landings wipe out.
+- **B:** launch from the yacht or step off a ski/rear seat.
+- **C:** face, chase, first person and swell overview; drag to orbit.
+- **R:** recover to the channel; resets and wipeouts discard unbanked points.
+- Landscape phones have pump, crouch/stall, rail/roll, steering and role buttons,
+  with pitch controls appearing during flight.
 
-Tune the authored surface and GLSL together in `src/surf/break.js`, board tuning
-in `src/surf/boards.js`, handling and catches in `src/surf/session.js`, and barrel,
-foam, quality mesh density and cameras in `src/surf/view.js`. Ocean physics and
-visible water share the reef surface function. Curl geometry is an artistic
-extension of that surface, not a fluid solver or collision volume. Low quality
-reduces the reef patch mesh and keeps spray pooled. Canal signs and enforcement
-now use 35 km/h; the Wharf retains its separate approximately 22 km/h slow zone.
+Progressive rail forces redirect velocity rather than instantly rotating it.
+Gravity and moving-surface pressure provide speed; turns, drag, stalls and soft
+shoulders scrub momentum. Shortboards have stronger fin/rail grip, bodyboards
+release and rotate more readily, and guns prefer drawn-out lines. Water sampling
+returns slope, normal and material velocity separately from wave propagation.
+The same parametric curled lip provides rendering and barrel head-clearance
+bounds. Whitewater can destabilize a slow board. The final lip launches only
+with sufficient speed and an upward approach: there is no jump button. Flight
+preserves momentum and applies gravity; landing checks angle, direction and
+impact against the moving surface, with limited assistance.
 
-Models, reef and rescue livery are original procedural work, informed by the
-supplied yacht reference. Plain RED BULL / REEF RESCUE lettering is a requested
-game livery, with no official logo, licensed model or implied affiliation.
-SumbaSurf's public page description was inspected for board and control ideas;
-its actual gameplay could not be inspected because the cloud browser rejected
-its certificate. This release does not claim matching graphics or wave physics.
-The reef is fictional, not a surveyed Mooloolaba surf break. No external assets
-are downloaded at play time for this feature.
+A clean wave exit banks surf/barrel points and existing upgrade money. Air
+rewards require landing; wipeouts lose the current wave. Solo step-offs hand
+the ski to a local support pilot. For two humans, join the same authenticated
+online room: one launches the ski, the other approaches and chooses **JOIN REAR
+SEAT** below 11 km/h. The passenger steps off while the pilot continues driving.
+One pilot and one human rear seat are allowed. Disconnects recover the passenger
+to the channel. Changing online worlds returns active surfers to the yacht.
 
-Validation includes real keyboard/touch interaction in Chromium, visual review,
-and a two-account browser test against the existing SQL migrations in local
-PGlite. Cloud graphics use software SwiftShader, so those tests cannot establish
-60 fps on a laptop or performance on a physical phone.
+No new SQL is needed: the existing authenticated, bounded movement RPC carries
+board/ski roles, seat identity, stance, airborne orientation and rail spray.
+Online wave timing uses a shared wall clock. Movement remains client-simulated
+and remote poses are interpolated; this is not an authoritative competitive
+surf server. Surf money uses the existing device-local account wallet.
+
+Tune sections, surface dimensions, handedness, size and GLSL in
+`src/surf/break.js`; board grip, speed and air limits in `src/surf/boards.js`;
+rail forces, pumping, contact, air and landing in `src/surf/board-physics.js`;
+and launch/crew roles in `src/surf/session.js`. `src/surf/view.js` controls mesh
+quality, foam and cameras; `src/surf/board-spray.js` pools falling rail spray and
+landing drops. Ocean physics and visible displacement use the same authored
+wave train. This is an approximate constrained-surface game model with a
+parametric lip, not a volumetric water/CFD simulation or surveyed Mooloolaba break.
+Canal enforcement is 35 km/h; the Wharf retains its approximately 22 km/h zone.
+
+Models, reef and rescue livery are original procedural work informed by the
+supplied yacht picture. Plain RED BULL / REEF RESCUE lettering is a requested
+game livery, with no copied logo, licensed model or implied affiliation.
+SumbaSurf's public page description was inspected; its gameplay was blocked by
+certificate trust in this cloud browser. The later YouTube reference around
+48 seconds was denied with HTTP 403 even after the approved network retry.
+No visual or physical match to unseen footage is claimed. No additional external
+asset download is needed for surfing.
+
+`tests/surf-performance.test.js` drives the connected manoeuvre sequence using
+only digital input values on both boards and both break directions. The browser
+specs exercise actual keyboard/touch input, quality settings, persisted options,
+recovery and two-account crew play against the existing SQL in local PGlite.
+Cloud graphics use software SwiftShader; those results cannot establish laptop
+60 fps or performance on a physical phone.
 
 ## Optional online worlds and accounts
 
