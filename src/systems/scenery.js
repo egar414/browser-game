@@ -1,3 +1,4 @@
+import {batchRigidAssembly} from '../vehicles/rigid-model.js';
 import{coastalTerrainHeight,COASTAL_RELIEF_REGIONS}from'./coastal-terrain.js';
 import * as THREE from 'three';
 import{COASTAL_STYLE as ART}from'./art-direction.js';
@@ -252,7 +253,9 @@ export function buildEstuaryScenery(scene,quality,solids){
     const boat=new THREE.Group();boat.position.set(x,0,z);boat.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);root.add(boat);
     const hull=new THREE.Mesh(new THREE.CapsuleGeometry(1.25,4.5,3,8),walls[0]);hull.rotation.x=Math.PI/2;hull.scale.z=.5;hull.position.y=.3;boat.add(hull);
     box(boat,1.85,1.4,3,0,1.2,-.4,walls[0],true);box(boat,1.9,.5,2.4,0,1.8,-.3,windows,true);box(boat,2.15,.15,3.1,0,2.13,-.4,navy);
-    solids.push({name:'Moored boat',x,z,w:3,d:7,height:3});
+    batchRigidAssembly(boat);boat.traverse(o=>{if(o.isMesh)o.userData.dynamic=true;});
+    const collider={name:'Moored boat',x,z,w:3,d:7,height:3};solids.push(collider);
+    tinnySites.push({id:`marina-cabin-${tinnySites.length}`,visual:'cabin',model:boat,x,z,heading:boat.rotation.y,width:3,length:7,capacityLitres:90,deckY:.85,fillDrop:.38,captureRect:{minX:-1,maxX:1,minZ:-3.3,maxZ:-2},collider,sinkLabel:'Marina cruiser swamped',sinkDetail:'The moored cruiser sinks and relaunches shortly.'});
   }
   const updateTinnies=createMooredTinnies(root,tinnySites,undefined,quality.trees>.9?650:quality.trees>.6?480:320);updateTinnies(0,mapData.spawn);root.userData.update=updateTinnies;root.userData.moorings=updateTinnies.fleet;
   // Mapped entrance breakwater, dressed with original interlocking stone blocks.
@@ -308,6 +311,6 @@ export function buildEstuaryScenery(scene,quality,solids){
   }
   for(const m of originals){m.removeFromParent();m.geometry.dispose();}
   const contactShadows=addGroundContacts(root,contacts);
-  root.userData.stats={coastalExtension:mapData.coastalExtension?.added,artStyle:ART.name,contactShadows,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
+  root.userData.stats={coastalExtension:mapData.coastalExtension?.added,artStyle:ART.name,contactShadows,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.filter(p=>p.visual!=='cabin').length,mooredCruisers:tinnySites.filter(p=>p.visual==='cabin').length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
   return root;
 }

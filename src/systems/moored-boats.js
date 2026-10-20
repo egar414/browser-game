@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildTender} from '../vehicles/tender.js';
 import {VEHICLES,waveHeight} from '../config.js';
-import {MooringFlood,MOORING_FLOOD} from './mooring-flood.js';
+import {MooringFlood,MOORING_FLOOD,floodCapacity} from './mooring-flood.js';
 
 function tenderParts(colour){
   const root=buildTender(colour);root.updateMatrixWorld(true);const groups=new Map();
@@ -19,7 +19,7 @@ function tenderParts(colour){
 export function createMooredTinnies(root,sites,onEvent,drawDistance=400){
   const fleet=new MooringFlood(sites,onEvent),batches=[],matrix=new THREE.Matrix4(),q=new THREE.Quaternion(),euler=new THREE.Euler(0,0,0,'YXZ'),position=new THREE.Vector3(),scale=new THREE.Vector3(1,1,1);
   for(let variant=0;variant<3;variant++){
-    const group=fleet.boats.filter((s,i)=>i%3===variant);if(!group.length)continue;
+    const group=fleet.boats.filter((s,i)=>i%3===variant&&s.visual!=='cabin');if(!group.length)continue;
     for(const part of tenderParts(['#bdc9cc','#c7d8ca','#d8d0b9'][variant])){
       const mesh=new THREE.InstancedMesh(part.geometry,part.material,group.length);mesh.userData.dynamic=true;mesh.castShadow=mesh.receiveShadow=true;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);root.add(mesh);batches.push({mesh,sites:group});
     }
@@ -30,8 +30,13 @@ export function createMooredTinnies(root,sites,onEvent,drawDistance=400){
   water.userData.dynamic=true;water.instanceMatrix.setUsage(THREE.DynamicDrawUsage);root.add(water);
   const distant=distantBoats(root,sites.length);
   const render=(time,view)=>{
-    const visible=fleet.boats.filter(p=>!view||Math.hypot(p.x-view.x,p.z-view.z)<drawDistance);
-    render.visibleCount=visible.length;const detailed=new Set(visible);distant.update(fleet.boats.filter(p=>!detailed.has(p)&&p.sinking<.98&&(!view||Math.hypot(p.x-view.x,p.z-view.z)<1100)),time);
+    const visible=fleet.boats.filter(p=>p.visual!=='cabin'&&(!view||Math.hypot(p.x-view.x,p.z-view.z)<drawDistance));
+    for(const p of fleet.boats.filter(p=>p.visual==='cabin')){
+      const y=waveHeight(p.x,p.z,time),fill=p.water/floodCapacity(p);p.deckY=y+.85;
+      p.model.visible=p.sinking<.98&&(!view||Math.hypot(p.x-view.x,p.z-view.z)<Math.max(900,drawDistance));
+      p.model.position.set(p.x,y-fill*.38-p.sinking*3.8,p.z);p.model.rotation.set(p.sinking*.23,p.heading,p.sinking*.35,'YXZ');
+    }
+    render.visibleCount=visible.length;const detailed=new Set(visible);distant.update(fleet.boats.filter(p=>p.visual!=='cabin'&&!detailed.has(p)&&p.sinking<.98&&(!view||Math.hypot(p.x-view.x,p.z-view.z)<1100)),time);
     const poses=new Map();for(const p of visible){
       const fx=Math.sin(p.heading),fz=Math.cos(p.heading),fill=p.water/MOORING_FLOOD.capacityLitres;
       const y=waveHeight(p.x,p.z,time),front=waveHeight(p.x+fx*.8,p.z+fz*.8,time),back=waveHeight(p.x-fx*.8,p.z-fz*.8,time),left=waveHeight(p.x-fz*.5,p.z+fx*.5,time),right=waveHeight(p.x+fz*.5,p.z-fx*.5,time);

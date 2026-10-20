@@ -24,10 +24,10 @@ export class RemoteStates{
    if(p.pose?.type==='hyper'&&p.creator!==true){this.players.delete(p.id);continue;}
    if(!validPose(p.pose)||!Number.isSafeInteger(p.seq))continue;
    let r=this.players.get(p.id);
-   if(r){r.combat=p.combat;r.creator=p.creator===true;r.name=String(p.name||'Boater').slice(0,20);}
+   if(r){r.combat=p.combat;r.combatAt=now;r.creator=p.creator===true;r.name=String(p.name||'Boater').slice(0,20);}
    if(r&&p.seq<=r.seq){r.seen=now;continue;}
    if(!r){r={id:p.id,history:[]};this.players.set(p.id,r);}
-   r.combat=p.combat;r.name=String(p.name||'Boater').slice(0,20);r.creator=p.creator===true;r.seq=p.seq;r.seen=now;r.history.push({time:now,...p.pose});
+   r.combat=p.combat;r.combatAt=now;r.name=String(p.name||'Boater').slice(0,20);r.creator=p.creator===true;r.seq=p.seq;r.seen=now;r.history.push({time:now,...p.pose});
    if(r.history.length>8)r.history.shift();
   }
   for(const [id,r]of this.players)if(!ids.has(id)||now-r.seen>12000)this.players.delete(id);
@@ -41,6 +41,7 @@ export class RemoteStates{
   if(Math.hypot(b.x-a.x,b.z-a.z)>180)return {...b};
   const t=clamp((target-a.time)/Math.max(1,b.time-a.time),0,1),p={...b};
   for(const key of Object.keys(ranges))p[key]=a[key]+(b[key]-a[key])*t;
+  if(Array.isArray(a.spray)&&Array.isArray(b.spray))p.spray=b.spray.map(s=>{const prev=a.spray.find(q=>q.kind===s.kind);if(!prev)return s;const value={...s};for(const key of ['ox','oy','oz','vx','vy','vz','power'])value[key]=prev[key]+(s[key]-prev[key])*t;return value;});
   p.heading=a.heading+wrapAngle(b.heading-a.heading)*t;
   if(target>b.time&&b.active){const seconds=Math.min(.25,(target-b.time)/1000);p.x+=b.vx*seconds;p.z+=b.vz*seconds;}
   return p;

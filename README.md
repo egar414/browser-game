@@ -994,12 +994,26 @@ flooding simulation and cannot be sunk by another player in this release.
 
 ### Police patrols, shared spray and automatic online flooding
 
-Four local police craft (two grey console boats and two jet skis) patrol the
-main waterway. Pause → **FIND POLICE PATROL** puts you beside one. Within 105 m
-and a clear line of sight they start a 60-second pursuit; sightings do not extend
-the timer. They return to patrol afterwards, with a 30-second cooldown. Land and
-solid-object probes constrain steering. These are local free-roam NPCs, not
-synchronised server-controlled police. Tune `POLICE` in `police-patrol.js`.
+Four local police craft (two grey console boats and two jet skis) now patrol a
+waterway navigation graph through the river, connected canals and coastal water.
+Pause → **FIND POLICE PATROL** or **PATROL WATCH** finds an officer without
+staging a crime. Innocent proximity does not start a pursuit. Officers need line
+of sight to speeding in the marked Wharf/canal no-wake zones, a dangerous close
+spray, or an actual spray hit on a patrol. AI boaters are never suspects.
+The units share a last-seen position and take pursuer, interceptor and flanking
+roles. Break sight and stay at least 95 m away for 12 seconds to escape; there
+is no automatic one-minute expiry while still visible. A low-speed interception
+within 7.5 m for 2.5 seconds impounds the local player's craft for 30 wall-clock
+seconds. Driving, recovery and destination shortcuts are blocked during impound;
+settings and account menus still work. The countdown survives a reload in local
+storage where available. On release you relaunch beside the Wharf.
+Police can flood, sink and relaunch. Their AI, offence detection and impound are
+**local gameplay**, not authoritative or synchronised across online clients.
+Other players' poses and spray hits are shared by the server; police positions
+can differ between devices. This is not an anti-cheat or account ban.
+Tune `POLICE` in `police-patrol.js` and routes/zone limits in
+`police-navigation.js`. Grounded clear-path edges respect shore and bridge
+clearance; emergency stuck recovery is retained for pathological obstructions.
 The wide chase camera now uses a 72–78 degree field of view; C still cycles views.
 
 Remote craft now have bounded spray and wake pools, released on departure or
@@ -1048,16 +1062,11 @@ evidence, not a claim about player-device frame rates.
 
 ### Police visibility fix
 
-All four patrol craft now launch 23–83 m ahead of the Wharf spawn. Blue lights,
-overhead POLICE markers, blue minimap dots and a distance indicator make them
-easier to identify. **FIND POLICE** and **WATCH CHASE** are on the driving HUD as
-well as pause settings. FIND faces the camera at a patrol; WATCH chooses a visible
-local/online boater, starts a pursuit, and places the observer behind the chase
-with both the police and marked suspect ahead. Police have small pooled wakes.
-Moving visible boaters can be targeted before a stationary observer. The HUD
-names the suspect. Pursuits still last 60 seconds, with a cooldown afterwards.
-NPC simulation remains local to each device; online player positions are shared,
-but this does not make police movement identical across devices.
+Two patrol boats start near the Wharf; the two skis cover canal and upstream
+reaches. Blue lights, POLICE markers, minimap dots and a distance indicator make
+patrols discoverable. FIND POLICE and PATROL WATCH face a nearby patrol. The
+new offence and escape rules above replace the older automatic sighting chase.
+Police have small pooled wakes so effects do not hide a pursuit.
 
 ### Online spray velocity correction
 
@@ -1106,3 +1115,44 @@ approved external retry. No authoritative definition of the regional slang
 bouncing description as authored arcade physics; it is not presented as a
 research-validated real-world technique. Models use the supplied photos as visual
 references, with original hull graphics and no copied sponsor logos.
+
+### Authenticator 2FA and online spray follow-up
+
+ONLINE / ACCOUNT → **SET UP 2FA** enrols a TOTP authenticator. Scan the QR or
+enter the manual key in an authenticator app, then verify its six-digit code.
+Later password sign-ins require that authenticator before entering rooms or
+using Creator privileges. Setup secrets and codes are not saved in game settings
+or sent to peers. Keep access to the authenticator; this release has no
+self-service lost-factor recovery. The Supabase project owner can manage a lost
+factor. Removal requires an AAL2-verified session. Single player stays available.
+
+The owner must apply `supabase/migrations/005_account_security.sql` after
+001–004, or copy **COPY OWNER DATABASE UPDATE** in the account menu and run all
+of it in Supabase SQL Editor. Existing Creator grants are preserved. The new
+server RPC guards reject lower-assurance requests for accounts with verified
+factors, including direct attempts to call private helper functions. This
+migration does not enrol anybody: each player must set up their own app.
+TOTP must be enabled in the Supabase project's Auth settings. No provider setting
+or production account factor was changed by the development environment.
+
+Remote spray now interpolates source vectors with the craft and uses denser,
+smaller falling packets instead of sparse opaque blobs. Remote effects have an
+independent advancing clock, so pausing the receiving client's vehicle cannot
+pile particles up at one age. Teleports clear the old source history. Pools are
+bounded (900 rear packets and 240 side droplets per nearby peer), and released
+outside 240 m or on departure. All nine selectable craft types, including the
+large fishing/racing boats and both 50 hp tinnies, pass server flooding checks.
+Large cruisers receive water through the aft cockpit; missing, rising or shielded
+water still does not flood. Online sinking needs the existing owner SQL update.
+
+Validation uses Chromium + SwiftShader software rendering in the cloud, not a
+physical laptop/GPU benchmark. Browser account/authenticator checks use isolated
+Auth fixtures and real PostgreSQL-compatible migrations; the owner's production
+factor and sign-in must be verified by the owner after setup.
+
+Moored cabin boats now join the same flood/reset fleet as pontoon tinnies, with
+a rear receiving area and disabled collision when submerged. Their hull models
+stay separate from static land batches so sinking moves the entire boat. Tall
+online fishing boats descend far enough to submerge their tower; local and
+remote views share that visual timing. Patrols stop searching after a remote
+suspect leaves the room.

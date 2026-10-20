@@ -22,6 +22,8 @@ test('two browser accounts share moving boats, private codes isolate, sign out r
   await expect.poll(async()=>(await status(b)).online.visibleSprays,{timeout:25000}).toBeGreaterThan(0);expect((await status(b)).online.remoteSprayMaxSpeed).toBeLessThan(220);await b.screenshot({path:'test-results/receiving-player-sees-spray.png'});
   await expect.poll(async()=>{const snapshot=await rpc(f,users[1],'er_snapshot');return snapshot.players.find(p=>p.id===users[0]).pose.speed;},{timeout:15000}).toBeGreaterThan(2);
   await a.screenshot({path:'test-results/multiplayer-public-world.png'});
+  await b.bringToFront();if((await status(b)).state==='paused')await b.keyboard.press('Escape');await b.keyboard.down('KeyW');await expect.poll(async()=>(await status(b)).speed,{timeout:35000}).toBeGreaterThan(6);await b.keyboard.up('KeyW');
+  await expect.poll(async()=>(await status(a)).online.visibleSprays,{timeout:20000}).toBeGreaterThan(0);expect((await status(a)).online.remoteSprayMaxSpeed).toBeLessThan(220);await a.screenshot({path:'test-results/creator-sees-return-spray.png'});console.log('Both accounts see each other’s falling spray');
   await a.locator('#online-status').click();await a.getByRole('button',{name:'CREATE PRIVATE ROOM',exact:true}).click();
   await expect.poll(async()=>(await status(a)).online.room?.public).toBe(false);
   const code=(await status(a)).online.room.code;await expect.poll(async()=>(await status(b)).online.remotePlayers).toBe(0);

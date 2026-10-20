@@ -137,7 +137,7 @@ export class Spray {
     this.state={left:0,right:0,rate:0};this.time=0;this.waterImpacts=0;this.impactBudget=0;
   }
   clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.current=null;fan.mesh.visible=false;}}
-  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,secondary:false,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:SPRAY_VISUAL_SCALE*(kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65),kind});}
+  emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,secondary:false,opacity:1,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:SPRAY_VISUAL_SCALE*(kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65),kind});}
   impact(x,z,strength){
     if(this.impactBudget<=0)return;this.impactBudget--;this.waterImpacts++;
     this.wake.returns.push({x,z,time:this.time,strength:clamp(strength,.25,.8)});
@@ -159,10 +159,16 @@ export class Spray {
     const count=Math.min(Math.floor(this.accumulator),80);this.accumulator-=count;
     for(let i=0;i<count;i++){
       const side=Math.random()*(this.state.left+this.state.right)<this.state.left?-1:1;
-      this.emit(received?{...received.find(p=>p.kind===(side<0?'left':'right')),lifetime:3,diameter:.005}:launchSpray(v,this.state,side),i%3===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
+      if(received){const source=received.find(p=>p.kind===(side<0?'left':'right'));if(!source)continue;
+        // A transmitted fan is a mean vector. Sample a continuous spread, not a
+        // stack of identical opaque particles at the three network ticks/sec.
+        const spread=.8+source.power*.55,fx=Math.sin(v.heading),fz=Math.cos(v.heading),lateral=(Math.random()-.5)*spread;
+        this.emit({...source,x:source.x+(Math.random()-.5)*.12,z:source.z+(Math.random()-.5)*.12,vx:source.vx+fz*lateral,vy:source.vy*(.85+Math.random()*.3),vz:source.vz-fx*lateral,lifetime:3.4,diameter:.005},i%5===0?1:0);
+        const packet=this.particles[(this.next-1+this.count)%this.count];if(packet.kind===1){packet.size*=.28;packet.opacity=.38;}
+      }else this.emit(launchSpray(v,this.state,side),i%3===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
     }
-    const discharge=active?pumpDischarge(v,time):null;this.stream.update(v,discharge);
-    const rear=received?.find(p=>p.kind==='rear'),plume=received?(active&&rear?{origin:rear,velocity:{x:rear.vx,y:rear.vy,z:rear.vz},power:rear.power,loaded:v.riderAft||0,packetScale:v.type==='hyper'?2.2:1}:null):jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
+    const discharge=active&&!received?pumpDischarge(v,time):null;this.stream.update(v,discharge);
+    const rear=received?.find(p=>p.kind==='rear'),plume=received?(active&&rear?{origin:rear,velocity:{x:rear.vx,y:rear.vy,z:rear.vz},power:rear.power,loaded:v.riderAft||0,packetScale:v.type==='hyper'?1.35:.85}:null):jetPlumeSource(v,discharge,time,this.state);this.plume.update(dt,plume,time);
     this.jetAccumulator+=dt*this.state.jet*(isJet(v.type)?200:90);
     const jetCount=Math.min(30,Math.floor(this.jetAccumulator));this.jetAccumulator-=jetCount;
     for(let i=0;i<jetCount&&discharge;i++){
@@ -190,7 +196,7 @@ export class Spray {
       const p=this.particles[i],particleDt=p.birthStep??dt;p.birthStep=null;p.life-=particleDt;
       if(p.life>0){stepDroplet(p,particleDt);
         if(p.y<waveHeight(p.x,p.z,time)-.02){if(!p.secondary&&p.vy<-.8)this.impact(p.x,p.z,Math.abs(p.vy)*.06);p.life=0;}
-        this.positions.set([p.x,p.y,p.z],i*3);this.sizes[i]=p.size*(p.kind?1+(1-p.life/p.max)*1.9:1);this.alphas[i]=clamp(p.life/.2);this.kinds[i]=p.kind;
+        this.positions.set([p.x,p.y,p.z],i*3);this.sizes[i]=p.size*(p.kind?1+(1-p.life/p.max)*1.9:1);this.alphas[i]=clamp(p.life/.2)*(p.opacity??1);this.kinds[i]=p.kind;
       }else{this.alphas[i]=0;this.sizes[i]=0;}
     }
     for(const attr of Object.values(this.points.geometry.attributes))attr.needsUpdate=true;

@@ -22,8 +22,13 @@ export class OnlineUI{
   }
   this.onOpen=open;this.onClose=close;
   this.root.querySelector('form').addEventListener('submit',event=>{event.preventDefault();this.run(async()=>{await client.signIn(this.value('email'),this.value('password'));this.root.querySelector('#online-password').value='';});});
+  const security=document.createElement('section');security.id='account-security';security.innerHTML=`<h3>Authenticator 2FA</h3><p id="mfa-status" role="status"></p><button id="mfa-enable" class="secondary">SET UP 2FA</button><div id="mfa-enrol" hidden><p>Scan with your authenticator app. Keep access to the app for future sign-ins. Do not share the setup secret or codes.</p><img id="mfa-qr" width="180" height="180" alt="Authenticator setup QR code"><label>Manual setup key<input id="mfa-secret" readonly autocomplete="off"></label><button id="mfa-cancel" class="secondary">CANCEL SETUP</button></div><form id="mfa-verify" hidden><label>Authenticator code<input id="mfa-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></label><button class="play-button">VERIFY CODE</button></form><button id="mfa-disable" class="secondary" hidden>REMOVE 2FA</button><p class="fine-print">Removing 2FA requires a verified session. If you lose the app, account recovery needs the project owner. Single player remains available.</p>`;this.root.querySelector('#online-signed-in').prepend(security);
+  security.querySelector('#mfa-enable').onclick=()=>this.run(async()=>{await client.security.enroll();this.render(client.status);});
+  security.querySelector('#mfa-cancel').onclick=()=>this.run(async()=>{await client.security.cancel();this.render(client.status);});
+  security.querySelector('#mfa-disable').onclick=()=>this.run(async()=>{await client.security.disable();this.render(client.status);});
+  security.querySelector('#mfa-verify').onsubmit=e=>{e.preventDefault();const code=security.querySelector('#mfa-code');if(!code.reportValidity())return;const value=code.value;code.value='';this.run(async()=>{await client.security.verify(value);this.render(client.status);});};
   const perks=document.createElement('p');perks.id='online-creator-perks';perks.className='creator-perks';perks.hidden=true;perks.textContent='★ CREATOR · Apex 300 development access · All garage designs and tuning unlocked · 2× garage XP';this.root.querySelector('#online-signed-in').prepend(perks);
-  const refresh=document.createElement('button');refresh.className='secondary';refresh.textContent='REFRESH ACCOUNT';refresh.addEventListener('click',()=>this.run(()=>client.refreshPerks()));this.root.querySelector('#online-signed-in').append(refresh);
+  const refresh=document.createElement('button');refresh.className='secondary';refresh.textContent='REFRESH ACCOUNT';refresh.addEventListener('click',()=>this.run(()=>client.refreshAccount()));this.root.querySelector('#online-signed-in').append(refresh);
   const nameField=this.root.querySelector('#online-name');nameField.addEventListener('input',()=>{this.nameDirty=true;});
   const saveName=document.createElement('button');saveName.id='online-save-name';saveName.className='secondary';saveName.textContent='SAVE NAME';saveName.addEventListener('click',()=>{if(!nameField.reportValidity())return;this.run(async()=>{await client.saveName(nameField.value);this.nameDirty=false;this.render(client.status);});});nameField.parentElement.after(saveName);
   const creatorHelp=document.createElement('div');creatorHelp.id='online-creator-help';creatorHelp.innerHTML='<p id="online-creator-status" role="status"></p><p class="fine-print">Account ID: <span id="online-account-id"></span> <button id="online-copy-id" class="secondary">COPY ACCOUNT ID</button></p><button id="online-copy-creator" class="secondary">COPY MY CREATOR SETUP</button> <button id="online-copy-sole" class="secondary">COPY SINGLE-ACCOUNT SETUP</button> <a class="secondary" href="https://supabase.com/dashboard/project/tqvgqtgxwgxdxpbvuatf/sql/new" target="_blank" rel="noopener">OPEN SUPABASE SQL EDITOR ↗</a><p class="fine-print">Project owner only: copy the setup, paste into SQL Editor, click Run, then Refresh Account. The public game key cannot assign badges.</p>';
@@ -55,11 +60,16 @@ export class OnlineUI{
   const previous=client.onChange;client.onChange=status=>{previous(status);this.render(status);};this.render(client.status);
  }
  value(id){return this.root.querySelector(`#online-${id}`).value;}
- async run(action){if(this.busy)return;this.busy=true;this.root.querySelectorAll('button:not([data-online="close"])').forEach(b=>b.disabled=true);try{await action();}catch(e){this.message(accountError(e));}finally{this.busy=false;this.root.querySelectorAll('button').forEach(b=>b.disabled=false);}}
+ async run(action){if(this.busy)return;this.busy=true;this.root.querySelectorAll('button:not([data-online="close"])').forEach(b=>b.disabled=true);try{await action();}catch(e){this.message(accountError(e));}finally{this.busy=false;this.root.querySelectorAll('button').forEach(b=>b.disabled=false);this.render(this.client.status);}}
  message(text){this.root.querySelector('#online-message').textContent=text;}
  render(s){
   // Keep an error visible until the next deliberate action instead of clearing it at 3 Hz.
   if(s.message!==this.previousMessage){this.message(s.message);this.previousMessage=s.message;}
+  const sec=s.security||{},pending=this.client.security.pending;
+  this.root.querySelector('#mfa-status').textContent=sec.required?'Enter the code from your authenticator to finish signing in.':sec.enabled?'Authenticator 2FA enabled.':'Add an authenticator app to protect your account.';
+  this.root.querySelector('#mfa-enrol').hidden=!pending;this.root.querySelector('#mfa-verify').hidden=!pending&&!sec.required;this.root.querySelector('#mfa-enable').hidden=!!pending||sec.enabled;this.root.querySelector('#mfa-disable').hidden=!sec.enabled||sec.required;
+  const qr=this.root.querySelector('#mfa-qr'),secret=this.root.querySelector('#mfa-secret');if(pending?.qr?.startsWith('data:image/svg+xml;'))qr.src=pending.qr;else qr.removeAttribute('src');secret.value=pending?.secret||'';
+  for(const action of ['public','create','join','drive','password'])this.root.querySelector(`[data-online="${action}"]`).disabled=!!sec.required;
   this.root.querySelector('#online-account').hidden=s.signedIn;this.root.querySelector('#online-signed-in').hidden=!s.signedIn;
   const nameField=this.root.querySelector('#online-name');if(this.accountId!==s.accountId){this.accountId=s.accountId;this.nameDirty=false;nameField.value=s.playerName||'Estuary Rat';}else if(!this.nameDirty&&document.activeElement!==nameField)nameField.value=s.playerName||'Estuary Rat';
   this.root.querySelector('#online-room').textContent=s.room?`${s.room.public?'PUBLIC WORLD':'ROOM '+s.room.code} · ${s.room.players}/8 players · ${s.combatEnabled?'SPRAY SINKING ON':'OWNER SQL UPDATE NEEDED FOR SINKING'}${s.connected?'':' · reconnecting'}`:'';
@@ -67,7 +77,7 @@ export class OnlineUI{
   this.statusButton.textContent=s.room?`${s.room.public?'PUBLIC':s.room.code} · ${s.room.players}/8${s.connected?'':' · RETRYING'}`:'ONLINE / ACCOUNT';
   this.statusButton.classList.toggle('is-creator',s.creator);if(s.creator)this.statusButton.textContent='★ CREATOR · '+this.statusButton.textContent;
   this.root.querySelector('#online-creator-perks').hidden=!s.creator;
-  const messages={active:'★ Creator tag active on this account. It appears above your saved name in chase view.',inactive:'Creator tag is not assigned to this account yet. Use the owner setup below.',missing:'The Creator database update is not installed yet. Use the owner setup below.',checking:'Checking your account’s Creator tag…',error:'Could not check your Creator tag. Check your connection and press Refresh Account.'};
+  const messages={mfa:'Verify your authenticator to unlock your account privileges.',active:'★ Creator tag active on this account. It appears above your saved name in chase view.',inactive:'Creator tag is not assigned to this account yet. Use the owner setup below.',missing:'The Creator database update is not installed yet. Use the owner setup below.',checking:'Checking your account’s Creator tag…',error:'Could not check your Creator tag. Check your connection and press Refresh Account.'};
   this.root.querySelector('#online-creator-status').textContent=(messages[s.creatorState]||'Sign in to check your Creator tag.')+(s.creatorState==='error'&&s.creatorError?' '+s.creatorError:'');
   this.root.querySelector('#online-account-id').textContent=s.accountId||'';
   this.root.querySelector('#online-creator-help').hidden=!s.signedIn;
@@ -79,7 +89,7 @@ export class OnlineUI{
   guide.textContent=s.signedIn?'OWNER SETUP / CREATOR TAG ↗':'OWNER SETUP GUIDE ↗';
  }
  async show(){this.onOpen();this.root.classList.remove('hidden');this.root.querySelector('[data-online="close"]').focus();await this.run(()=>this.client.readiness());}
- hide(){this.root.classList.add('hidden');this.onClose();}
+ hide(){if(this.client.security.pending)void this.client.security.cancel().catch(()=>{});this.root.querySelector('#mfa-code').value='';this.root.querySelector('#mfa-secret').value='';this.root.querySelector('#mfa-qr').removeAttribute('src');this.root.classList.add('hidden');this.onClose();}
 }
 export function accountError(error){
  if(error.code==='over_email_send_rate_limit'||/email.*rate.*limit|email.*limit.*exceed/i.test(error.message))return 'Supabase email sending limit reached. Please stop retrying for now. The project owner can turn off Confirm email (addresses will not be verified), or configure a custom SMTP sender in Supabase. See the Owner Setup Guide → Email problems.';

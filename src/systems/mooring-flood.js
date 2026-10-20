@@ -30,7 +30,7 @@ export class MooringFlood {
   key(x,z){return `${Math.floor(x/8)}:${Math.floor(z/8)}`;}
   emit(p,litres){const packet=this.packets[this.cursor++%this.packets.length];Object.assign(packet,{ballistic:null,age:0,source:null},p,{life:p.lifetime||4.8,litres});}
   clearSpray(){for(const p of this.packets)p.life=0;this.emission=0;}
-  get status(){return this.boats.map(b=>({id:b.id,x:b.x,z:b.z,heading:b.heading,water:b.water/floodCapacity(b)*100,rearWater:b.rearWater,sinking:b.sinking,resetIn:b.resetIn,sinks:b.sinks}));}
+  get status(){return this.boats.map(b=>({id:b.id,x:b.x,z:b.z,heading:b.heading,kind:b.visual||'tinny',water:b.water/floodCapacity(b)*100,rearWater:b.rearWater,sinking:b.sinking,resetIn:b.resetIn,sinks:b.sinks}));}
   update(dt,player,time,allowSpray=true){
     for(const b of this.boats){
       b.scoreCooldown=Math.max(0,b.scoreCooldown-dt);

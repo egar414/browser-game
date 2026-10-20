@@ -59,3 +59,15 @@ test('received rear plume launches with transmitted vx/vy/vz instead of absolute
  const v={type:'ski',config:VEHICLES.ski,x:-220,y:.4,z:-1080,heading:0,pitch:0,roll:0,speed:10,throttle:1,steer:0,vx:0,vz:10,drive:{neutral:true},spray:[{kind:'rear',ox:0,oy:0,oz:-1.5,vx:0,vy:6,vz:-14,power:1}]};
  for(let i=0;i<6;i++)spray.update(.1,v,i*.1,true,{remote:true});const packets=spray.plume.packets.filter(p=>p.active);assert(packets.length>0);assert(packets.every(p=>Math.abs(p.vz+14)<5),'rear spray moves aft at ~14m/s, not ~1080m/s');assert(packets.every(p=>Math.abs(p.vx)<5));spray.dispose();
 });
+test('every selectable online craft, including large boats and new tinnies, can sink from descending trim water',async()=>{
+ const f=await database();try{
+  await f.db.query('insert into er_creators values($1)',[b]);const room=await rpc(f,a,'er_join',{p_name:'Trim sprayer',p_code:'PUBLIC'});await rpc(f,b,'er_join',{p_name:'Every craft',p_code:'PUBLIC'});
+  await rpc(f,a,'er_exchange',{p_pose:pose(100,0),p_seq:1});let seq=1;
+  for(const type of ['ski','seago','hyper','tinny','dinghy','skua','cat','cruiser','racer']){
+   await f.owner("update er_players set pose_at=clock_timestamp()-interval '1 second',water=0,sinking_until=null,shield_until=clock_timestamp()-interval '1 second';delete from er_spray_packets");
+   const target={...pose(50,10),type};await rpc(f,b,'er_exchange',{p_pose:target,p_seq:seq});
+   await f.owner(`update er_players set water=96 where user_id='${b}';update er_players set pose_at=clock_timestamp()-interval '1 second';insert into er_spray_packets(emitter,room_id,born,checked,x,y,z,vx,vy,vz,power) values('${a}','${room.id}',clock_timestamp()-interval '.6 seconds',clock_timestamp()-interval '.6 seconds',50,${type==='cruiser'?1.6:.85},${type==='cruiser'?7:10},0,0,0,2)`);
+   const hit=await rpc(f,a,'er_exchange',{p_pose:pose(100,0),p_seq:++seq});assert(hit.players.find(p=>p.id===b).combat.sinking>0,`${type} must be sinkable`);seq++;
+  }
+ }finally{await f.db.close();}
+});

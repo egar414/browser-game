@@ -1,3 +1,4 @@
+import {onlineSinkDrop} from './online-sinking.js';
 import {packSpray} from './network-spray.js';
 import {isJet} from '../config.js';
 import {Spray} from './spray.js';
@@ -28,7 +29,7 @@ export class OnlineWorld{
   for(const resource of entry.resources)resource.dispose();this.models.delete(id);
  }
  update(dt,now,viewer,camera,localView={}){
-  this.localPlate.label.hidden=true;
+  this.effectTime=Math.max((this.effectTime??localView.time??now/1000)+dt,localView.time||0);this.localPlate.label.hidden=true;
   if(localView.playing&&!localView.firstPerson&&this.client.session){
    const me=this.client.room?.players?.find(p=>p.id===this.client.session.user.id);
    const name=me?.name||this.client.status.playerName||document.getElementById('online-name')?.value||'Estuary Rat';
@@ -50,14 +51,15 @@ export class OnlineWorld{
    }
    const {model,label}=entry;const distance=Math.hypot(p.x-viewer.x,p.z-viewer.z);model.visible=!!p.active&&distance<1000;
    label.hidden=!model.visible||distance>220;if(!model.visible){if(entry.spray){entry.spray.dispose();entry.spray=null;}continue;}
-   const sink=r.combat?.sinking||0;model.position.set(p.x,p.y-(sink?Math.min(3,(6-sink)*.65):0),p.z);model.rotation.set(-p.pitch,p.heading,p.roll,'YXZ');
+   if(entry.previousPosition&&Math.hypot(p.x-entry.previousPosition.x,p.z-entry.previousPosition.z)>90)entry.spray?.clear();entry.previousPosition={x:p.x,z:p.z};
+   const sink=Math.max(0,(r.combat?.sinking||0)-Math.max(0,(now-(r.combatAt??now))/1000));model.position.set(p.x,p.y-(sink?onlineSinkDrop(p.type,sink):0),p.z);model.rotation.set(-p.pitch,p.heading,p.roll,'YXZ');
    if(model.userData.handlebars)model.userData.handlebars.rotation.y=-p.steer*.43;
    for(const part of [model.userData.motor,model.userData.nozzle])if(part)part.rotation.set(p.trimAngle,-p.steeringAngle,0,'YXZ');
    const v={...p,config:VEHICLES[p.type],slip:p.vx*Math.cos(p.heading)-p.vz*Math.sin(p.heading),yawRate:p.steer*.8,trimDegrees:p.trim,animationTime:now/1000,drive:{rpm:p.rpm,neutral:p.throttle<.08,flow:(isJet(p.type)?.16:1.2)*Math.max(0,p.throttle),exitSpeed:isJet(p.type)?24:8,wetness:1,reverse:p.throttle<0?1:0,trimAngle:p.trimAngle,steeringAngle:p.steeringAngle},airTricks:{pose:p.pose,blend:p.pose?1:0}};
    // Legacy backends strip source arrays. Reconstruct a visual-only fallback
    // until the owner installs the exact-source/shared-hit SQL update.
    if(!Array.isArray(v.spray))v.spray=packSpray(v,localView.time??now/1000,p.active&&!sink);
-   if(distance<240){if(!entry.spray)entry.spray=new Spray(entry.effects,{...QUALITY.Low,particles:72,wakeSamples:32,plumeDensity:.2,plumeCapacity:280});entry.spray.update(dt,v,localView.time??now/1000,p.active&&!sink,{remote:true});entry.spray.resize(innerHeight,camera.fov,Math.min(devicePixelRatio,1));}else if(entry.spray){entry.spray.dispose();entry.spray=null;}
+   if(distance<240){if(!entry.spray)entry.spray=new Spray(entry.effects,{...QUALITY.Low,particles:240,wakeSamples:48,plumeDensity:.95,plumeCapacity:900});entry.spray.update(dt,v,this.effectTime,p.active&&!sink,{remote:true});entry.spray.resize(innerHeight,camera.fov,Math.min(devicePixelRatio,1));}else if(entry.spray){entry.spray.dispose();entry.spray=null;}
    const rider=model.userData.rider;
    if(p.type==='cruiser'){rider.position.set(p.deck?p.deckX:0,p.deck?1.02:3.25,p.deck?p.deckZ:-.25);rider.rotation.y=p.deck?p.deckHeading:0;rider.userData.animate(now/1000,0,false,!p.deck);}
    else rider?.userData.update?.(v,dt,model.userData);
