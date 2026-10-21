@@ -189,6 +189,20 @@ its frame rate is not representative of a laptop GPU.
 
 ## Rear trim plume and big-boat flooding
 
+Jet skis now have a taller, thicker rear arc, especially at the final trim detent.
+Hold **Q** to maximum trim, accelerate with **W**, then alternate **A/D** to sweep
+it. At maximum trim only, grounded hull yaw is damped while the nozzle still
+steers. The extra lateral deflection is about 5 degrees, bounded to roughly 32
+degrees from aft; ordinary trim and airborne controls keep their handling.
+Water remains in world space after emission and falls under gravity and drag.
+The ordinary skis' full-power arc reached about 8–9 m in the calm-water simulation,
+enough for the estimated 4.8–7.2 m canal bridge clearances; this is arcade tuning,
+not a validated real waterjet model. Bridge wet-surface decals are not simulated.
+Particle capacities and emission budgets are unchanged. Existing online rear-source
+packets carry the new trajectory; no new SQL is needed. Tune lift, sweep, thickness
+and the maximum-trim yaw assistance in `src/vehicles/trim-spray.js`, with base
+plume settings in `src/systems/spray-model.js`.
+
 The jet ski's visible rear/trim plume now counts as water aboard when its falling
 heavy core crosses an open hull. Capture uses the same linear-drag/gravity
 trajectory as the rendered plume, including water still falling after throttle

@@ -1,3 +1,4 @@
+import {maxTrimSpray,MAX_TRIM_SPRAY} from '../vehicles/trim-spray.js';
 import {isTinny} from '../config.js';
 export const SPRAY_VISUAL_SCALE=1.75;
 import{isJet}from'../config.js';
@@ -109,7 +110,7 @@ export function stepDroplet(p,dt) {
 
 // Larger visible breakup around the central pump wash, independently tunable
 // from the unchanged chine spray and hydraulic reaction-force calculation.
-export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.2, trimLift:2.8, rearSpeed:12, spread:.78, drag:.32, baseRate:260, poweredRate:330, coreOpacity:1.1, mistOpacity:.10, coreGrowth:.62, coreRadius:1.25, mistRadius:1.35, fineFraction:.14, streakThreshold:.84, bowLift:1.8, bowReach:.28 };
+export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.8, trimLift:2.8, rearSpeed:12, spread:.78, drag:.32, baseRate:260, poweredRate:330, coreOpacity:1.1, mistOpacity:.10, coreGrowth:.62, coreRadius:1.25, mistRadius:1.35, fineFraction:.14, streakThreshold:.84, bowLift:1.8, bowReach:.28 };
 export function jetPlumeSource(v,discharge,time=0,state=null){
   if(v.type==='racer'){
     if(!discharge||v.airborne||v.wipeout||v.throttle<.12||discharge.reverse>.08||v.speed<8||v.planing<.2)return null;
@@ -120,9 +121,14 @@ export function jetPlumeSource(v,discharge,time=0,state=null){
   const power=clamp(discharge.flow/.16)*clamp(v.throttle),trim=clamp((v.drive?.trimAngle||0)/.33),bow=bowSprayLoad(v);
   const dx=discharge.velocity.x-(v.vx||0),dz=discharge.velocity.z-(v.vz||0),len=Math.hypot(dx,dz)||1;
   const loaded=state?clamp((Math.max(state.left,state.right)-.8)/2.5):0;
-  const apex=v.type==='hyper',tuning=apex?APEX_SPRAY:JET_PLUME;
-  const washLift=1.1+power*tuning.lift+trim*tuning.trimLift+loaded*loaded*5.8+bow*JET_PLUME.bowLift;
-  const lift=Math.min(apex?APEX_SPRAY.maximumLift:15,Math.max(discharge.aerial?discharge.velocity.y:0,washLift));
+  const apex=v.type==='hyper',tuning=apex?APEX_SPRAY:JET_PLUME,sweep=maxTrimSpray(v);
+  // The fan stays anchored to the nozzle. A small extra deflection broadens
+  // max-trim sweeps without making a sideways hose or rotating old droplets.
+  const fx=Math.sin(v.heading),fz=Math.cos(v.heading),side=dx/len*fz-dz/len*fx,aft=-dx/len*fx-dz/len*fz;
+  const angle=sweep>0&&aft>0?clamp(Math.atan2(side,aft)+(v.steer||0)*MAX_TRIM_SPRAY.extraSweep*sweep,-MAX_TRIM_SPRAY.maximumSweep,MAX_TRIM_SPRAY.maximumSweep):Math.atan2(side,aft);
+  const jetX=fz*Math.sin(angle)-fx*Math.cos(angle),jetZ=-fx*Math.sin(angle)-fz*Math.cos(angle);
+  const washLift=1.1+power*tuning.lift+trim*tuning.trimLift+loaded*loaded*5.8+bow*JET_PLUME.bowLift+sweep*MAX_TRIM_SPRAY.lift;
+  const lift=Math.min(apex?APEX_SPRAY.maximumLift:15+sweep*(MAX_TRIM_SPRAY.maximumLift-15),Math.max(discharge.aerial?discharge.velocity.y:0,washLift));
   return {origin:{...discharge.origin,y:Math.max(discharge.origin.y,waveHeight(discharge.origin.x,discharge.origin.z,time)+.055)},
-    velocity:{x:(v.vx||0)+dx/len*(3+power*tuning.rearSpeed)*(1+bow*JET_PLUME.bowReach),y:lift,z:(v.vz||0)+dz/len*(3+power*tuning.rearSpeed)*(1+bow*JET_PLUME.bowReach)},power:power*(apex?1.25:1),loaded,packetScale:apex?APEX_SPRAY.packetScale:1};
+    velocity:{x:(v.vx||0)+jetX*(3+power*tuning.rearSpeed)*(1+bow*JET_PLUME.bowReach)*(1+sweep*(MAX_TRIM_SPRAY.reachScale-1)),y:lift,z:(v.vz||0)+jetZ*(3+power*tuning.rearSpeed)*(1+bow*JET_PLUME.bowReach)*(1+sweep*(MAX_TRIM_SPRAY.reachScale-1))},power:power*(apex?1.25:1),loaded,packetScale:(apex?APEX_SPRAY.packetScale:1)*(1+sweep*(MAX_TRIM_SPRAY.packetScale-1))};
 }

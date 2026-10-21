@@ -1,3 +1,4 @@
+import {maxTrimSpray,MAX_TRIM_SPRAY} from './trim-spray.js';
 import {updateWomp} from './womping.js';
 import {isTinny} from '../config.js';
 import{updateRacer}from'./racing-physics.js';
@@ -115,11 +116,12 @@ export class VehiclePhysics {
       const resistance=immersed*coastDrag*trimDrag*planeDrag*bowDrag*(driveConfig.linearResistance+this.speed*driveConfig.quadraticResistance)/driveConfig.effectiveMass+(1-immersed)*this.speed*.0015;
       const drag = Math.exp(-resistance*dt);
       this.vx *= drag; this.vz *= drag;
-      const yawDamping=hydro.yawDamping+Math.abs(forward)*hydro.yawSpeedDamping+apexSpeed*APEX_HANDLING.highSpeedYawDamping;
+      const trimSweep=maxTrimSpray(this);
+      const yawDamping=trimSweep*MAX_TRIM_SPRAY.yawDamping+hydro.yawDamping+Math.abs(forward)*hydro.yawSpeedDamping+apexSpeed*APEX_HANDLING.highSpeedYawDamping;
       const sliding=input.freestyle?.72:1;
       const decay=Math.exp(-yawDamping*sliding*dt);
-      const torque=(this.drive.yawMoment||0)*sprayTurn.yawGain;
-      const yawLimit=this.type==='hyper'?APEX_HANDLING.yawLimit/(1+this.speed/APEX_HANDLING.turnSpeedScale)*(1-apexSpeed*(1-APEX_HANDLING.highSpeedYawScale))*(1-apexSpeed*.75*(1-Math.abs(this.steer))):sprayTurn.yawLimit;
+      const torque=(this.drive.yawMoment||0)*sprayTurn.yawGain*(1-trimSweep*(1-MAX_TRIM_SPRAY.yawScale));
+      const yawLimit=(this.type==='hyper'?APEX_HANDLING.yawLimit/(1+this.speed/APEX_HANDLING.turnSpeedScale)*(1-apexSpeed*(1-APEX_HANDLING.highSpeedYawScale))*(1-apexSpeed*.75*(1-Math.abs(this.steer))):sprayTurn.yawLimit)*(1-trimSweep*(1-MAX_TRIM_SPRAY.yawScale));
       this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw*(this.workshop?.yaw||1)/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-yawLimit,yawLimit);
       if(this.type==='hyper'){
         const magnitude=Math.hypot(this.vx,this.vz),cap=forward<0?c.reverseMax:c.maxSpeed;
