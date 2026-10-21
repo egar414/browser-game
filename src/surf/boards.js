@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {makeDeckCharacter} from '../vehicles/wardrobe.js';
 export const BOARDS={
- body:{name:'Bodyboard',length:1.12,width:.55,paddle:3.1,maxSpeed:12.8,turn:1.85,grip:2.6,airYaw:6.2,launchSpeed:3.8,stability:1.15,colour:'#ffba42'},
+ body:{name:'Bodyboard',length:1.12,width:.55,paddle:3.1,maxSpeed:12.8,turn:1.75,grip:3.5,airYaw:6.2,launchSpeed:3.8,stability:1.15,colour:'#ffba42'},
  short:{name:'Shortboard',length:1.92,width:.51,paddle:2.7,maxSpeed:16,turn:1.65,grip:4.5,airYaw:3.5,launchSpeed:4.5,stability:1,colour:'#f1eee2'},
  gun:{name:'Big-wave gun',length:2.75,width:.49,paddle:3.5,maxSpeed:18.5,turn:1.02,grip:5.5,airYaw:2.3,launchSpeed:5.2,stability:1.4,colour:'#e1564c'},
 };

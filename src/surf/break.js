@@ -15,10 +15,11 @@ const spacing=SURF_BREAK.period*SURF_BREAK.travelSpeed;
 const crestAt=(lx,time)=>-85+setPhase(time)*SURF_BREAK.travelSpeed+lx*SURF_OPTIONS.direction*.035;
 export function surfSection(x){
  const progress=SURF_OPTIONS.direction*(x-SURF_BREAK.x)+140;
- const hollow=smooth(18,40,progress)*(1-smooth(75,100,progress))+.8*smooth(182,202,progress)*(1-smooth(220,242,progress));
+ const wall=smooth(18,40,progress)*(1-smooth(75,100,progress));
+ const hollow=.8*smooth(182,202,progress)*(1-smooth(220,242,progress));
  const shoulder=smooth(124,150,progress)*(1-smooth(175,195,progress)),air=smooth(225,248,progress)*(1-smooth(278,300,progress));
- const name=progress<30?'TAKEOFF':progress<90?'BARREL':progress<140?'OPEN WALL':progress<190?'SHOULDER':progress<225?'REBUILT POCKET':progress<285?'AIR SECTION':'EXIT';
- return {progress,name,hollow,shoulder,air,height:1-.3*shoulder+.1*hollow+.12*air,front:1+.65*shoulder-.22*hollow-.25*air};
+ const name=progress<30?'TAKEOFF':progress<90?'OPEN WALL':progress<140?'LIP POCKET':progress<190?'SHOULDER':progress<225?'BARREL':progress<285?'AIR SECTION':'EXIT';
+ return {progress,name,hollow,shoulder,air,height:1-.3*shoulder+.1*(hollow+wall)+.12*air,front:1+.65*shoulder-.22*(hollow+wall)-.25*air};
 }
 function shape(crest){
  const shoal=smooth(-260,-90,crest),strength=(.32+.68*shoal)*smooth(-720,-620,crest)*(1-smooth(240,340,crest));
@@ -40,7 +41,7 @@ export function surfWave(x,z,time){
  if(!influence)return {normal:{x:0,y:1,z:0},height:0,setStrength:0,influence:0,crest:SURF_BREAK.z+crest,q,peel:SURF_BREAK.x,broken:0,curl:0,slopeX:0,slopeZ:0,phase:setPhase(time),section:surfSection(x),surfaceVelocity:{x:0,y:0,z:0}};
  const section=surfSection(x),ux=lx*SURF_OPTIONS.direction;const phase=(crest-lx*SURF_OPTIONS.direction*.035+85)/SURF_BREAK.travelSpeed,peel=-140+phase*7,breaking=smooth(-140,-85,crest)*(1-smooth(230,300,crest)),broken=breaking*(1-smooth(peel-35,peel+5,ux));
  const slopeX=(train(lx+.1,lz,time)-train(lx-.1,lz,time))/.2,slopeZ=(train(lx,lz+.1,time)-train(lx,lz-.1,time))/.2,normalLength=Math.hypot(slopeX,1,slopeZ);
- return {normal:{x:-slopeX/normalLength,y:1/normalLength,z:-slopeZ/normalLength},height:train(lx,lz,time),setStrength:s.strength,influence,crest:SURF_BREAK.z+crest,q,peel:SURF_BREAK.x+SURF_OPTIONS.direction*peel,broken,curl:breaking*clamp(section.hollow*Math.max(smooth(peel-28,peel-7,ux),section.progress>180?.65*smooth(peel-115,peel-70,ux):0)+.55*section.air*smooth(peel-115,peel-70,ux))*(1-smooth(peel+16,peel+42,ux)),slopeX,slopeZ,phase:setPhase(time),section,surfaceVelocity:{x:SURF_OPTIONS.direction*(.12*s.strength+.7*broken),z:.45*s.strength*Math.cos(q/20)+2*broken,y:(train(lx,lz,time+.02)-train(lx,lz,time-.02))/.04}};
+ return {normal:{x:-slopeX/normalLength,y:1/normalLength,z:-slopeZ/normalLength},height:train(lx,lz,time),setStrength:s.strength,influence,crest:SURF_BREAK.z+crest,q,peel:SURF_BREAK.x+SURF_OPTIONS.direction*peel,broken,curl:breaking*clamp(section.hollow*Math.max(smooth(peel-28,peel-7,ux),section.progress>180?smooth(peel-190,peel-140,ux):0)+.55*section.air*smooth(peel-115,peel-70,ux))*(1-smooth(peel+16,peel+42,ux)),slopeX,slopeZ,phase:setPhase(time),section,surfaceVelocity:{x:SURF_OPTIONS.direction*(.12*s.strength+.7*broken),z:.45*s.strength*Math.cos(q/20)+2*broken,y:(train(lx,lz,time+.02)-train(lx,lz,time-.02))/.04}};
 }
 export function curlPoint(x,crest,time,theta,context=null){
  const section=context?.section||surfSection(x),strength=context?.setStrength??shape(crest-SURF_BREAK.z).strength,part=theta/(Math.PI*.98);

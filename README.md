@@ -20,15 +20,15 @@ a left- or right-hand break and Forgiving / Standard / Expert assistance.
 Preferences save locally. Online rooms share the left-hand 2.2 m break so all
 clients sample matching water; personal difficulty remains adjustable.
 
-The fictional reef has a sequence of smoothly changing takeoff, hollow barrel,
-performance wall, softer shoulder, rebuilt pocket and air sections. Several
+The fictional reef has a sequence of smoothly changing takeoff, open wall,
+lip pocket, cutback shoulder, rebuilt barrel and final air sections. Several
 continuous swells roll through a 1,060 m patch, staying broad offshore before
 shoaling into the reef. Period wrapping relabels the crests without respawning
 water. Paddling's camera faces the incoming set; **SWELL OVERVIEW** shows the
 whole approach. The exposed shelf is behind the riding area.
 
 - **WASD:** paddle / steer / drive the rescue ski. Angle down the wave after catching it.
-- **Space:** paddle and catch; tap after loading a down/up line to pump. Holding it
+- **Space:** paddle and catch; hold to compress on the descent, then release while climbing to pump. Holding it
   cannot repeatedly add pump energy. Pump returns are capped and require loading.
 - **Shift:** crouch and stall. Forgiving mode helps crouch inside the barrel;
   Expert requires manual stance and has stricter landing and whitewater limits.
@@ -37,11 +37,21 @@ whole approach. The exposed shelf is behind the riding area.
   suitable launch and sufficient airtime; badly aligned landings wipe out.
 - **B:** launch from the yacht or step off a ski/rear seat.
 - **C:** face, chase, first person and swell overview; drag to orbit.
-- **R:** recover to the channel; resets and wipeouts discard unbanked points.
+- **R:** restart the same practice takeoff offline; recover to the channel online.
+  Restarts and wipeouts discard unbanked points.
 - Landscape phones have pump, crouch/stall, rail/roll, steering and role buttons,
   with pitch controls appearing during flight.
 
+Steering is surfer-relative: A/Left turns the board toward its left rail and
+D/Right toward its right rail; it does not change with camera orientation.
 Progressive rail forces redirect velocity rather than instantly rotating it.
+Nose, centre and tail water samples drive critically damped moving-surface
+support and pitch. Position is not snapped to a centre height each frame.
+Contact fraction, relative water speed, angular velocities, compression and
+available grip are explicit state. Excessive sideways slip reduces grip;
+higher speed widens the natural arc. The local rider is interpolated between
+60 Hz physics steps, while the camera smooths separately. Reduced-motion system
+preferences disable speed-based field-of-view changes.
 Gravity and moving-surface pressure provide speed; turns, drag, stalls and soft
 shoulders scrub momentum. Shortboards have stronger fin/rail grip, bodyboards
 release and rotate more readily, and guns prefer drawn-out lines. Water sampling
@@ -68,7 +78,9 @@ surf server. Surf money uses the existing device-local account wallet.
 
 Tune sections, surface dimensions, handedness, size and GLSL in
 `src/surf/break.js`; board grip, speed and air limits in `src/surf/boards.js`;
-rail forces, pumping, contact, air and landing in `src/surf/board-physics.js`;
+central physical parameters and separate assist presets in `src/surf/tuning.js`;
+shared wave/frame/barrel sampling and damped multi-point support in
+`src/surf/contact.js`; rail forces, pumping, air and landing in `src/surf/board-physics.js`;
 and launch/crew roles in `src/surf/session.js`. `src/surf/view.js` controls mesh
 quality, foam and cameras; `src/surf/board-spray.js` pools falling rail spray and
 landing drops. Ocean physics and visible displacement use the same authored
@@ -89,8 +101,17 @@ asset download is needed for surfing.
 only digital input values on both boards and both break directions. The browser
 specs exercise actual keyboard/touch input, quality settings, persisted options,
 recovery and two-account crew play against the existing SQL in local PGlite.
+`npm run dev` also shows a development-only **SURF LAB** while surfing.
+Expand it for contact/grip/rail/compression/angular-velocity readouts, contact
+markers, a wave-normal arrow and deterministic takeoff/bottom-turn/barrel/air
+spawns. Development spawns are disabled online; the lab is excluded from the
+production bundle. `src/surf/practice.js` defines those comparisons. Restart
+clears previous takeoff/rotation/turn state. Manoeuvre rewards require travel
+and committed turns; passive ride points scale with distance, not time.
 Cloud graphics use software SwiftShader; those results cannot establish laptop
-60 fps or performance on a physical phone.
+60 fps or performance on a physical phone. The connected keyboard validation
+recorded about 3.9 fps with CPU SwiftShader, 73 draw calls and 1.64 million
+triangles; this is a cloud software-renderer measurement, not a laptop benchmark.
 
 ## Optional online worlds and accounts
 

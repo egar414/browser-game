@@ -124,3 +124,7 @@
 
 .surf-options{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.surf-options label{display:flex;flex-direction:column;gap:3px;font-size:9px;color:#cde9df}.surf-options select{background:#164852;color:#fff0d5;border:1px solid #719b9e;border-radius:4px;padding:5px;max-width:130px}#surf-panel:not([data-mode="yacht"]) .surf-options{display:none}.surf-touch [data-surf-air]{display:none}#surf-panel.airborne .surf-touch [data-surf-air]{display:block}@media(max-height:500px){.touch-device.surfing .surf-touch{left:154px;gap:4px;padding:4px}.touch-device.surfing .surf-touch button{padding:6px;font-size:9px}.surf-options{gap:5px;margin-top:5px}.surf-options select{font-size:10px;padding:3px}}
 #surf-panel[data-mode="ride"] .surf-touch [data-surf-air],#surf-panel[data-mode="ski"] .surf-touch [data-surf-air]{display:block}.touch-device.surfing #surf-panel[data-mode="yacht"] .surf-touch{display:none}#surf-panel[data-mode="ski"] .surf-touch [data-surf-hold="Space"],#surf-panel[data-mode="ski"] .surf-touch [data-surf-hold="KeyX"]{display:none}
+
+#surf-debug{position:fixed;right:12px;bottom:100px;z-index:55;background:#102f35ed;color:#eaf6e8;padding:10px;font:12px monospace;border:1px solid #e4b75c;max-width:340px}#surf-debug summary{cursor:pointer}#surf-debug button{color:#15343c;background:#f5d17a;border:1px solid #97c3bd;padding:5px;margin:3px;font:inherit}#surf-debug pre{white-space:pre-wrap;margin-bottom:0}
+
+#surf-panel[data-mode="ride"] .surf-board-picker,#surf-panel[data-mode="ride"]>small{display:none}#surf-panel[data-mode="ride"]{background:#0d343fd9}
