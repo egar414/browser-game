@@ -24,7 +24,7 @@ export function loadSettings(storage) {
     if (!['Auto', 'Low', 'Medium', 'High'].includes(result.quality)) result.quality = 'Auto';
     for (const key of ['master', 'engine', 'water']) result[key] = Math.max(0, Math.min(1, result[key]));
     result.colour = Math.abs(Math.floor(result.colour)) % 3;
-    result.camera = Math.abs(Math.floor(result.camera)) % 3;
+    result.camera = Math.abs(Math.floor(result.camera)) % 4;
     return result;
   } catch { return { ...defaults }; }
 }

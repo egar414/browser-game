@@ -97,7 +97,7 @@ const input=new Input(code=>{
   if(code==='KeyR')recover();
   if(code==='KeyL')visitWaterfront();
   if(code==='KeyO')visitDolphins();
-  if(code==='KeyC'||code==='KeyP'){settings.camera=code==='KeyP'?(settings.camera===2?0:2):(settings.camera+1)%3;chase.reset();saveSettings(settings);ui.toast(['Wide chase view','Close riding view','First person · ahead of rider · drag to look'][settings.camera]);}
+  if(code==='KeyC'||code==='KeyP'){settings.camera=code==='KeyP'?(settings.camera===2?0:2):(settings.camera+1)%4;chase.reset();saveSettings(settings);ui.toast(['Wide chase view','Close riding view','First person · ahead of rider · drag to look','Extra wide · offset from rear spray'][settings.camera]);}
   if(crew.active){if(code==='KeyJ')toggleCrew();return;}
   if(code==='KeyJ'){if(crew.nearest(online,vehicle))toggleCrew();else toggleHelm();}
   if(code==='KeyK'){if(vehicle.type==='cruiser'&&!deck.active){ui.toast('Leave the helm first','Slow down and press J / DECK to fish from the cockpit.');return;}if(!battle.active&&!activities.race&&!activities.challenge){fishing.hour=dayClock.hour;fishing.action(vehicle,deck.active?{...bodyPoint(vehicle,[deck.x,1.02,deck.z]),heading:vehicle.heading+deck.heading}:null);if(!fishing.active)ui.toast(fishing.message);}}

@@ -77,7 +77,8 @@ export class VehiclePhysics {
     this.throttle = damp(this.throttle, input.throttle, mode.throttleResponse, dt);
     const apexSpeed=this.type==='hyper'?clamp((this.speed-APEX_HANDLING.highSpeedStart)/(APEX_HANDLING.highSpeedEnd-APEX_HANDLING.highSpeedStart),0,1):0;
     const handling=isTinny(this.type)?TINNY_HANDLING:this.type==='cat'?CAT_HANDLING:null;
-    this.steer = damp(this.steer, input.steer, this.type==='hyper'?APEX_HANDLING.steerResponse+(APEX_HANDLING.highSpeedSteerResponse-APEX_HANDLING.steerResponse)*apexSpeed:handling?.steerResponse||c.steerResponse||6, dt);
+    const apexReleased=this.type==='hyper'&&Math.abs(input.steer)<.01&&!this.airborne;
+    this.steer = damp(this.steer, input.steer, apexReleased?32: this.type==='hyper'?APEX_HANDLING.steerResponse+(APEX_HANDLING.highSpeedSteerResponse-APEX_HANDLING.steerResponse)*apexSpeed:handling?.steerResponse||c.steerResponse||6, dt);
     if(!this.airborne){
       if(input.trimStep){
         if(isJet(this.type))this.trimDegrees=jetTrimPositions(this.type)[clamp(this.trimIndex+input.trimStep,0,jetTrimPositions(this.type).length-1)];
@@ -117,13 +118,13 @@ export class VehiclePhysics {
       const drag = Math.exp(-resistance*dt);
       this.vx *= drag; this.vz *= drag;
       const trimSweep=maxTrimSpray(this);
-      const yawDamping=trimSweep*MAX_TRIM_SPRAY.yawDamping+hydro.yawDamping+Math.abs(forward)*hydro.yawSpeedDamping+apexSpeed*APEX_HANDLING.highSpeedYawDamping;
+      const yawDamping=(apexReleased?28:0)+trimSweep*MAX_TRIM_SPRAY.yawDamping+hydro.yawDamping+Math.abs(forward)*hydro.yawSpeedDamping+apexSpeed*APEX_HANDLING.highSpeedYawDamping;
       const sliding=input.freestyle?.72:1;
       const decay=Math.exp(-yawDamping*sliding*dt);
-      const torque=(this.drive.yawMoment||0)*sprayTurn.yawGain*(1-trimSweep*(1-MAX_TRIM_SPRAY.yawScale));
+      const torque=(apexReleased?0:(this.drive.yawMoment||0))*sprayTurn.yawGain*(1-trimSweep*(1-MAX_TRIM_SPRAY.yawScale));
       const yawLimit=(this.type==='hyper'?APEX_HANDLING.yawLimit/(1+this.speed/APEX_HANDLING.turnSpeedScale)*(1-apexSpeed*(1-APEX_HANDLING.highSpeedYawScale))*(1-apexSpeed*.75*(1-Math.abs(this.steer))):sprayTurn.yawLimit)*(1-trimSweep*(1-MAX_TRIM_SPRAY.yawScale));
       this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw*(this.workshop?.yaw||1)/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-yawLimit,yawLimit);
-      if(this.type==='hyper'){
+      if(this.type==='hyper'||this.type==='cat'){
         const magnitude=Math.hypot(this.vx,this.vz),cap=forward<0?c.reverseMax:c.maxSpeed;
         if(magnitude>cap){this.vx*=cap/magnitude;this.vz*=cap/magnitude;}
       }

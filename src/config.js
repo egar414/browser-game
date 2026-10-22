@@ -19,8 +19,8 @@ export const VEHICLES = {
     wheelieAngle: 0.92, wipeoutAngle: 1.22, colours: ['#1679e8', '#ff613d', '#86df9c'],
   },
   cat: {
-    name: 'Tunnel Rat 50', subtitle: 'Inflatable racing catamaran', description: 'Twin pontoons. One lively outboard. Settle onto the plane and carry a wide, heavy spray through the bends.',
-    length: 4.1, width: 2.05, maxSpeed: 27,
+    name: 'Tunnel Rat 50', subtitle: 'Inflatable racing catamaran', description: 'Twin pontoons. One lively outboard. A 110 km/h gameplay speed ceiling, with wide, heavy spray through the bends.',
+    length: 4.1, width: 2.05, maxSpeed: 110 / 3.6,
     reverseMax: 3.3, lateralGrip: 2.6,
     slideGrip: 0.92, spring: 34, damping: 10, rideHeight: 0.16, airSteer: 0.83,
     wheelieAngle: 0.89, wipeoutAngle: 1.25, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
@@ -62,7 +62,7 @@ export const TINNY_HANDLING={steerResponse:10,slideYawGain:.48,slideYawLimit:2.2
   bounceHz:.95,chineLift:.24,pitchBounce:.34,rollBounce:.12,loadedDamping:7.2};
 // Broader twin-pontoon support: slower catch/release and less pitch authority
 // than the short tender. Clip-inspired arcade values, not real craft limits.
-export const CAT_HANDLING={steerResponse:7.8,slideYawGain:.24,slideYawLimit:1.75,
+export const CAT_HANDLING={steerResponse:7.8,slideYawGain:.60,slideYawLimit:1.75,
   bowStart:2.4,bowRange:3.5,bowSteeringLoss:.48,surgePitch:.025,sternSupport:.34,
   bowSpeedStart:10,bowSpeedRange:6,bowSpeedLoss:.18,
   bounceHz:.83,chineLift:.17,pitchBounce:.14,rollBounce:.06,loadedDamping:7.4};
@@ -77,7 +77,7 @@ export const PROPULSION = {
     kind:'propeller',effectiveMass:360,maximumRpm:5500,idleFraction:.14,
     shaftPower:37300,propellerArea:.053,steeringAngle:.49,
     motorMount:[.18,.4,-1.65],propeller:[0,-.72,-.23],fullImmersion:.13,
-    linearResistance:14,quadraticResistance:1.45,reverseEfficiency:.5,trimRate:6,
+    linearResistance:14,quadraticResistance:.15,reverseEfficiency:.5,trimRate:6,
   },
   tinny:{
     kind:'propeller',effectiveMass:185,maximumRpm:5600,idleFraction:.14,
@@ -95,9 +95,9 @@ HYDRODYNAMICS.cruiser={...HYDRODYNAMICS.cat};
 export const isJet=type=>type==='ski'||type==='seago'||type==='hyper';
 export const SPORTFISHER_HEIGHT=10.8;
 // Original long-hull performance PWC; 120 km/h is a game speed ceiling.
-VEHICLES.seago={...VEHICLES.ski,name:'Seago 120',subtitle:'Performance touring jet ski',description:'A longer, black performance hull with a 120 km/h game speed ceiling. Nine trim settings, powerful carving and a balanced bow ride.',length:3.65,width:1.32,maxSpeed:120/3.6,reverseMax:4,lateralGrip:4.1,slideGrip:1.2,spring:45,damping:12,airSteer:2.8,wheelieAngle:.82,wipeoutAngle:1.27,colours:['#b83836','#3a91ba','#b2bfc4']};
-PROPULSION.seago={...PROPULSION.ski,effectiveMass:420,hydraulicPower:128000,nozzleArea:.0065,nozzleMount:[0,-.06,-1.8],intake:[0,-.29,-1.2],linearResistance:23,quadraticResistance:2.15,steeringAngle:.39};
-HYDRODYNAMICS.seago={...HYDRODYNAMICS.ski,planingStart:5,planingEnd:16,yawInertia:500,pitchSpring:21,pitchDamping:8};
+VEHICLES.seago={...VEHICLES.ski,name:'Seago 120',subtitle:'Performance touring jet ski',description:'A longer, black performance hull with a 120 km/h game speed ceiling. Nine trim settings, powerful carving and a balanced bow ride.',length:3.65,width:1.32,maxSpeed:120/3.6,reverseMax:4,lateralGrip:5.1,steerResponse:11,slideGrip:1.2,spring:45,damping:12,airSteer:2.8,wheelieAngle:.82,wipeoutAngle:1.27,colours:['#b83836','#3a91ba','#b2bfc4']};
+PROPULSION.seago={...PROPULSION.ski,effectiveMass:420,hydraulicPower:128000,nozzleArea:.0065,nozzleMount:[0,-.06,-1.8],intake:[0,-.29,-1.2],linearResistance:23,quadraticResistance:2.15,steeringAngle:.49};
+HYDRODYNAMICS.seago={...HYDRODYNAMICS.ski,planingStart:5,planingEnd:16,yawInertia:430,yawSpeedDamping:.055,pitchSpring:21,pitchDamping:8};
 
 // Fictional offshore racing cat: the requested 500 km/h is arcade performance.
 VEHICLES.racer={...VEHICLES.cat,name:'Riptide 500',subtitle:'Twin-engine offshore racing cat',description:'A 12 m closed-cockpit racing cat with twin inboard bays and surface drives. Massive planing spray. 500 km/h is fictional arcade tuning. Launches on the offshore speed run.',length:12.4,width:4.4,maxSpeed:500/3.6,reverseMax:4.5,rideHeight:.18,wheelieAngle:.10,wipeoutAngle:1.5,colours:['#28a8c4','#f36545','#8ac9a7']};

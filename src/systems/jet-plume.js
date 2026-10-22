@@ -3,13 +3,13 @@ import { waveHeight } from '../config.js';
 import { JET_PLUME, SPRAY_VISUAL_SCALE, clamp } from './spray-model.js';
 // A packet remains in world space after leaving the nozzle. Its water follows
 // a ballistic trajectory with drag, including the falling half of the plume.
-export function plumeTrajectory(p,age){
+export function plumeTrajectory(p,age,out={}){
   const drag=p.drag,decay=Math.exp(-drag*age),travel=(1-decay)/drag;
-  return {x:p.x+p.vx*travel,y:p.y+(p.vy+9.81/drag)*travel-9.81*age/drag,z:p.z+p.vz*travel,vx:p.vx*decay,vy:(p.vy+9.81/drag)*decay-9.81/drag,vz:p.vz*decay};
+  out.x=p.x+p.vx*travel;out.y=p.y+(p.vy+9.81/drag)*travel-9.81*age/drag;out.z=p.z+p.vz*travel;out.vx=p.vx*decay;out.vy=(p.vy+9.81/drag)*decay-9.81/drag;out.vz=p.vz*decay;return out;
 }
 export class JetPlume {
   constructor(scene,texture,capacity=2400,density=1){
-    this.density=density;
+    this.density=density;this.trajectory={};
     this.history=[];this.packets=Array.from({length:capacity},()=>({active:false}));this.next=0;this.accumulator=0;this.impacts=[];this.falling=0;
     const plane=new THREE.PlaneGeometry(1,1),g=new THREE.InstancedBufferGeometry();g.index=plane.index;g.attributes.position=plane.attributes.position;g.attributes.uv=plane.attributes.uv;
     for(const [name,size]of [['aCenter',3],['aSize',2],['aAlpha',1],['aSeed',1],['aVelocity',3]])g.setAttribute(name,new THREE.InstancedBufferAttribute(new Float32Array(capacity*size),size).setUsage(THREE.DynamicDrawUsage));
@@ -61,7 +61,7 @@ export class JetPlume {
     if(dt>0){this.history.unshift({time,source});if(this.history.length>2)this.history.pop();}
     let n=0;const {aCenter,aSize,aAlpha,aSeed,aVelocity}=this.geometry.attributes;
     for(const p of this.packets){
-      if(!p.active)continue;const lifetime=p.lifetime||JET_PLUME.lifetime,age=time-p.birth,q=plumeTrajectory(p,age),water=waveHeight(q.x,q.z,time);
+      if(!p.active)continue;const lifetime=p.lifetime||JET_PLUME.lifetime,age=time-p.birth,q=plumeTrajectory(p,age,this.trajectory),water=waveHeight(q.x,q.z,time);
       if(age>lifetime||(q.vy<0&&q.y<=water+.025)){
         if(q.vy<0&&age>0.15&&!p.fine)this.impacts.push({x:q.x,z:q.z,time,strength:.1+p.power*.13});p.active=false;continue;
       }
@@ -71,7 +71,7 @@ export class JetPlume {
       aAlpha.setX(n,fade*p.power*(p.contact?.5:1)*(p.seed>JET_PLUME.streakThreshold?.9:p.fine?JET_PLUME.mistOpacity:JET_PLUME.coreOpacity)*clamp((q.y-water+.14)/.18));aSeed.setX(n,p.seed);aVelocity.setXYZ(n,q.vx,q.vy,q.vz);n++;
     }
     this.geometry.instanceCount=n;this.mesh.visible=n>0;
-    for(const name of ['aCenter','aSize','aAlpha','aSeed','aVelocity'])this.geometry.attributes[name].needsUpdate=true;
+    for(const name of ['aCenter','aSize','aAlpha','aSeed','aVelocity']){const attribute=this.geometry.attributes[name];attribute.clearUpdateRanges();if(n)attribute.addUpdateRange(0,n*attribute.itemSize);attribute.needsUpdate=n>0;}
   }
   dispose(){this.mesh.removeFromParent();this.geometry.dispose();this.material.dispose();}
 }
