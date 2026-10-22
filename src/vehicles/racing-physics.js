@@ -1,7 +1,8 @@
+import{assistedYaw}from'./steering-assist.js';
 import{constrainHullWater}from'./shafting.js';
 import{WORLD,waveHeight,RIDE_MODES}from'../config.js';
 import{bodyPoint}from'./propulsion.js';
-export const RACER_HANDLING={acceleration:11.5,braking:17,coastDrag:1.8,steerResponse:2.8,lowTurnRate:.85,turnSpeedScale:24,grip:3.8,waterSpring:30,waterDamping:11,boundaryMargin:700};
+export const RACER_HANDLING={acceleration:11.5,braking:17,coastDrag:1.8,steerResponse:10,lowTurnRate:.85,turnSpeedScale:24,grip:3.8,waterSpring:30,waterDamping:11,boundaryMargin:700};
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
 export function updateRacer(v,dt,input,time){
  v.previous=v.snapshot();if(v.wipeout>0){v.wipeout-=dt;if(v.wipeout<=0)v.recover(true);return;}
@@ -11,7 +12,7 @@ export function updateRacer(v,dt,input,time){
  const target=braking?0:v.throttle*(v.throttle>=0?c.maxSpeed*(RIDE_MODES[v.rideMode]?.power||1):c.reverseMax);
  const rate=braking?T.braking:Math.abs(input.throttle)<.05?T.coastDrag:T.acceleration*(v.workshop?.power||1);
  let forward=oldForward+clamp(target-oldForward,-rate*dt,rate*dt);if(Math.abs(target-forward)<.05)forward=target;
- const yaw=v.steer*T.lowTurnRate*(v.workshop?.yaw||1)/(1+Math.abs(forward)/T.turnSpeedScale)*Math.min(1,Math.abs(forward)/5)*Math.sign(forward||1);v.yawRate=damp(v.yawRate,yaw,3,dt);v.heading+=v.yawRate*dt;
+ const yaw=v.steer*T.lowTurnRate*(v.workshop?.yaw||1)/(1+Math.abs(forward)/T.turnSpeedScale)*Math.min(1,Math.abs(forward)/5)*Math.sign(forward||1);const previousYaw=v.yawRate;v.yawRate=damp(v.yawRate,yaw,3,dt);v.yawRate=assistedYaw(v,input,dt,previousYaw,v.yawRate,{forward,wet:1});v.heading+=v.yawRate*dt;
  const fx=Math.sin(v.heading),fz=Math.cos(v.heading),oldX=v.x,oldZ=v.z;
  const lateral=(v.vx*fz-v.vz*fx)*Math.exp(-T.grip*(v.workshop?.grip||1)*dt);v.vx=fx*forward+fz*lateral;v.vz=fz*forward-fx*lateral;v.speed=Math.hypot(v.vx,v.vz);if(v.speed>c.maxSpeed){v.vx*=c.maxSpeed/v.speed;v.vz*=c.maxSpeed/v.speed;v.speed=c.maxSpeed;}v.slip=v.vx*fz-v.vz*fx;v.surgeAcceleration=(forward-oldForward)/dt;v.lateralAcceleration=v.yawRate*forward;
  // Sweep the full long hull at <=1.2 m intervals: no high-speed tunnelling.

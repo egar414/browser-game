@@ -1,3 +1,4 @@
+import{assistedYaw}from'./steering-assist.js';
 import {maxTrimSpray,MAX_TRIM_SPRAY} from './trim-spray.js';
 import {updateWomp} from './womping.js';
 import {isTinny} from '../config.js';
@@ -123,7 +124,9 @@ export class VehiclePhysics {
       const decay=Math.exp(-yawDamping*sliding*dt);
       const torque=(apexReleased?0:(this.drive.yawMoment||0))*sprayTurn.yawGain*(1-trimSweep*(1-MAX_TRIM_SPRAY.yawScale));
       const yawLimit=(this.type==='hyper'?APEX_HANDLING.yawLimit/(1+this.speed/APEX_HANDLING.turnSpeedScale)*(1-apexSpeed*(1-APEX_HANDLING.highSpeedYawScale))*(1-apexSpeed*.75*(1-Math.abs(this.steer))):sprayTurn.yawLimit)*(1-trimSweep*(1-MAX_TRIM_SPRAY.yawScale));
+      const previousYaw=this.yawRate;
       this.yawRate=clamp(this.yawRate*decay+(torque*TUNING[this.tuning].yaw*(this.workshop?.yaw||1)/hydro.yawInertia)/(yawDamping*sliding)*(1-decay),-yawLimit,yawLimit);
+      this.yawRate=assistedYaw(this,input,dt,previousYaw,this.yawRate,{forward,trimScale:1-trimSweep*(1-MAX_TRIM_SPRAY.yawScale)});
       if(this.type==='hyper'||this.type==='cat'){
         const magnitude=Math.hypot(this.vx,this.vz),cap=forward<0?c.reverseMax:c.maxSpeed;
         if(magnitude>cap){this.vx*=cap/magnitude;this.vz*=cap/magnitude;}

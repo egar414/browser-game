@@ -1,3 +1,4 @@
+import{assistedYaw}from'./steering-assist.js';
 import{sportfisherZ,SPORTFISHER_DECK}from'./sportfisher-shape.js';
 import{constrainHullWater}from'./shafting.js';
 import{SPORTFISHER_HEIGHT}from'../config.js';
@@ -6,10 +7,10 @@ import{bridgeObstruction}from'../systems/sportfishing-traffic.js';
 export const CRUISER_HANDLING={forwardSpeed:15.5,reverseSpeed:2.6,powerResponse:.27,brakeResponse:.65,coastResponse:.14,turnRate:.37,waterResponse:3,deckWalkSpeed:1.6};
 const damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
 export function updateCruiser(v,dt,input,time){
- v.previous=v.snapshot();v.throttle=damp(v.throttle,input.throttle,3,dt);v.steer=damp(v.steer,input.steer,3,dt);
+ v.previous=v.snapshot();v.throttle=damp(v.throttle,input.throttle,3,dt);v.steer=damp(v.steer,input.steer,10,dt);
  const T={...CRUISER_HANDLING,...v.config.cruiseHandling},oldSpeed=v.vx*Math.sin(v.heading)+v.vz*Math.cos(v.heading),braking=input.throttle<0&&oldSpeed>1;
  const target=v.deckMode||braking?0:v.throttle*(v.throttle>=0?T.forwardSpeed*(RIDE_MODES[v.rideMode]?.power||1):T.reverseSpeed),k=v.deckMode?1.8:braking?T.brakeResponse:Math.abs(input.throttle)>.05?T.powerResponse*(v.workshop?.power||1):T.coastResponse;
- let forward=damp(oldSpeed,target,k,dt);v.yawRate=damp(v.yawRate,v.steer*T.turnRate*(v.workshop?.yaw||1)*Math.min(1,Math.abs(forward)/4)*Math.sign(forward||1),2.5,dt);v.heading+=v.yawRate*dt;
+ let forward=damp(oldSpeed,target,k,dt);const previousYaw=v.yawRate;v.yawRate=damp(v.yawRate,v.steer*T.turnRate*(v.workshop?.yaw||1)*Math.min(1,Math.abs(forward)/4)*Math.sign(forward||1),2.5,dt);v.yawRate=assistedYaw(v,input,dt,previousYaw,v.yawRate,{forward,wet:1});v.heading+=v.yawRate*dt;
  const sx=Math.sin(v.heading),cz=Math.cos(v.heading),nx=v.x+sx*forward*dt,nz=v.z+cz*forward*dt;
  let hit=null;const top=Math.max(v.y,waveHeight(nx,nz,time))+(v.config.height||SPORTFISHER_HEIGHT);
  for(const d of (v.config.diveBoat?[-.42,-.2,0,.2,.43].map(n=>n*v.config.length):[-4,-2,0,2,4.2].map(sportfisherZ)))hit ||= bridgeObstruction(nx+sx*d,nz+cz*d,top,v.config.width*.5)||v.collision(nx+sx*d,nz+cz*d,v.config.width*.49,0);

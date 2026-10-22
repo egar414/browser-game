@@ -63,7 +63,7 @@ test('corrupt or unavailable preferences recover safely',()=>{
   assert.equal(loadSettings({getItem(){throw new Error('blocked');}}).vehicle,'ski');
 });
 
-test('powered steering responds promptly with distinct practical turning circles',()=>{
+test('powered steering responds promptly on both small hulls with practical turning circles',()=>{
   const headings={};
   for(const type of ['ski','cat']){
     const v=openBoat(type);v.x=-200;v.z=-1000;v.heading=Math.PI/2;
@@ -72,5 +72,5 @@ test('powered steering responds promptly with distinct practical turning circles
     assert(headings[type]>(type==='ski'?1.3:.7),`${type} powered turn too wide`);
     assert(v.speed/Math.abs(v.yawRate)<(type==='ski'?25:40));assert(v.speed>8);
   }
-  assert(headings.ski>headings.cat*1.3);
+  assert(headings.cat>headings.ski*.5&&headings.cat<headings.ski*1.2);
 });

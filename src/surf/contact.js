@@ -31,3 +31,13 @@ export function supportBoard(s,c,w,dt){
  s.relativeSpeed=Math.hypot(s.vx-w.surfaceVelocity.x,s.vz-w.surfaceVelocity.z);
  s.planing=clamp(s.relativeSpeed/5)*s.contact;
 }
+
+// Test the actual water volume, including the falling tip. A surfer above the
+// lip can launch; a rider travelling through its underside cannot phase through.
+export function boardHitsLip(s,time,w=surfWave(s.x,s.z,time),tolerance=0){
+ if(w.curl<.25)return false;
+ const width=surfWidth(),roof=barrelRoof(s.x,s.z,time,w),stance=s.board==='body'?.28:1.18-(s.crouch||0)*.65;
+ if(roof!==null&&w.q>2.3*width&&w.q<10.5*width&&s.y<roof+.5*Math.sqrt(width)+.12&&s.y+stance>roof+.18+tolerance*.35)return true;
+ const tip=curlPoint(s.x,w.crest,time,Math.PI*.98,w);
+ return Math.abs(w.q-tip.q)<.3*width&&s.y<tip.y+.35*width&&s.y+stance>tip.y+.03;
+}

@@ -1,7 +1,7 @@
 import {SURF_BREAK as B,SURF_OPTIONS as OPTIONS,surfWave,surfWidth,barrelRoof,clamp} from './break.js';
 import {BOARDS} from './boards.js';
 import {SURF_PHYSICS as P,SURF_ASSIST as ASSIST} from './tuning.js';
-import {makeContacts,sampleBoardContact,supportBoard,sampleSurfSurface} from './contact.js';
+import {makeContacts,sampleBoardContact,supportBoard,sampleSurfSurface,boardHitsLip} from './contact.js';
 import {waveHeight} from '../config.js';
 const damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
 const angle=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -35,7 +35,7 @@ export function stepBoard(s,dt,input,space){
  const w=surfWave(s.x,s.z,s.time),c=BOARDS[s.board],width=surfWidth(),assist=SURF_ASSIST[OPTIONS.difficulty],direction=OPTIONS.direction;
  s.moveTime=Math.max(0,s.moveTime-dt);s.pumpCooldown=Math.max(0,s.pumpCooldown-dt);s.release=Math.max(0,s.release-dt);s.landingWobble*=Math.exp(-P.landingWobbleDecay*dt);s.lastLandingImpact=s.landingImpact;s.landingImpact=0;
  if(s.mode==='wipeout'){s.y=waveHeight(s.x,s.z,s.time)+.05;if(!s.cooldown)s.recover();return;}
- if(s.airborne){advanceAir(s,dt,input,w,c);return;}
+ if(s.airborne){advanceAir(s,dt,input,w,c);if(s.mode!=='wipeout'&&boardHitsLip(s,s.time))s.wipe('Pitching lip contact');return;}
  sampleBoardContact(s,c,s.time);
  const paddling=s.mode==='paddle';s.compression=damp(s.compression,space&&!paddling?1:0,P.compressionResponse,dt);s.foreAft=damp(s.foreAft,input.trim||0,5,dt);s.crouch=damp(s.crouch,input.freestyle?1:w.curl>.25?assist/.45:0,8,dt);
  s.steer=damp(s.steer||0,input.steer,P.steeringResponse,dt);
@@ -64,7 +64,7 @@ export function stepBoard(s,dt,input,space){
   const sampled=sampleSurfSurface(s.x,s.z,s.time,w),roof=sampled.barrel.roof,stance=s.board==='body'?.28:1.18-s.crouch*.65,under=roof!==null&&w.q>2.3*width&&w.q<10.5*width;
   const ridingDistance=speed*dt;
   if(under&&s.y+stance<roof+.12&&speed>2){s.tube+=dt;s.barrelDistance+=ridingDistance;if(s.tube>.45&&s.barrelDistance-s.barrelAwardDistance>3){surfMove(s,'Barrel',80);s.barrelAwardDistance=s.barrelDistance;}}
-  else if(under&&s.y+stance>roof+.18+assist*.35&&s.time>s.takeoffUntil){s.wipe('Pitching lip contact · crouch or adjust your line');return;}
+  else if(boardHitsLip(s,s.time,w,assist)&&s.time>s.takeoffUntil){s.wipe('Pitching lip contact · crouch or adjust your line');return;}
   if(w.q>6*width&&vertical<-.1)s.wasDropping=true;if(s.wasDropping&&w.q>5*width&&Math.abs(input.steer)>.15&&vertical>.1){surfMove(s,'Bottom turn',70);s.wasDropping=false;}
   const turnSign=Math.abs(yaw)>.15?Math.sign(yaw):0;if(turnSign&&turnSign!==s.turnSign){s.turnSweep=0;s.turnTravel=0;s.turnSign=turnSign;}
   if(Math.abs(yaw)>.25&&speed>P.turnMinSpeed){s.turnTravel+=ridingDistance;s.turnSweep+=Math.abs(yaw)*dt;}
