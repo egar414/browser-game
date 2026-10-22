@@ -11,7 +11,7 @@ export class ChaseCamera {
   reset() { this.initialized=false; }
   update(dt,v,input,mode=0,menu=false,eye=null,aim=null) {
     const extraWide=mode===3&&!menu;
-    const fast=v.type==='racer'||v.type==='hyper',apex=v.type==='hyper';
+    const fast=v.type==='racer'||v.type==='hyper',apex=v.type==='hyper',sled=v.type==='sled';
     const rearView=!menu&&!!input.held?.('KeyU');
     if(rearView!==!!this.rearView){this.initialized=false;this.rearView=rearView;}
     if(!input.dragging)input.orbit*=Math.exp(-dt*.9);
@@ -51,17 +51,17 @@ export class ChaseCamera {
     // Extra wide sits beside the rear plume, with room to read turns and wakes.
     if(extraWide&&!rearView){target.x+=Math.cos(heading)*9;target.z-=Math.sin(heading)*9;}
     // A three-quarter chase stays beside the two racing prop rooster tails.
-    if(fast&&!menu&&!rearView&&!extraWide){const offset=apex?(mode?6:9):(mode?6:10);target.x+=Math.cos(heading)*offset;target.z-=Math.sin(heading)*offset;}
+    if((fast||sled)&&!menu&&!rearView&&!extraWide){const offset=sled?(mode?4.5:7):apex?(mode?6:9):(mode?6:10);target.x+=Math.cos(heading)*offset;target.z-=Math.sin(heading)*offset;}
     // Feed forward racing velocity to cancel the smoothing lag at 500 km/h.
     // Without this the chase drops tens of metres into the trailing spray,
     // and a held rear view can drift behind the craft it should lead.
-    if(fast&&!menu&&this.initialized){
+    if((fast||sled)&&!menu&&this.initialized){
       const positionLead=Math.max(0,1/4.5-dt*.5),lookLead=Math.max(0,1/6-dt*.5);
       target.x+=(v.vx||0)*positionLead;target.z+=(v.vz||0)*positionLead;
       look.x+=(v.vx||0)*lookLead;look.z+=(v.vz||0)*lookLead;
     }
     // Raise over shorelines and docks along the camera ray, avoiding terrain clipping.
-    for(let t=.2;t<=1;t+=.2) if(collision(v.x+(target.x-v.x)*t,v.z+(target.z-v.z)*t,.5,target.y)) {target.y=Math.max(target.y,12);break;}
+    if(!(sled&&v.sledMode==='land'))for(let t=.2;t<=1;t+=.2) if(collision(v.x+(target.x-v.x)*t,v.z+(target.z-v.z)*t,.5,target.y)) {target.y=Math.max(target.y,12);break;}
     if(!this.initialized){this.camera.position.copy(target);this.look.copy(look);this.initialized=true;}
     this.camera.position.lerp(target,1-Math.exp(-dt*4.5));this.look.lerp(look,1-Math.exp(-dt*6));this.camera.lookAt(this.look);
     this.camera.fov=menu?48:extraWide?84:mode?58:72+Math.min(6,v.speed*.18);this.camera.updateProjectionMatrix();

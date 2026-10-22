@@ -1,3 +1,4 @@
+import{isSledPose}from'./sled-protocol.js';
 import {isTenderPassenger} from './tender-crew.js';
 import {packSpray} from './network-spray.js';
 import {availableCraft} from './craft-access.js';
@@ -39,12 +40,13 @@ export class RemoteStates{
   for(let i=1;i<h.length;i++)if(h[i].time>=target){a=h[i-1];b=h[i];break;}
   if(!a)return null;
   // Seat identity is discrete; never interpolate a passenger token or marker.
-  if(isTenderPassenger(a)||isTenderPassenger(b))return {...b};
+  if(isTenderPassenger(a)||isTenderPassenger(b)||isSledPose(a)!==isSledPose(b))return {...b};
   // Recover/teleport immediately instead of sailing a ghost across town.
   if(Math.hypot(b.x-a.x,b.z-a.z)>180)return {...b};
   const t=clamp((target-a.time)/Math.max(1,b.time-a.time),0,1),p={...b};
   for(const key of Object.keys(ranges))p[key]=a[key]+(b[key]-a[key])*t;
   if(Array.isArray(a.spray)&&Array.isArray(b.spray))p.spray=b.spray.map(s=>{const prev=a.spray.find(q=>q.kind===s.kind);if(!prev)return s;const value={...s};for(const key of ['ox','oy','oz','vx','vy','vz','power'])value[key]=prev[key]+(s[key]-prev[key])*t;return value;});
+  if(isSledPose(b)){p.deckX=-1;p.deckZ=8;p.trim=40;p.deck=true;}
   p.heading=a.heading+wrapAngle(b.heading-a.heading)*t;
   if(target>b.time&&b.active){const seconds=Math.min(.25,(target-b.time)/1000);p.x+=b.vx*seconds;p.z+=b.vz*seconds;}
   return p;

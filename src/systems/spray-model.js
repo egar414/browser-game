@@ -40,6 +40,11 @@ export function sharpTurnLoad(v){
  return steer*waterLoad*clamp((v.speed-3)/4)*clamp(v.throttle*2);
 }
 export function sprayState(v,_freestyle=false,time=0) {
+  if(v.type==='sled'){
+   const wet=v.sledMode==='water'&&!v.wipeout,load=wet?clamp(v.speed/20)*clamp(v.throttle):0,turn=wet?sharpTurnLoad(v):0,fx=Math.sin(v.heading),fz=Math.cos(v.heading),p=v.drive?.origin||v;
+   const contacts=[-1,1].map(side=>({x:p.x+fz*side*.28,y:waveHeight(p.x,p.z,time)+.04,z:p.z-fx*side*.28,wet:load}));
+   return{speed:wet?v.speed:0,left:load*turn,right:load*turn,rate:load*turn*180,jet:load,outside:-Math.sign(v.steer),contacts,turnGate:turn};
+  }
   if(v.type==='racer'){
     const speed=clamp(v.speed,0,140),load=!v.airborne&&!v.wipeout&&v.throttle>.12?clamp((speed-7)/13)*clamp(v.planing||0)*clamp(v.throttle):0;
     const contacts=[-1,1].map(side=>{const p=bodyPoint(v,[side*1.95,-.12,-3.8]);return{...p,y:waveHeight(p.x,p.z,time)+.045,wet:load?1:0};});
@@ -84,6 +89,7 @@ export function launchSpray(v,state,side,random=Math.random) {
 }
 // Submerged pump discharge stays a surface wash. Only a real surface crossing creates an aerial jet.
 export function pumpDischarge(v,time=0) {
+  if(v.type==='sled')return null;
   const d=v.drive;
   if(!d||d.neutral||d.flow<=.0001||v.airborne||v.wipeout)return null;
   const pose=propulsionPose(v,d.trimAngle,d.steeringAngle),origin={...pose.origin};
@@ -112,6 +118,11 @@ export function stepDroplet(p,dt) {
 // from the unchanged chine spray and hydraulic reaction-force calculation.
 export const JET_PLUME = { lifetime:4.8, minimumFlow:.008, lift:4.8, trimLift:2.8, rearSpeed:12, spread:.78, drag:.32, baseRate:260, poweredRate:330, coreOpacity:1.1, mistOpacity:.10, coreGrowth:.62, coreRadius:1.25, mistRadius:1.35, fineFraction:.14, streakThreshold:.84, bowLift:1.8, bowReach:.28 };
 export function jetPlumeSource(v,discharge,time=0,state=null){
+  if(v.type==='sled'){
+   if(v.sledMode!=='water'||v.throttle<.08||v.speed<4||v.wipeout)return null;
+   const power=clamp(v.speed/22)*clamp(v.throttle),fx=Math.sin(v.heading),fz=Math.cos(v.heading),p=v.drive?.origin||{x:v.x-fx*.85,y:v.y,z:v.z-fz*.85};
+   return{origin:{x:p.x,y:waveHeight(p.x,p.z,time)+.06,z:p.z},velocity:{x:v.vx-fx*(8+power*12),y:3+power*6+(v.riderAft||0)*3,z:v.vz-fz*(8+power*12)},power:power*1.2,loaded:v.riderAft||0,packetScale:1.05};
+  }
   if(v.type==='racer'){
     if(!discharge||v.airborne||v.wipeout||v.throttle<.12||discharge.reverse>.08||v.speed<8||v.planing<.2)return null;
     const power=clamp((v.speed-7)/13)*clamp(v.throttle),fx=Math.sin(v.heading),fz=Math.cos(v.heading),origins=[-1,1].map(side=>{const p=bodyPoint(v,[side*1.27,-.19,-6.28]);return{...p,y:Math.max(p.y,waveHeight(p.x,p.z,time)+.055)};});

@@ -131,3 +131,8 @@ for(const [type,name,length,width,speed,height] of [
  PROPULSION[type]={...PROPULSION.cruiser,effectiveMass:type==='rib'?1200:3200,motorMount:[0,.35,-length*.46],propeller:[0,-.8,-.3]};
  HYDRODYNAMICS[type]={...HYDRODYNAMICS.cruiser};
 }
+
+// Original snowmobile water-skipper; dedicated land-start physics.
+VEHICLES.sled={...VEHICLES.ski,name:'Track Rat',subtitle:'Land-launch water-skipping snowmobile',description:'Build 54+ km/h on the marked beach run-up, then skim on the rear track. Stay above 42 km/h; slowing down swamps it. Shift lifts the skis, Q/E balances the nose, R returns to dry land. Arcade physics.',length:3.05,width:1.3,maxSpeed:34,reverseMax:2,rideHeight:.22,colours:['#d4ed35','#ff7040','#49b8d1']};
+PROPULSION.sled={...PROPULSION.cat,kind:'track',effectiveMass:300,motorMount:[0,0,-.7],propeller:[0,-.2,-.15],trimRate:6};
+HYDRODYNAMICS.sled={...HYDRODYNAMICS.ski};

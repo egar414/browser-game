@@ -1,3 +1,4 @@
+import{decodeSledPose}from'./sled-protocol.js';
 import {isTenderPassenger,crewDriver,crewPassengers,tenderSeatPoint} from './tender-crew.js';
 import {makeCrewActor,animateCrewActor} from './tender-crew-view.js';
 import {BoardSpray} from '../surf/board-spray.js';
@@ -44,7 +45,7 @@ export class OnlineWorld{
   const states=this.client.remote;
   for(const id of this.models.keys())if(!states.players.has(id))this.remove(id);
   for(const [id,r]of states.players){
-   const p=states.sample(r,now);if(!p)continue;
+   const p=decodeSledPose(states.sample(r,now));if(!p)continue;
    const passenger=isTenderPassenger(p),driver=passenger?crewDriver(this.client.room?.players||[],{id,pose:p}):null;
    if(passenger&&!driver){this.remove(id);continue;}
    let entry=this.models.get(id);const surf=decodeSurfPose(p),key=`${passenger?'crew:'+driver.id:surf?surf.mode+':'+surf.board:'normal'}:${p.type}:${p.colour}:${p.design}:${r.creator===true}`;

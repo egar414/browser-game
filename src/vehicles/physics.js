@@ -1,3 +1,4 @@
+import{updateSled,resetSled,sledStart}from'./sled-physics.js';
 import{assistedYaw}from'./steering-assist.js';
 import {maxTrimSpray,MAX_TRIM_SPRAY} from './trim-spray.js';
 import {updateWomp} from './womping.js';
@@ -22,6 +23,7 @@ export class VehiclePhysics {
     this.airTricks=new AirTricks();this.safe = { ...SPAWN }; this.recover();
   }
   recover(nearest = false) {
+    if(this.type==='sled'){this.safe=sledStart();nearest=false;}
     if(nearest&&Number.isFinite(this.x)&&Number.isFinite(this.z)){
       const x=this.x,z=this.z;let found=false;
       for(const radius of [0,8,18,35,70]){
@@ -38,7 +40,7 @@ export class VehiclePhysics {
       wompLoad:0,wompEnergy:0,wompReady:false,womp:null,bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     this.airTricks.reset();this.previous = this.snapshot();
-    this.propulsion.reset();this.drive=this.propulsion.state;
+    this.propulsion.reset();this.drive=this.propulsion.state;if(this.type==='sled')resetSled(this);
   }
   snapshot() { return { x: this.x, y: this.y, z: this.z, heading: this.heading, pitch: this.pitch, roll: this.roll }; }
   setMode(mode){if(!RIDE_MODES[mode])return;this.rideMode=mode;this.setTrim(this.trimDegrees);}
@@ -58,6 +60,7 @@ export class VehiclePhysics {
   }
   setType(type) { this.type = type; this.config = VEHICLES[type];this.propulsion=new Propulsion(type);this.setTrim(this.trimDegrees); this.recover(); }
   respawnAt(position,time=0){
+    if(this.type==='sled'){this.recover();return;}
     this.safe={x:position.x,z:position.z,heading:position.heading};this.recover();
     if(this.collision(this.x,this.z,this.config.width*.5+.35,0))this.recover(true);
     this.y=waveHeight(this.x,this.z,time)+this.config.rideHeight;this.previous=this.snapshot();
@@ -68,6 +71,7 @@ export class VehiclePhysics {
     this.looping=isTinny(this.type)&&reason==='Looped the tinny';this.airTricks.reset();this.shaftLoad=0;if(this.shaft)this.shaft={...this.shaft,active:false,cue:'WIPEOUT',seconds:0};this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
   }
   update(dt, input, time, ramps = []) {
+    if(this.type==='sled')return updateSled(this,dt,input,time);
     if(this.type==='racer')return updateRacer(this,dt,input,time);
     if(this.config.diveBoat||this.type==='cruiser')return updateCruiser(this,dt,input,time);
     this.previous = this.snapshot();
