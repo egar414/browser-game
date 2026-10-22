@@ -1,3 +1,5 @@
+import {isTenderPassenger,crewDriver,crewPassengers,tenderSeatPoint} from './tender-crew.js';
+import {makeCrewActor,animateCrewActor} from './tender-crew-view.js';
 import {BoardSpray} from '../surf/board-spray.js';
 import {decodeSurfPose} from '../surf/protocol.js';
 import {makeSurfActor,animateSurfActor} from '../surf/actors.js';
@@ -43,16 +45,20 @@ export class OnlineWorld{
   for(const id of this.models.keys())if(!states.players.has(id))this.remove(id);
   for(const [id,r]of states.players){
    const p=states.sample(r,now);if(!p)continue;
-   let entry=this.models.get(id);const surf=decodeSurfPose(p),key=`${surf?surf.mode+':'+surf.board:'normal'}:${p.type}:${p.colour}:${p.design}:${r.creator===true}`;
+   const passenger=isTenderPassenger(p),driver=passenger?crewDriver(this.client.room?.players||[],{id,pose:p}):null;
+   if(passenger&&!driver){this.remove(id);continue;}
+   let entry=this.models.get(id);const surf=decodeSurfPose(p),key=`${passenger?'crew:'+driver.id:surf?surf.mode+':'+surf.board:'normal'}:${p.type}:${p.colour}:${p.design}:${r.creator===true}`;
    if(entry?.key!==key){this.remove(id);entry=null;}
    if(!entry){
     // At most seven remote models, made only when a player/paint changes.
-    const model=surf?makeSurfActor(surf):makeVehicle(p.type,VEHICLES[p.type].colours[p.colour],p.design,{creator:r.creator===true}),clones=new Map();
+    const model=passenger?makeCrewActor():surf?makeSurfActor(surf):makeVehicle(p.type,VEHICLES[p.type].colours[p.colour],p.design,{creator:r.creator===true}),clones=new Map();
     const own=resource=>{if(!clones.has(resource))clones.set(resource,resource.clone());return clones.get(resource);};
     model.traverse(o=>{o.castShadow=false;if(o.geometry)o.geometry=own(o.geometry);if(o.material){const materials=Array.isArray(o.material)?o.material:[o.material];const copies=materials.map(m=>{const copy=own(m);for(const k of Object.keys(copy))if(m[k]?.isTexture)copy[k]=own(m[k]);return copy;});o.material=Array.isArray(o.material)?copies:copies[0];}});
     const plate=nameplate();this.scene.add(model);const effects=new THREE.Group();this.scene.add(effects);entry={key,model,effects,spray:null,...plate,resources:new Set(clones.values())};this.models.set(id,entry);
    }
-   const {model,label}=entry;const distance=Math.hypot(p.x-viewer.x,p.z-viewer.z);model.visible=!!p.active&&distance<1000;
+   const {model,label}=entry;
+   if(passenger){const record=states.players.get(driver.id),pose=driver.id===this.client.session?.user.id?localView.craft:record?states.sample(record,now):driver.pose;if(!pose){model.visible=false;label.hidden=true;continue;}model.visible=!!p.active;model.position.set(pose.x,pose.y,pose.z);model.rotation.set(-pose.pitch,pose.heading,pose.roll,'YXZ');animateCrewActor(model,pose,dt);const seat=tenderSeatPoint(pose);if(Math.hypot(seat.x-viewer.x,seat.z-viewer.z)<220)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(seat.x,seat.y+1.3,seat.z),camera);else label.hidden=true;continue;}
+   const distance=Math.hypot(p.x-viewer.x,p.z-viewer.z);model.visible=!!p.active&&distance<1000;
    label.hidden=!model.visible||distance>220;if(!model.visible){if(entry.boardSpray){entry.boardSpray.clear();entry.boardSpray.points.visible=false;}if(entry.spray){entry.spray.dispose();entry.spray=null;}continue;}
    if(entry.previousPosition&&Math.hypot(p.x-entry.previousPosition.x,p.z-entry.previousPosition.z)>90)entry.spray?.clear();entry.previousPosition={x:p.x,z:p.z};
    const sink=Math.max(0,(r.combat?.sinking||0)-Math.max(0,(now-(r.combatAt??now))/1000));model.position.set(p.x,p.y-(sink?onlineSinkDrop(p.type,sink):0),p.z);model.rotation.set(-p.pitch,p.heading,p.roll,'YXZ');
@@ -67,7 +73,7 @@ export class OnlineWorld{
    const rider=model.userData.rider;
    if(p.type==='cruiser'){rider.position.set(p.deck?p.deckX:0,p.deck?1.02:3.25,p.deck?p.deckZ:-.25);rider.rotation.y=p.deck?p.deckHeading:0;rider.userData.animate(now/1000,0,false,!p.deck);}
    else rider?.userData.update?.(v,dt,model.userData);
-   model.userData.passenger?.userData.update(v,dt);
+   model.userData.passenger?.userData.update(v,dt);if(model.userData.passenger)model.userData.passenger.visible=localView.crewDriverId!==id&&!crewPassengers(this.client.room?.players||[],id).length;
    for(const prop of [model.userData.propeller,...(model.userData.propellers||[])])if(prop)prop.rotation.z+=p.rpm/60*Math.PI*2*dt;
    if(!label.hidden)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(p.x,p.y+(p.type==='cruiser'?6:3),p.z),camera);
   }

@@ -113,6 +113,32 @@ Cloud graphics use software SwiftShader; those results cannot establish laptop
 recorded about 3.9 fps with CPU SwiftShader, 73 draw calls and 1.64 million
 triangles; this is a cloud software-renderer measurement, not a laptop benchmark.
 
+## Two-player Tender 225
+
+The 25 hp tender seats **one online driver and one online passenger**. Join the
+same public or private world, stop within 8 m of your friend's tender, then press
+**J** or the **BOARD TENDER** button. Both boats must be slow; the tender must be
+below about 7 km/h and have its passenger seat free. The driver keeps WASD/trim
+controls; the passenger can change camera with C/P and look around. The human
+passenger replaces the existing animated passenger, including its fore/aft
+movement, rather than adding a third person. Names and Creator badges remain
+associated with the actual signed-in accounts.
+
+Press **J / LEAVE TENDER** below about 11 km/h to relaunch your own selected craft
+alongside. **R** is an emergency exit. Disconnects, room/account changes, driver
+craft changes, large recoveries and sinking safely end the ride. A stopped
+network heartbeat also releases the passenger. No new Supabase SQL is required:
+a reserved combination of the existing bounded pose fields carries seat state.
+Concurrent claims are resolved deterministically to a single occupant by updated
+clients. Like existing movement, this is client-simulated and is not a new
+server-authoritative anti-cheat or atomic reservation service. Legacy clients
+need a refresh to render the new passenger marker correctly.
+
+Seat rules and packet handling: `src/systems/tender-crew.js`; shared animated seat
+geometry: `src/vehicles/tinny-seat.js`; passenger rendering:
+`src/systems/tender-crew-view.js`. Unit, current Auth/RLS database and two-browser
+acceptance tests cover the seat limit, travel, exits and lost drivers.
+
 ## Optional online worlds and accounts
 
 Player names are saved per account on the device and synchronized to Auth

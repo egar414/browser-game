@@ -1,3 +1,4 @@
+import {isTenderPassenger} from './tender-crew.js';
 import {packSpray} from './network-spray.js';
 import {availableCraft} from './craft-access.js';
 export const ONLINE_TYPES = ['ski','cat','tinny','dinghy','skua','cruiser','seago','racer','hyper'];
@@ -37,6 +38,8 @@ export class RemoteStates{
   let a=h[0],b=h.at(-1);
   for(let i=1;i<h.length;i++)if(h[i].time>=target){a=h[i-1];b=h[i];break;}
   if(!a)return null;
+  // Seat identity is discrete; never interpolate a passenger token or marker.
+  if(isTenderPassenger(a)||isTenderPassenger(b))return {...b};
   // Recover/teleport immediately instead of sailing a ghost across town.
   if(Math.hypot(b.x-a.x,b.z-a.z)>180)return {...b};
   const t=clamp((target-a.time)/Math.max(1,b.time-a.time),0,1),p={...b};

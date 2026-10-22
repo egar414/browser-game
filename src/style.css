@@ -128,3 +128,8 @@
 #surf-debug{position:fixed;right:12px;bottom:100px;z-index:55;background:#102f35ed;color:#eaf6e8;padding:10px;font:12px monospace;border:1px solid #e4b75c;max-width:340px}#surf-debug summary{cursor:pointer}#surf-debug button{color:#15343c;background:#f5d17a;border:1px solid #97c3bd;padding:5px;margin:3px;font:inherit}#surf-debug pre{white-space:pre-wrap;margin-bottom:0}
 
 #surf-panel[data-mode="ride"] .surf-board-picker,#surf-panel[data-mode="ride"]>small{display:none}#surf-panel[data-mode="ride"]{background:#0d343fd9}
+
+#tender-crew{position:absolute;top:258px;left:22px;max-width:330px;padding:10px;font-size:11px;pointer-events:auto}#tender-crew[hidden]{display:none}#tender-crew:disabled{opacity:.8}@media(max-height:500px){.touch-device #tender-crew{left:auto;right:12px;top:160px;max-width:240px;font-size:10px}}
+
+.riding-tender .touch-throttle,.riding-tender .touch-steer,.riding-tender .touch-trim,.riding-tender .touch-tricks,.riding-tender .touch-fishing,.riding-tender .activity-shortcuts,.riding-tender #wharf-hud{display:none!important}
+.riding-tender #trim-label,.riding-tender #trim-gauge,.riding-tender .key-strip,.riding-tender #womp-readout{display:none!important}

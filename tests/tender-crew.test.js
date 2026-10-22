@@ -1,0 +1,24 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {TenderCrew,crewPassengers,crewDriver,isTenderPassenger} from '../src/systems/tender-crew.js';
+import {VehiclePhysics} from '../src/vehicles/physics.js';import {SPAWN} from '../src/config.js';
+import {packPose,validPose,RemoteStates} from '../src/systems/network-state.js';
+import {database,rpc,users} from './multiplayer-fixture.js';
+const settings={colour:0,design:'classic'};
+function setup(){const boat=new VehiclePhysics('tinny');boat.respawnAt(SPAWN);const driver={id:users[0],name:'Driver',seq:1,pose:packPose(boat,settings,{},true)},v=new VehiclePhysics('ski');v.respawnAt({...SPAWN,x:SPAWN.x+3});const client={session:{user:{id:users[1]}},room:{id:'room',players:[driver]},remote:new RemoteStates(),failures:0};return{boat,driver,v,client};}
+test('a tender carries one authenticated driver and one online passenger through existing pose fields',()=>{
+ const {driver,v,client}=setup(),s=new TenderCrew();assert(s.board(client,v));const packet=s.encode(packPose(v,settings,{},true));assert(validPose(packet));assert(isTenderPassenger(packet));assert.equal(packet.spray.length,0);client.room.players.push({id:users[1],pose:packet});assert.equal(crewPassengers(client.room.players,driver.id).length,1);assert.equal(crewDriver(client.room.players,client.room.players[1]).id,driver.id);driver.pose.x+=5;driver.seq++;s.sync(client,v);assert.equal(v.x,driver.pose.x);assert.equal(v.throttle,0);assert.equal(v.steer,0);
+});
+test('boarding needs slow nearby boats, a free seat, the same room and a real tender',()=>{
+ const {driver,v,client}=setup(),s=new TenderCrew();for(const change of[{type:'cat'},{speed:4},{active:false},{airborne:true},{x:v.x+20}]){const pose=driver.pose;driver.pose={...pose,...change};assert(!s.board(client,v));driver.pose=pose;}assert(s.board(client,v));client.room.players.push({id:users[1],pose:s.encode(packPose(v,settings,{},true))});const other=new TenderCrew();client.session.user.id=users[2];assert(!other.board(client,v));
+});
+test('two simultaneous seat claims have a stable single winner and the loser recovers',()=>{
+ const {driver,v,client}=setup(),a=new TenderCrew(),b=new TenderCrew();assert(a.board(client,v));const other={...client,session:{user:{id:users[2]}}};assert(b.board(other,v));client.room.players.push({id:users[1],pose:a.encode(packPose(v,settings,{},true))},{id:users[2],pose:b.encode(packPose(v,settings,{},true))});assert.deepEqual(crewPassengers(client.room.players,driver.id).map(p=>p.id),[users[1]]);a.sync(client,v);b.sync(other,v);assert(a.active);assert(!b.active);
+});
+test('disconnect, stale heartbeat, room switch, sinking and driver craft changes safely end the ride',()=>{
+ for(const change of [({client})=>client.room.players=[],({client})=>client.room.id='other',({driver})=>driver.pose.type='ski',({driver})=>driver.combat={sinking:6},({client})=>client.failures=1,(_,s)=>s.lastHeartbeat-=13000]){const f=setup(),exits=[],s=new TenderCrew((pose,reason)=>exits.push({pose,reason}));assert(s.board(f.client,f.v));change(f,s);s.sync(f.client,f.v);assert(!s.active);assert.equal(exits.length,1);assert(Number.isFinite(exits[0].pose.x));}
+});
+test('normal exit needs a slow tender; emergency exit remains available',()=>{const {client,v}=setup(),s=new TenderCrew();s.board(client,v);s.pose.speed=10;assert(!s.leave());assert(s.active);assert(s.leave(true));assert(!s.active);});
+test('remote interpolation never turns a seat identity into a fractional engine token',()=>{const {v,client,driver}=setup(),s=new TenderCrew();s.board(client,v);const ordinary=packPose(v,settings,{},true),seated=s.encode(ordinary),r=new RemoteStates();r.accept([{id:users[1],seq:1,pose:ordinary}],users[0],0);r.accept([{id:users[1],seq:2,pose:seated}],users[0],333);const result=r.sample(r.players.get(users[1]),500);assert(isTenderPassenger(result));assert.equal(crewDriver([{...driver},{id:users[1],pose:result}],{id:users[1],pose:result}).id,driver.id);});
+test('current authenticated SQL stores crew packets without a schema update and keeps private rooms isolated',async()=>{
+ const f=await database(),{driver,v,client}=setup(),s=new TenderCrew();try{await rpc(f,users[0],'er_join',{p_name:'Driver',p_code:'PUBLIC'});await rpc(f,users[1],'er_join',{p_name:'Passenger',p_code:'PUBLIC'});await rpc(f,users[0],'er_exchange',{p_pose:driver.pose,p_seq:1});assert(s.board(client,v));const packet=s.encode(packPose(v,settings,{},true));await rpc(f,users[1],'er_exchange',{p_pose:packet,p_seq:1});const room=await rpc(f,users[0],'er_snapshot');assert.equal(crewPassengers(room.players,users[0])[0].id,users[1]);assert.equal(crewDriver(room.players,room.players.find(p=>p.id===users[1])).id,users[0]);await rpc(f,users[2],'er_join',{p_name:'Private',p_create:true});assert.equal((await rpc(f,users[2],'er_snapshot')).players.length,1);}finally{await f.db.close();}
+});
