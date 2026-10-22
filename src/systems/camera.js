@@ -43,13 +43,13 @@ export class ChaseCamera {
     const orbit=deck?THREE.MathUtils.clamp(input.orbit,-1.2,1.2):input.orbit;
     const heading=(deck?(v.hullHeading??v.heading):v.heading)+orbit+(shaft?.35:0)+(menu?Math.PI+.65:0)+(rearView?Math.PI:0);
     const dive=!!v.config?.diveBoat,racer=v.type==='racer',big=v.type==='cruiser'||v.config?.diveBoat||racer;
-    const distance=extraWide?(big?34:24):rearView?(big?14:apex?8:6):shaft?(mode?6.5:8.5):dive?(menu?15:mode?9:15):big?(menu?21:mode?13:25):menu?8.5:mode?5.3:13.5+Math.min(2.5,v.speed*.10);
-    const height=extraWide?(big?15:11):rearView?(big?10:apex?5:3):shaft?(mode?2.8:3.8):deck?3.6:dive?(menu?6:mode?3.5:6.5):big?(racer?(menu?6:mode?4:8):(menu?9:mode?8:12)):menu?4:apex?(mode?4:8):mode?2.15:5.8+v.speed*.035;
-    const ahead=rearView?-8:fast?Math.min(apex?8:12,v.speed*.12):shaft?.6:menu?0:mode?v.speed*.14:3+v.speed*.20;
+    const distance=extraWide?(v.towing?38:big?34:24):v.towing?30:v.towRider?(mode?5:9):rearView?(big?14:apex?8:6):shaft?(mode?6.5:8.5):dive?(menu?15:mode?9:15):big?(menu?21:mode?13:25):menu?8.5:mode?5.3:13.5+Math.min(2.5,v.speed*.10);
+    const height=extraWide?(big?15:11):v.towing?10:v.towRider?3.6:rearView?(big?10:apex?5:3):shaft?(mode?2.8:3.8):deck?3.6:dive?(menu?6:mode?3.5:6.5):big?(racer?(menu?6:mode?4:8):(menu?9:mode?8:12)):menu?4:apex?(mode?4:8):mode?2.15:5.8+v.speed*.035;
+    const ahead=rearView?-8:v.towing?-7:v.towRider?6:fast?Math.min(apex?8:12,v.speed*.12):shaft?.6:menu?0:mode?v.speed*.14:3+v.speed*.20;
     const look=new THREE.Vector3(v.x+Math.sin(v.heading)*ahead,v.y+(big?(racer?.65:dive?1.0:2.2):menu||mode?.85:.25),v.z+Math.cos(v.heading)*ahead);
     const target=new THREE.Vector3(v.x-Math.sin(heading)*distance,v.y+height,v.z-Math.cos(heading)*distance);
     // Extra wide sits beside the rear plume, with room to read turns and wakes.
-    if(extraWide&&!rearView){target.x+=Math.cos(heading)*9;target.z-=Math.sin(heading)*9;}
+    if((extraWide||v.towing)&&!rearView){target.x+=Math.cos(heading)*9;target.z-=Math.sin(heading)*9;}
     // A three-quarter chase stays beside the two racing prop rooster tails.
     if((fast||sled)&&!menu&&!rearView&&!extraWide){const offset=sled?(mode?4.5:7):apex?(mode?6:9):(mode?6:10);target.x+=Math.cos(heading)*offset;target.z-=Math.sin(heading)*offset;}
     // Feed forward racing velocity to cancel the smoothing lag at 500 km/h.

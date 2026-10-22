@@ -1,3 +1,5 @@
+import{decodeTow,towDriver}from'./tow-protocol.js';
+import{makeTowActor,animateTowActor,TowLine}from'./tow-view.js';
 import{decodeSledPose}from'./sled-protocol.js';
 import {isTenderPassenger,crewDriver,crewPassengers,tenderSeatPoint} from './tender-crew.js';
 import {makeCrewActor,animateCrewActor} from './tender-crew-view.js';
@@ -29,7 +31,7 @@ function placeNameplate(plate,name,creator,anchor,camera){
 
 export class OnlineWorld{
  constructor(scene,client){this.scene=scene;this.client=client;this.models=new Map();this.localPlate=nameplate();this.localPlate.label.id='local-player-name';}
- remove(id){const entry=this.models.get(id);if(!entry)return;entry.spray?.dispose();entry.boardSpray?.dispose();entry.effects?.removeFromParent();this.scene.remove(entry.model);entry.label.remove();
+ remove(id){const entry=this.models.get(id);if(!entry)return;entry.towLine?.dispose();entry.spray?.dispose();entry.boardSpray?.dispose();entry.effects?.removeFromParent();this.scene.remove(entry.model);entry.label.remove();
   // Several craft share source geometry/materials. Removing an online craft must
   // never dispose resources still used by the local player or AI boats.
   for(const resource of entry.resources)resource.dispose();this.models.delete(id);
@@ -48,11 +50,12 @@ export class OnlineWorld{
    const p=decodeSledPose(states.sample(r,now));if(!p)continue;
    const passenger=isTenderPassenger(p),driver=passenger?crewDriver(this.client.room?.players||[],{id,pose:p}):null;
    if(passenger&&!driver){this.remove(id);continue;}
-   let entry=this.models.get(id);const surf=decodeSurfPose(p),key=`${passenger?'crew:'+driver.id:surf?surf.mode+':'+surf.board:'normal'}:${p.type}:${p.colour}:${p.design}:${r.creator===true}`;
+   const tow=decodeTow(p),towBoat=tow?towDriver(this.client.room?.players||[],{id,pose:p}):null;if(tow&&!towBoat){this.remove(id);continue;}
+   let entry=this.models.get(id);const surf=tow?null:decodeSurfPose(p),key=`${tow?'tow:'+towBoat.id+':'+tow.board:passenger?'crew:'+driver.id:surf?surf.mode+':'+surf.board:'normal'}:${p.type}:${p.colour}:${p.design}:${r.creator===true}`;
    if(entry?.key!==key){this.remove(id);entry=null;}
    if(!entry){
     // At most seven remote models, made only when a player/paint changes.
-    const model=passenger?makeCrewActor():surf?makeSurfActor(surf):makeVehicle(p.type,VEHICLES[p.type].colours[p.colour],p.design,{creator:r.creator===true}),clones=new Map();
+    const model=tow?makeTowActor(tow.board):passenger?makeCrewActor():surf?makeSurfActor(surf):makeVehicle(p.type,VEHICLES[p.type].colours[p.colour],p.design,{creator:r.creator===true}),clones=new Map();
     const own=resource=>{if(!clones.has(resource))clones.set(resource,resource.clone());return clones.get(resource);};
     model.traverse(o=>{o.castShadow=false;if(o.geometry)o.geometry=own(o.geometry);if(o.material){const materials=Array.isArray(o.material)?o.material:[o.material];const copies=materials.map(m=>{const copy=own(m);for(const k of Object.keys(copy))if(m[k]?.isTexture)copy[k]=own(m[k]);return copy;});o.material=Array.isArray(o.material)?copies:copies[0];}});
     const plate=nameplate();this.scene.add(model);const effects=new THREE.Group();this.scene.add(effects);entry={key,model,effects,spray:null,...plate,resources:new Set(clones.values())};this.models.set(id,entry);
@@ -60,9 +63,10 @@ export class OnlineWorld{
    const {model,label}=entry;
    if(passenger){const record=states.players.get(driver.id),pose=driver.id===this.client.session?.user.id?localView.craft:record?states.sample(record,now):driver.pose;if(!pose){model.visible=false;label.hidden=true;continue;}model.visible=!!p.active;model.position.set(pose.x,pose.y,pose.z);model.rotation.set(-pose.pitch,pose.heading,pose.roll,'YXZ');animateCrewActor(model,pose,dt);const seat=tenderSeatPoint(pose);if(Math.hypot(seat.x-viewer.x,seat.z-viewer.z)<220)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(seat.x,seat.y+1.3,seat.z),camera);else label.hidden=true;continue;}
    const distance=Math.hypot(p.x-viewer.x,p.z-viewer.z);model.visible=!!p.active&&distance<1000;
-   label.hidden=!model.visible||distance>220;if(!model.visible){if(entry.boardSpray){entry.boardSpray.clear();entry.boardSpray.points.visible=false;}if(entry.spray){entry.spray.dispose();entry.spray=null;}continue;}
+   label.hidden=!model.visible||distance>220;if(!model.visible){if(entry.towLine)entry.towLine.group.visible=false;if(entry.boardSpray){entry.boardSpray.clear();entry.boardSpray.points.visible=false;}if(entry.spray){entry.spray.dispose();entry.spray=null;}continue;}
    if(entry.previousPosition&&Math.hypot(p.x-entry.previousPosition.x,p.z-entry.previousPosition.z)>90)entry.spray?.clear();entry.previousPosition={x:p.x,z:p.z};
    const sink=Math.max(0,(r.combat?.sinking||0)-Math.max(0,(now-(r.combatAt??now))/1000));model.position.set(p.x,p.y-(sink?onlineSinkDrop(p.type,sink):0),p.z);model.rotation.set(-p.pitch,p.heading,p.roll,'YXZ');
+   if(tow){const record=states.players.get(towBoat.id),driverPose=towBoat.id===this.client.session?.user.id?localView.craft:record?states.sample(record,now):towBoat.pose;if(!entry.towLine)entry.towLine=new TowLine(entry.effects);entry.towLine.update(tow,driverPose,localView.time||now/1000);animateTowActor(model,tow,localView.time||now/1000);if(!entry.boardSpray)entry.boardSpray=new BoardSpray(entry.effects,120);entry.boardSpray.update(localView.playing?dt:0,tow,localView.time||now/1000,camera);if(!label.hidden)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(p.x,p.y+2.1,p.z),camera);continue;}
    if(surf){if(['ride','paddle','wipeout'].includes(surf.mode)&&distance<160){if(!entry.boardSpray)entry.boardSpray=new BoardSpray(entry.effects,120);entry.boardSpray.update(localView.playing?dt:0,surf,localView.time||now/1000,camera);}else if(entry.boardSpray){entry.boardSpray.dispose();entry.boardSpray=null;}if(surf.mode==='ski'&&distance<240){if(!entry.spray)entry.spray=new Spray(entry.effects,{...QUALITY.Low,particles:160,wakeSamples:45,plumeCapacity:400});entry.spray.update(dt,{...p,config:VEHICLES.ski,drive:{rpm:p.rpm,wetness:1,neutral:false,flow:1,trimAngle:p.trimAngle,steeringAngle:p.steeringAngle}},this.effectTime,p.active&&!sink,{remote:true});entry.spray.resize(innerHeight,camera.fov,1);}animateSurfActor(model,surf,localView.time||now/1000);if(!label.hidden)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(p.x,p.y+2.1,p.z),camera);continue;}
    if(model.userData.handlebars)model.userData.handlebars.rotation.y=-p.steer*.43;
    for(const part of [model.userData.motor,model.userData.nozzle])if(part)part.rotation.set(p.trimAngle,-p.steeringAngle,0,'YXZ');
