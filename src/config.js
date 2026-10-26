@@ -12,7 +12,7 @@ export const LOCAL_TRAFFIC={lookAhead:10,avoidDistance:14,stuckSeconds:9,
   riverSpeed:4.4,canalSpeed:3.0,viewDistance:520,visible:{Low:5,Medium:8,High:10}};
 export const VEHICLES = {
   ski: {
-    name: 'Sparkplug', subtitle: 'Freestyle jet ski', description: 'Light, lively and made for mischief. Lift the bow, carve a rooster tail, and spin off the ramps.',
+    name: 'Sea-Doo Spark Trixx', subtitle: 'Freestyle jet ski', description: 'Light, lively and made for mischief. Lift the bow, carve a rooster tail, and spin off the ramps.',
     length: 3.0, width: 1.18, maxSpeed: 25.5,
     reverseMax: 4, lateralGrip: 4.6, steerResponse: 8,
     slideGrip: 1.15, spring: 42, damping: 11, rideHeight: 0.14, airSteer: 4.9,

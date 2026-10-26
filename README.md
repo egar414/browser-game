@@ -268,7 +268,7 @@ Q/E selects **11 trim positions, −12° to +36°**, the widest range in the gam
 Hold W + Shift / GO + LIFT to lift the bow; high trim gives an approximately 78°
 maximum powered stance and trades speed for lift. Release LIFT and settle trim
 to return to the plane. This is authored handling, not real-world VTS behaviour.
-Existing Sparkplug and Seago retain their nine-position trim tables.
+Existing Sea-Doo Spark Trixx and Seago retain their nine-position trim tables.
 
 A/D gives faster aerial spins; Q/E levels the landing. Hold **Y / HEART** in the
 air for a **Heart attack**; Z/X/V remain Hangman, No-hander and Superman. Release
@@ -440,7 +440,7 @@ The supplied 22.8-second video informed denser, taller loaded-turn sheets,
 broader Thundercat pontoon spray and finer falling droplets. Straight-line rear
 wash stays lower; trim and turn loading raise the plume. This is a visual
 approximation, not reconstructed or measured real fluid flow. The video is not
-bundled. The Sparkplug body is an original procedural model in
+bundled. The Sea-Doo Spark Trixx body is an original procedural model in
 `src/vehicles/spark-model.js`; it needs no Blender installation or model download.
 
 On touch devices, rotate sideways for the preferred riding view. FULL requests
@@ -848,7 +848,7 @@ Tune the player sportfisher's acceleration, braking, speed, steering and walking
 
 ## Seago, daylight and waterfront update
 
-Select **SEAGO** for an original longer black performance PWC inspired by the supplied silhouette, with separate mass/handling and a **120 km/h gameplay ceiling**. It retains a waterjet, nine Q/E trim positions, brake/reverse bucket and Shift weight shift; settle trim to reach full speed. The existing Sparkplug remains available. The large sportfisher now has a tall braced tuna tower, ladder, radar, long outriggers and teak-style cockpit/transom based on the supplied reference. Its 10.8 m game air draft is included in bridge clearance checks for player and AI craft.
+Select **SEAGO** for an original longer black performance PWC inspired by the supplied silhouette, with separate mass/handling and a **120 km/h gameplay ceiling**. It retains a waterjet, nine Q/E trim positions, brake/reverse bucket and Shift weight shift; settle trim to reach full speed. The existing Sea-Doo Spark Trixx remains available. The large sportfisher now has a tall braced tuna tower, ladder, radar, long outriggers and teak-style cockpit/transom based on the supplied reference. Its 10.8 m game air draft is included in bridge clearance checks for player and AI craft.
 
 **C / VIEW** cycles wide chase, close chase and **first person**, including the big boat's helm and walking/fishing cockpit. Drag to look around; the camera follows the rider's actual eye position with the camera 42 cm ahead of the eye, the own face/torso/legs hidden and hands retained. On deck, J / DECK still returns to the helm.
 
@@ -1043,7 +1043,7 @@ XML and rebuild instructions in `src/data/sources/README.md`. Facades, missing
 heights and relief are game approximations, not replicas of each real property.
 The coastline does not change the tinny's shaft-only bounce or spray tuning.
 
-## Sparkplug steering and riding view
+## Sea-Doo Spark Trixx steering and riding view
 
 The compact jet ski responds faster to steering input, carries more lateral grip
 and carves a tighter powered turn while preserving momentum and coasting steering
@@ -1059,9 +1059,9 @@ acceleration cannot pull the camera backwards through the rider. Mouse drag
 looks around; U looks behind. Tune the eye and view in `JET_RIDING_VIEW` in
 `src/systems/camera.js`. Other boat cockpit views retain their existing anchors.
 
-## Creator Sparkplug and restored account badge
+## Creator Sea-Doo Spark Trixx and restored account badge
 
-The reference-sculpted compact Sparkplug is now a verified Creator-account perk.
+The reference-sculpted compact Sea-Doo Spark Trixx is now a verified Creator-account perk.
 Other accounts and signed-out players receive the regular procedural jet ski;
 all players retain the improved steering and first-person controls. The local
 model follows the server-checked role. Remote models use the role in the server
@@ -1127,7 +1127,7 @@ water; misses, rising water, cabin roofs and dry intakes still do not. The
 rear gameplay contribution increases from 260 to 360 litres per unit power per
 second. This deliberately scaled quantity is not a real pump-flow measurement.
 
-Sparkplug, Seago and Apex rear hits feed the same moored tender, cruising local
+Sea-Doo Spark Trixx, Seago and Apex rear hits feed the same moored tender, cruising local
 boat and sportfisher flooding systems. A receiving boat's hint says REAR JET
 WATER COUNTED, and diagnostics expose cumulative `rearWater` litres until its
 next relaunch. Falling packets keep working after throttle release. Capture is

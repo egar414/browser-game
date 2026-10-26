@@ -3,7 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {makeRider} from './rider.js';
 import {batchRigidAssembly} from './rigid-model.js';
 const mat=(color,roughness=.5)=>new THREE.MeshStandardMaterial({color,roughness,metalness:.08});
-// Original regular Sparkplug; the reference-sculpted version is a Creator perk.
+// Original regular Sea-Doo Spark Trixx; the reference-sculpted version is a Creator perk.
 export function box(parent, w, h, d, x, y, z, material, radius = false) {
   const geometry=radius?new RoundedBoxGeometry(w,h,d,2,Math.min(w,h,d)*.15):new THREE.BoxGeometry(w,h,d);
   const mesh = new THREE.Mesh(geometry, material);
