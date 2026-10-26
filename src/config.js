@@ -16,7 +16,7 @@ export const VEHICLES = {
     length: 3.0, width: 1.18, maxSpeed: 25.5,
     reverseMax: 4, lateralGrip: 4.6, steerResponse: 8,
     slideGrip: 1.15, spring: 42, damping: 11, rideHeight: 0.14, airSteer: 4.9,
-    wheelieAngle: 0.92, wipeoutAngle: 1.22, colours: ['#1679e8', '#ff613d', '#86df9c'],
+    wheelieAngle: 0.92, wipeoutAngle: 1.22, colours: ['#1260f4', '#ff613d', '#86df9c'],
   },
   cat: {
     name: 'Tunnel Rat 50', subtitle: 'Inflatable racing catamaran', description: 'Twin pontoons. One lively outboard. A 110 km/h gameplay speed ceiling, with wide, heavy spray through the bends.',

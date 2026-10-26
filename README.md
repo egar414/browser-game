@@ -1415,3 +1415,11 @@ The normal small-craft chase camera now sits nearer the boat, lower and to one s
 Riders use fitted garment lofts and shaped limbs; the outboards now have angular rounded cowlings, side vents and tilt hinges. The alloy boats have thicker rolled gunwales and a stern splashwell. Waterfront palms use solid curved fronds with individual leaflets and instanced curved trunks. Suitable waterfront planting sites are selected on land while keeping roads and homes clear. These are original procedural models, with simpler detail than the supplied cinematic reference.
 
 Model sources: `src/vehicles/sculpted-crew.js`, `src/vehicles/tender.js`; palm source: `src/systems/coastal-palms.js`; framing: `src/systems/camera.js`. Verify with `npm test` and `npx playwright test tests/coastal-detail.spec.js`.
+
+### Blue-and-black Sea-Doo Spark Trixx photo rebuild
+
+The uploaded STL archives exceeded the attachment-transfer limit and were not imported. This revision is a manually built approximation from the supplied front, rear, side and three-quarter photographs; it is not an exact copy of an unseen mesh.
+
+The ordinary and personal Creator variants now share the rebuilt hull proportions: wider stern, pointed black bow, lower black hood, separate blue front panels, black seat-side fairings, recessed footwells and a raised/scooped blue saddle. The handlebar riser is shorter and enclosed, with a small trim plate; the stern has recess details, a shorter dark jet outlet and a grille. The name is Sea-Doo Spark Trixx and the first colour is royal blue/black. Other colour choices, the current physics tuning and nozzle transform remain available. Creator-specific detailing stays tied to verified access; this does not unlock Apex or other account perks.
+
+The actual game factory is `src/vehicles/spark-model.js`; ordinary play calls it through `src/vehicles/standard-spark.js`. `art/spark-review.html` is a development-only geometry inspection page, not a substitute for gameplay. `tests/spark-photo.spec.js` captures that same game mesh from four directions. The running-game acceptance test remains `tests/spark-model.spec.js` and checks acceleration, steering, trim/bow lift, reverse and camera modes.

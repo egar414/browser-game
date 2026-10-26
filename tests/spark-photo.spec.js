@@ -1,0 +1,2 @@
+import{test,expect}from'@playwright/test';
+test('photo-based Spark front, rear and profile use the actual game mesh',async({page:p})=>{const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto('/art/spark-review.html');await p.waitForFunction(()=>window.review);for(const name of['front','back','side','top']){await p.evaluate(name=>window.review.view(name),name);await p.screenshot({path:'test-results/photo-spark-'+name+'.png'});}expect(errors).toEqual([]);});
