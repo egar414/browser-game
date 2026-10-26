@@ -1407,3 +1407,11 @@ The supplied boating image is a colour, lighting and material reference. This up
 Tune the palette in `src/systems/art-direction.js`, lighting in `src/systems/day-cycle.js`, water in `src/systems/water.js`, and scenery shading in `src/systems/scenery-lighting.js`. Brushed metal is in `src/vehicles/marine-finish.js`; crown and grass geometry live in `src/systems/foliage.js` and `src/systems/coastal-understory.js`.
 
 Validation: `npm test` and `npx playwright test tests/reference-coast.spec.js`. The reference-art browser check covers startup, driving, turn spray, Medium/Low/High, sunset, resize and shader errors. Tests run in Chromium SwiftShader software rendering on a cloud AMD EPYC environment with five exposed CPUs. This is a software-rendering check, not a physical laptop GPU benchmark; no laptop/phone frame rate is promised.
+
+### Detailed vehicle and waterfront pass
+
+The normal small-craft chase camera now sits nearer the boat, lower and to one side. C cycles to a lower waterline view, first person and the existing extra-wide view. Fast racing craft, towing, deck walking and big-boat framing retain their specialised cameras. Nearby floating market text is hidden to keep it out of the boat view.
+
+Riders use fitted garment lofts and shaped limbs; the outboards now have angular rounded cowlings, side vents and tilt hinges. The alloy boats have thicker rolled gunwales and a stern splashwell. Waterfront palms use solid curved fronds with individual leaflets and instanced curved trunks. Suitable waterfront planting sites are selected on land while keeping roads and homes clear. These are original procedural models, with simpler detail than the supplied cinematic reference.
+
+Model sources: `src/vehicles/sculpted-crew.js`, `src/vehicles/tender.js`; palm source: `src/systems/coastal-palms.js`; framing: `src/systems/camera.js`. Verify with `npm test` and `npx playwright test tests/coastal-detail.spec.js`.

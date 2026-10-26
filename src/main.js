@@ -107,7 +107,7 @@ const input=new Input(code=>{
   if(code==='KeyR')recover();
   if(code==='KeyL')visitWaterfront();
   if(code==='KeyO')visitDolphins();
-  if(code==='KeyC'||code==='KeyP'){settings.camera=code==='KeyP'?(settings.camera===2?0:2):(settings.camera+1)%4;chase.reset();saveSettings(settings);ui.toast(['Wide chase view','Close riding view','First person · ahead of rider · drag to look','Extra wide · offset from rear spray'][settings.camera]);}
+  if(code==='KeyC'||code==='KeyP'){settings.camera=code==='KeyP'?(settings.camera===2?0:2):(settings.camera+1)%4;chase.reset();saveSettings(settings);ui.toast(['Offset chase view','Low waterline view','First person · ahead of rider · drag to look','Extra wide · offset from rear spray'][settings.camera]);}
   if(crew.active){if(code==='KeyJ')toggleCrew();return;}
   if(code==='KeyJ'){if(crew.nearest(online,vehicle))toggleCrew();else toggleHelm();}
   if(code==='KeyK'){if(vehicle.type==='cruiser'&&!deck.active){ui.toast('Leave the helm first','Slow down and press J / DECK to fish from the cockpit.');return;}if(!battle.active&&!activities.race&&!activities.challenge){fishing.hour=dayClock.hour;fishing.action(vehicle,deck.active?{...bodyPoint(vehicle,[deck.x,1.02,deck.z]),heading:vehicle.heading+deck.heading}:null);if(!fishing.active)ui.toast(fishing.message);}}
@@ -406,7 +406,7 @@ try {
     atmosphere.setUnderwater(diving.active);
     const day=dayClock.status;atmosphere.update(simulationTime,camera.position,day);sun.color.set(day.sunColour);sun.intensity=day.sunIntensity;hemi.intensity=day.ambient;scene.fog.color.set(day.fog);water.setDay(day);
     if(diving.active){scene.fog.color.set('#206b77');scene.fog.density=.032;scene.background=new THREE.Color('#206b77');hemi.intensity=Math.max(.9,day.ambient);document.getElementById('reef-aim').classList.toggle('ready',!!diving.target(input,simulationTime));}else{scene.fog.density=ART.hazeDensity;scene.background=new THREE.Color(day.fog);}
-    reefView.render(simulationTime,diving,diving.active?diving:render,waveHeight(REEF.launch.x,REEF.launch.z,simulationTime));fisheriesModel.visible=Math.hypot(vehicle.x-fisheries.x,vehicle.z-fisheries.z)<400;fisheriesModel.position.set(fisheries.x,waveHeight(fisheries.x,fisheries.z,simulationTime)+.1,fisheries.z);fisheriesModel.rotation.y=fisheries.heading;fisheriesModel.userData.label.visible=Math.hypot(vehicle.x-fisheries.x,vehicle.z-fisheries.z)>12;marketMarker.visible=state==='playing'&&!diving.active&&Math.hypot(vehicle.x-SPAWN.x,vehicle.z-SPAWN.z)<120;
+    reefView.render(simulationTime,diving,diving.active?diving:render,waveHeight(REEF.launch.x,REEF.launch.z,simulationTime));fisheriesModel.visible=Math.hypot(vehicle.x-fisheries.x,vehicle.z-fisheries.z)<400;fisheriesModel.position.set(fisheries.x,waveHeight(fisheries.x,fisheries.z,simulationTime)+.1,fisheries.z);fisheriesModel.rotation.y=fisheries.heading;fisheriesModel.userData.label.visible=Math.hypot(vehicle.x-fisheries.x,vehicle.z-fisheries.z)>12;marketMarker.visible=state==='playing'&&!diving.active&&Math.hypot(vehicle.x-SPAWN.x,vehicle.z-SPAWN.z)>14&&Math.hypot(vehicle.x-SPAWN.x,vehicle.z-SPAWN.z)<120;
     onlineWorld.update(dt,now,surf.active?{...render,...surf.status}:render,camera,{craft:render,crewDriverId:crew.driver,playing:state==='playing',firstPerson:surf.active?true:firstPerson,eye,time:surf.active?surf.time:simulationTime});
     police.render(dt,simulationTime,render,state==='playing',camera);
     dolphins.render(simulationTime,render,qualityName);people.render(dt,simulationTime,render,qualityName);

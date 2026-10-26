@@ -1,0 +1,7 @@
+import * as THREE from'three';
+import{mergeGeometries}from'three/addons/utils/BufferGeometryUtils.js';
+// Original fitted garment lofts replace the old spherical torso silhouettes.
+function loft(rows,segments=16){const p=[],uv=[],indices=[];for(const[y,w,d,z]of rows)for(let i=0;i<=segments;i++){const a=i/segments*Math.PI*2;p.push(Math.sin(a)*w,y,Math.cos(a)*d+z);uv.push(i/segments,(y-rows[0][0])/(rows.at(-1)[0]-rows[0][0]));}for(let j=0;j<rows.length-1;j++)for(let i=0;i<segments;i++){const a=j*(segments+1)+i,b=a+segments+1;indices.push(a,a+1,b,a+1,b+1,b);}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();return g;}
+export function crewTorsoGeometry(){return loft([[-1,.63,.70,0],[-.65,.77,.84,0],[0,.91,.95,0],[.48,1.08,.93,-.04],[.72,1.04,.86,-.06],[.92,.57,.62,-.02],[1,.39,.48,0]]);}
+export function crewVestGeometry(){const body=loft([[.02,.18,.13,0],[.15,.21,.16,0],[.36,.27,.165,-.01],[.47,.265,.145,-.015],[.55,.16,.12,0],[.57,.1,.09,0]]),parts=[body];for(const side of[-1,1]){const pad=new THREE.BoxGeometry(.16,.25,.055,1,2,1);pad.translate(side*.115,.31,.155);parts.push(pad);const buckle=new THREE.BoxGeometry(.075,.04,.025);buckle.translate(side*.065,.18,.193);parts.push(buckle);}const g=mergeGeometries(parts,false);parts.forEach(p=>p.dispose());return g;}
+export function crewLimbGeometry(){return loft([[-.5,.68,.72,0],[-.35,.92,.90,0],[0,1.1,1,0],[.25,1.13,1.03,0],[.5,.88,.86,0]],12);}

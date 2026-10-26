@@ -1,3 +1,4 @@
+import{addCoastalPalms}from'./coastal-palms.js';
 import{addCoastalUnderstory}from'./coastal-understory.js';
 import {batchRigidAssembly} from '../vehicles/rigid-model.js';
 import{coastalTerrainHeight,COASTAL_RELIEF_REGIONS}from'./coastal-terrain.js';
@@ -185,29 +186,21 @@ export function buildEstuaryScenery(scene,quality,solids){
       p=crowns[i];position.set(p[0],p[1],p[2]);scale.set(3.9*p[3],2.9*p[3],3.7*p[3]);matrix.compose(position,q,scale);cmesh.setMatrixAt(j,matrix);cmesh.setColorAt(j,new THREE.Color(ART.canopyTints[i%3]));});
     tmesh.computeBoundingSphere();cmesh.computeBoundingSphere();tmesh.castShadow=cmesh.castShadow=true;cmesh.receiveShadow=true;root.add(tmesh,cmesh);
   }
-  const leafCanvas=document.createElement('canvas');leafCanvas.width=128;leafCanvas.height=256;
-  const lc=leafCanvas.getContext('2d');lc.strokeStyle='#5a7950';lc.lineWidth=4;lc.beginPath();lc.moveTo(64,0);lc.lineTo(64,256);lc.stroke();
-  for(let y=12;y<245;y+=8){const spread=Math.sin(y/256*Math.PI)*61;lc.lineWidth=5;lc.strokeStyle=y%16?'#5c824c':'#789258';for(const side of [-1,1]){lc.beginPath();lc.moveTo(64,y-5);lc.lineTo(64+side*spread,y+15);lc.stroke();}}
-  const leafTexture=new THREE.CanvasTexture(leafCanvas);leafTexture.colorSpace=THREE.SRGBColorSpace;
-  const leafMaterial=new THREE.MeshStandardMaterial({color:'#e0e7ca',map:leafTexture,alphaTest:.45,side:THREE.DoubleSide,roughness:.85});
-  function palm(x,z,size=1){
-    const base=terrainHeight(x,z);
-    tube(root,[[x,base,z],[x+.5*size,base+5*size,z],[x+size,base+8.5*size,z]],.19*size,timber,6);
-    for(let j=0;j<7;j++){
-      const angle=j*Math.PI*2/7,v=[],indices=[],uv=[];
-      for(let i=0;i<=8;i++){
-        const t=i/8,w=Math.sin(t*Math.PI)*.45*size,px=x+(1+Math.sin(angle)*t*4.8)*size,pz=z+Math.cos(angle)*t*4.8*size,py=base+(8.5+Math.sin(t*Math.PI)-t*t*2.2)*size;
-        for(const side of [-1,1]){v.push(px+Math.cos(angle)*w*side,py,pz-Math.sin(angle)*w*side);uv.push(side<0?0:1,t);}
-        if(i<8){const a=i*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}
-      }
-      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(indices);g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.computeVertexNormals();root.add(new THREE.Mesh(g,leafMaterial));
-    }
-  }
+  const palmSites=[];function palm(x,z,size=1){palmSites.push({x,z,y:terrainHeight(x,z),size});}
   // Original palms decorate the real shoreline, without changing its geometry.
   for(const land of lands)for(let i=0;i<land.grass.length;i++){
     const ring=land.grass[i].points;
     for(let j=0;j<ring.length;j+=5){const [x,z]=ring[j];if(z<100&&!occupied(x,z)&&random()>.25)palm(x,z,.8+random()*.4);}
   }
+  // Fill suitable land beside waterfront routes so palms are visible while driving.
+  const additionalPalms=[],palmBudget=Math.round(quality.trees*230);
+  for(const land of lands)for(let j=1;j<land.points.length;j++){
+    const a=land.points[j-1],b=land.points[j],length=Math.hypot(b[0]-a[0],b[1]-a[1]);if(length<15)continue;
+    for(let d=8;d<length;d+=34){const px=a[0]+(b[0]-a[0])*d/length,pz=a[1]+(b[1]-a[1])*d/length;if(pz>150||pz<-1700)continue;
+      for(const side of[-1,1]){const x=px+(b[1]-a[1])/length*side*9,z=pz-(b[0]-a[0])/length*side*9;if(!landAt(x,z)||occupied(x,z)||palmSites.some(p=>Math.hypot(p.x-x,p.z-z)<10)||mapData.roads.some(r=>r.points.some((p,i)=>i&&edgeDistance(x,z,r.points[i-1],p)<r.w/2+2)))continue;additionalPalms.push({x,z,y:terrainHeight(x,z),size:.85+random()*.35});break;}
+    }
+  }
+  additionalPalms.sort((a,b)=>Math.hypot(a.x-mapData.spawn.x,a.z-mapData.spawn.z)-Math.hypot(b.x-mapData.spawn.x,b.z-mapData.spawn.z));palmSites.push(...additionalPalms.slice(0,palmBudget));const coastalPalms=addCoastalPalms(root,palmSites);
   const grassSites=[],grassBudget=Math.round(quality.trees*3000);
   for(const land of lands)for(const bank of land.grass){for(let j=1;j<bank.points.length&&grassSites.length<grassBudget;j++){
     const a=bank.points[j-1],b=bank.points[j],length=Math.hypot(b[0]-a[0],b[1]-a[1]);
@@ -318,6 +311,6 @@ export function buildEstuaryScenery(scene,quality,solids){
   }
   for(const m of originals){m.removeFromParent();m.geometry.dispose();}
   const contactShadows=addGroundContacts(root,contacts);
-  root.userData.stats={coastalExtension:mapData.coastalExtension?.added,artStyle:ART.name,contactShadows,shoreGrass:grassSites.length,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.filter(p=>p.visual!=='cabin').length,mooredCruisers:tinnySites.filter(p=>p.visual==='cabin').length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
+  root.userData.stats={coastalExtension:mapData.coastalExtension?.added,artStyle:ART.name,contactShadows,coastalPalms,shoreGrass:grassSites.length,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.filter(p=>p.visual!=='cabin').length,mooredCruisers:tinnySites.filter(p=>p.visual==='cabin').length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
   return root;
 }

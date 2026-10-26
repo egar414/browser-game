@@ -1,3 +1,4 @@
+import{RoundedBoxGeometry}from'three/addons/geometries/RoundedBoxGeometry.js';
 import{marineAlloyMaterial,hullUV}from'./marine-finish.js';
 import * as THREE from 'three';
 
@@ -25,7 +26,7 @@ export function buildTender(colour='#bdc9cc',design='classic',options={}){
   const transom=new THREE.Shape([new THREE.Vector2(-.52,.39),new THREE.Vector2(.52,.39),new THREE.Vector2(.4,-.17),new THREE.Vector2(0,-.23),new THREE.Vector2(-.4,-.17)]);
   mesh(root,new THREE.ShapeGeometry(transom),alloy,0,0,-1.08);
   for(const side of [-1,1]){
-    rail(root,sections.map(([z,w,y])=>[side*w,y,z]),.024,alloy);
+    rail(root,sections.map(([z,w,y])=>[side*w,y,z]),.034,alloy);
     rail(root,sections.map(([z,w,y,b])=>[side*w*.9,(y+b)*.5,z]),.012,ribs);
     for(const level of[.28,.49,.70])rail(root,sections.slice(0,-1).map(([z,w,y,b])=>[side*w*(.78+level*.22),b+(y-b)*level,z]),.009,alloy);
     for(let z=-.85;z<.75;z+=.24){const w=z>.2?.5-(z-.2)*.37:.54;rail(root,[[side*w,.37,z],[side*w*.75,-.12,z],[0,-.16,z]],.012,ribs);}
@@ -42,6 +43,7 @@ export function buildTender(colour='#bdc9cc',design='classic',options={}){
     block(root,w,.1,.29,0,.31,z,alloy);block(root,w-.07,.016,.23,0,.37,z,rubber);
     for(const side of [-1,1])block(root,.04,.32,.23,side*w*.35,.12,z,ribs);
   }
+  block(root,.91,.025,.12,0,.24,-.97,alloy);
   // Bow plate, fuel tank, hose, bailer and a folded orange flotation vest.
   block(root,.20,.025,.15,0,.5,.91,alloy);
   block(root,.31,.15,.22,.22,.02,-.87,red);block(root,.06,.025,.04,.22,.11,-.87,rubber);
@@ -50,7 +52,9 @@ export function buildTender(colour='#bdc9cc',design='classic',options={}){
   block(root,.10,.09,.13,-.29,-.02,.03,red);
   for(const x of [-.10,.10])block(root,.045,.18,.1,x,.35,-1.10,motorPaint);
   const motor=new THREE.Group();motor.name=`${options.hp||25} hp outboard`;motor.position.set(.12,.27,-1.12);root.add(motor);
-  mesh(motor,new THREE.CapsuleGeometry(.175,.20,4,12),motorPaint,0,.25,-.015).scale.set(1,.9,1.12);
+  mesh(motor,new RoundedBoxGeometry(.36,.40,.39,3,.055),motorPaint,0,.25,-.015);
+  for(const side of[-1,1])for(let i=0;i<4;i++)block(motor,.008,.013,.10,side*.183,.37-i*.025,.045,rubber);
+  const hinge=mesh(motor,new THREE.CylinderGeometry(.025,.025,.25,10),alloy,0,.07,.13);hinge.rotation.z=Math.PI/2;
   block(motor,.35,.035,.34,0,.22,-.01,red);
   block(motor,.075,.57,.10,0,-.23,0,motorPaint);
   mesh(motor,new THREE.SphereGeometry(1,12,8),motorPaint,0,-.63,-.02).scale.set(.07,.07,.19);

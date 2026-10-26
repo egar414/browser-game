@@ -1,3 +1,4 @@
+import{crewVestGeometry,crewLimbGeometry}from'./sculpted-crew.js';
 import{coastalHeadGeometry,coastalCapGeometry}from'./coastal-character-detail.js';
 import {isTinny} from '../config.js';
 import{beachWear}from'./wardrobe.js';
@@ -7,7 +8,7 @@ const skin=new THREE.MeshStandardMaterial({color:'#bc896b',roughness:.72});
 const suit=beachWear.shorts;
 const vest=beachWear.vest;
 const dark=new THREE.MeshStandardMaterial({color:'#14292e',roughness:.62});
-const limbGeometry=new THREE.CylinderGeometry(1,1,1,12);
+const limbGeometry=crewLimbGeometry();
 export const RIDER_WEIGHT = { response:7, steeringShift:.17, loadShift:.008, maximumShift:.26, bowShift:.0704 };
 export function riderWeightTargets(v){
   const aft=THREE.MathUtils.clamp(v.riderAft||0,0,1),bow=v.airborne?0:THREE.MathUtils.clamp(((v.pitch||0)-.3)/.6,0,1)*aft;
@@ -27,14 +28,14 @@ function joint(a,b,l1,l2,hint){
 export function makeRider(parent,type){
   const root=new THREE.Group(),torso=new THREE.Group();parent.add(root);root.add(torso);
   ball(torso,[0,.27,0],[.215,.29,.145],suit);
-  ball(torso,[0,.29,.025],[.235,.245,.17],vest);
+  const jacket=new THREE.Mesh(crewVestGeometry(),vest);jacket.castShadow=true;torso.add(jacket);
   for(const side of [-1,1])ball(torso,[side*.16,.32,.155],[.025,.21,.017],dark);
   const face=new THREE.Group();torso.add(face);root.userData.face=face;const eye=new THREE.Object3D();eye.position.set(0,.73,.14);torso.add(eye);root.userData.eye=eye;
   const head=ball(face,[0,.69,.015],[.15,.19,.15],skin);head.geometry.dispose();head.geometry=coastalHeadGeometry();
   const cap=ball(face,[0,.8,.005],[.158,.083,.16],dark);cap.geometry.dispose();cap.geometry=coastalCapGeometry();
   ball(face,[0,.79,.14],[.16,.022,.1],dark);
   ball(face,[0,.71,.153],[.13,.036,.026],dark);
-  const limbs=[-1,1].map(side=>({side,arm:[segment(root,.069,vest),segment(root,.052,skin)],leg:[segment(root,.085,suit),segment(root,.071,skin)],hand:ball(root,[0,0,0],[.064,.065,.065],skin),foot:ball(root,[0,0,0],[.083,.045,.16],dark)}));
+  const limbs=[-1,1].map(side=>({side,arm:[segment(root,.085,vest),segment(root,.064,skin)],leg:[segment(root,.105,suit),segment(root,.081,skin)],hand:ball(root,[0,0,0],[.064,.065,.065],skin),foot:ball(root,[0,0,0],[.083,.045,.16],dark)}));
   for(const limb of limbs){limb.hand.name=limb.side===1?'right-hand':'left-hand';limb.foot.name=limb.side===1?'right-foot':'left-foot';}
   root.userData.bodyParts=[...torso.children.filter(o=>o.isMesh),...limbs.flatMap(l=>[...l.leg,l.foot])];
   let aft=0,lean=0,bow=0;

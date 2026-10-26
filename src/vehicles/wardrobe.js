@@ -1,3 +1,4 @@
+import{crewTorsoGeometry,crewLimbGeometry}from'./sculpted-crew.js';
 import{coastalHeadGeometry,coastalCapGeometry}from'./coastal-character-detail.js';
 import * as THREE from'three';
 function fabric(a,b,shorts=false){
@@ -25,6 +26,7 @@ export function makeDeckCharacter(){
   shape('arm'+side,[.075,.25,.075],[side*.32,.99,.01],beachWear.skin);
   shape('hand'+side,[.08,.09,.075],[side*.32,.75,.01],beachWear.skin);
  }
+ parts.shirt.geometry.dispose();parts.shirt.geometry=crewTorsoGeometry();for(const side of[-1,1])for(const name of['arm','leg']){const part=parts[name+side];part.geometry.dispose();part.geometry=crewLimbGeometry();part.geometry.scale(1,2,1);}
  parts.head.geometry.dispose();parts.head.geometry=coastalHeadGeometry();parts.hair.geometry.dispose();parts.hair.geometry=coastalCapGeometry();
  const eye=new THREE.Object3D();eye.position.set(0,1.74,.15);root.add(eye);root.userData.eye=eye;root.userData.faceParts=[parts.head,parts.hair,parts['eye1'],parts['eye-1']];
  root.userData.bodyParts=[parts.shirt,...[-1,1].flatMap(s=>[parts['shorts'+s],parts['leg'+s],parts['foot'+s]])];
