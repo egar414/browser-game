@@ -8,7 +8,7 @@ export function dayState(hour){
  const h=wrap(hour),angle=(h-6)/12*Math.PI,elevation=Math.sin(angle),daylight=Math.max(.12,Math.min(1,(elevation+.12)/.65)),warm=Math.max(0,1-Math.abs(elevation)/.38)*(h>4&&h<20?1:0);
  const night=elevation<-.15;
  return{hour:h,label:h<5||h>=20?'NIGHT':h<8?'SUNRISE':h<16.5?'DAYLIGHT':'SUNSET',clock:`${String(Math.floor(h)).padStart(2,'0')}:${String(Math.floor(h%1*60)).padStart(2,'0')}`,daylight,warm,
-  horizon:night?'#233958':warm>.25?'#eab386':'#afcbd8',zenith:night?'#101e3d':warm>.25?'#608db7':'#4998d2',fog:night?'#243d58':warm>.25?'#bd9b8e':'#a9c4ce',sunColour:warm>.2?'#ffb16d':'#ffe8c6',sunIntensity:Math.max(0,elevation+.08)*3.4,ambient:.25+daylight*.7,direction:{x:Math.cos(angle),y:elevation,z:-.45},fishing:fishingConditions(h)};
+  horizon:night?'#233958':warm>.25?'#eab386':'#9bc9e7',zenith:night?'#101e3d':warm>.25?'#608db7':'#257cc9',fog:night?'#243d58':warm>.25?'#bd9b8e':'#9fc9e5',sunColour:warm>.2?'#ffb16d':'#ffdfb0',sunIntensity:Math.max(0,elevation+.08)*3.4,ambient:.22+daylight*.52,direction:{x:Math.cos(angle),y:elevation,z:-.45},fishing:fishingConditions(h)};
 }
 export class DayCycle{
  constructor(mode='changing'){this.hour=14.8;this.setMode(mode);}

@@ -1,8 +1,9 @@
+import{addCoastalUnderstory}from'./coastal-understory.js';
 import {batchRigidAssembly} from '../vehicles/rigid-model.js';
 import{coastalTerrainHeight,COASTAL_RELIEF_REGIONS}from'./coastal-terrain.js';
 import * as THREE from 'three';
 import{COASTAL_STYLE as ART}from'./art-direction.js';
-import {addGroundContacts,finishGroundMaterial} from './scenery-lighting.js';
+import {addGroundContacts,finishGroundMaterial,finishFacadeMaterial} from './scenery-lighting.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { coastalCanopy } from './foliage.js';
 import {mappedResidentialHomes,planResidentialMoorings} from './residential-moorings.js';
@@ -32,7 +33,7 @@ export function buildEstuaryScenery(scene,quality,solids){
   const sand=groundMaterial(ART.sand,'sand'),grass=groundMaterial(ART.grass,'grass'),park=groundMaterial(ART.park,'grass'),road=material(ART.road);
   const concrete=material('#c3c4b6'),timber=coastalMaterial('timber'),navy=material('#263e4f');
   const walls=ART.walls.map(material),roofs=ART.roofs.map(roofMaterial);
-  walls.forEach(m=>m.userData.stylizedWall=quality.trees>.6);
+  walls.forEach(m=>{m.userData.stylizedWall=quality.trees>.6;m.userData.coastalFacade=true;});
   const garden=material(ART.garden),fence=material(ART.fence),homeGlass=facadeWindowMaterial();
   const windows=new THREE.MeshStandardMaterial({color:'#38636e',roughness:.22,metalness:.32});
   for(const land of lands){
@@ -207,6 +208,12 @@ export function buildEstuaryScenery(scene,quality,solids){
     const ring=land.grass[i].points;
     for(let j=0;j<ring.length;j+=5){const [x,z]=ring[j];if(z<100&&!occupied(x,z)&&random()>.25)palm(x,z,.8+random()*.4);}
   }
+  const grassSites=[],grassBudget=Math.round(quality.trees*3000);
+  for(const land of lands)for(const bank of land.grass){for(let j=1;j<bank.points.length&&grassSites.length<grassBudget;j++){
+    const a=bank.points[j-1],b=bank.points[j],length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    for(let d=1;d<length&&grassSites.length<grassBudget;d+=5/quality.trees){const x=a[0]+(b[0]-a[0])*d/length,z=a[1]+(b[1]-a[1])*d/length;if(occupied(x,z)||!landAt(x,z)||mapData.roads.some(r=>r.points.some((p,i)=>i&&edgeDistance(x,z,r.points[i-1],p)<r.w/2+2)))continue;grassSites.push({x,z,y:terrainHeight(x,z),scale:1.2+random()});}
+  }}
+  const shoreGrass=addCoastalUnderstory(root,grassSites);if(shoreGrass)shoreGrass.userData.dynamic=true;
   // Low branching mangrove crowns and exposed prop roots follow upstream banks.
   for(const land of lands)for(let i=1;i<land.points.length;i++){
     const a=land.points[i-1],b=land.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);
@@ -292,7 +299,7 @@ export function buildEstuaryScenery(scene,quality,solids){
   // Dynamic meshes stay out of the static scenery batches. Visual and physics
   // use the same curved deck profile and water-sampled floating base.
   kicker.traverse(o=>{if(o.isMesh){o.userData.dynamic=true;o.castShadow=o.receiveShadow=true;}});
-  root.userData.update=(time,view)=>{updateTinnies(time,view);kicker.position.y=rampBaseHeight(BAR_RAMP,time);if(root.userData.stats)root.userData.stats.visibleTinnies=updateTinnies.visibleCount;};root.userData.update(0,mapData.spawn);
+  root.userData.update=(time,view)=>{foliageMat.userData.wind.value=time;updateTinnies(time,view);kicker.position.y=rampBaseHeight(BAR_RAMP,time);if(root.userData.stats)root.userData.stats.visibleTinnies=updateTinnies.visibleCount;};root.userData.update(0,mapData.spawn);
   // Merge compatible static meshes. Instanced foliage remains separate.
   root.updateMatrixWorld(true);const batches=new Map(),originals=[];
   root.traverse(mesh=>{
@@ -300,17 +307,17 @@ export function buildEstuaryScenery(scene,quality,solids){
     const m=mesh.material;
     let g=mesh.geometry.clone();if(g.index)g=g.toNonIndexed();g.applyMatrix4(mesh.matrixWorld);g.computeBoundingSphere();
     const sphere=g.boundingSphere,tile=quality.trees<.6&&!m.transparent?'low-opaque':sphere.radius<150?`${Math.floor(sphere.center.x/400)}:${Math.floor(sphere.center.z/400)}`:'large';
-    const key=[tile,m.type,m.roughness,m.metalness,m.map?.uuid,m.normalMap?.uuid,m.alphaTest,m.transparent,m.opacity,m.side].join(':');
+    const key=[tile,m.type,m.roughness,m.metalness,m.map?.uuid,m.normalMap?.uuid,m.alphaTest,m.transparent,m.opacity,m.side,m.userData.coastalFacade].join(':');
     const colour=m.color||new THREE.Color('white'),colours=new Float32Array(g.attributes.position.count*3);for(let i=0;i<g.attributes.position.count;i++){const facade=mesh.userData.facade,shade=facade ? .78+.22*THREE.MathUtils.clamp((g.attributes.position.getY(i)-facade.base)/(facade.top-facade.base),0,1) : 1;colours.set([colour.r*shade,colour.g*shade,colour.b*shade],i*3);}g.setAttribute('color',new THREE.BufferAttribute(colours,3));
     if(!batches.has(key)){const mergedMaterial=m.clone();mergedMaterial.vertexColors=true;mergedMaterial.color.set('#ffffff');batches.set(key,{material:mergedMaterial,geometries:[]});}
     if(!g.attributes.uv)g.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
     batches.get(key).geometries.push(g);originals.push(mesh);
   });
   for(const {material:mat,geometries} of batches.values()){
-    const g=mergeGeometries(geometries,false);if(!g)throw new Error('Scenery batching failed');finishGroundMaterial(mat);const m=new THREE.Mesh(g,mat);m.castShadow=true;m.receiveShadow=true;root.add(m);geometries.forEach(g=>g.dispose());
+    const g=mergeGeometries(geometries,false);if(!g)throw new Error('Scenery batching failed');finishGroundMaterial(mat);finishFacadeMaterial(mat);const m=new THREE.Mesh(g,mat);m.castShadow=true;m.receiveShadow=true;root.add(m);geometries.forEach(g=>g.dispose());
   }
   for(const m of originals){m.removeFromParent();m.geometry.dispose();}
   const contactShadows=addGroundContacts(root,contacts);
-  root.userData.stats={coastalExtension:mapData.coastalExtension?.added,artStyle:ART.name,contactShadows,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.filter(p=>p.visual!=='cabin').length,mooredCruisers:tinnySites.filter(p=>p.visual==='cabin').length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
+  root.userData.stats={coastalExtension:mapData.coastalExtension?.added,artStyle:ART.name,contactShadows,shoreGrass:grassSites.length,...architectureStats,estimatedHomes:homeSites.length,roads:mapData.roads.length,mappedBridges:mapData.bridges.length,mappedPools:(mapData.pools||[]).length,mooredTinnies:tinnySites.filter(p=>p.visual!=='cabin').length,mooredCruisers:tinnySites.filter(p=>p.visual==='cabin').length,housePontoons:residentialMoorings.length,breakwaterRocks:rockSites.length};
   return root;
 }

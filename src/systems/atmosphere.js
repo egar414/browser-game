@@ -25,7 +25,7 @@ export function createAtmosphere(scene, renderer) {
         colour+=vec3(.9,.32,.1)*pow(towardSun,16.)*(.12+uWarm*.6)*uDaylight;
         colour+=vec3(7.,4.9,2.6)*pow(towardSun,9000.)*smoothstep(-.05,.05,uSun.y);
         if(uPhotoReady>.5&&uDaylight>.16){
-          vec3 photo=coastalSky(uPhoto,d);
+          vec3 photo=coastalSky(uPhoto,d);photo=mix(photo,photo*vec3(.84,.96,1.12),uDaylight);
           photo=mix(uHorizon*.65,photo,uDaylight)*(.12+.88*uDaylight);
           photo+=vec3(.32,.09,.025)*uWarm*(1.-elevation);
           colour=mix(colour,photo,smoothstep(-.035,.035,d.y)*smoothstep(.05,.4,uDaylight));
@@ -56,12 +56,12 @@ export function createAtmosphere(scene, renderer) {
   environmentScene.add(new THREE.Mesh(dome.geometry, material));
   const pmrem = new THREE.PMREMGenerator(renderer);
   let environment = pmrem.fromScene(environmentScene, .06, .1, 2000, { size: 128 });
-  scene.environment = environment.texture; scene.environmentIntensity = .8;
+  scene.environment = environment.texture; scene.environmentIntensity = 1.0;
   pmrem.dispose();
   return {setUnderwater(value){dome.visible=!value;}, refreshEnvironment(){
     material.uniforms.uPhotoReady.value=material.uniforms.uPhoto.value.userData.loaded?1:0;
     const generator=new THREE.PMREMGenerator(renderer),previous=environment;
     environment=generator.fromScene(environmentScene,.06,.1,2000,{size:128});
     scene.environment=environment.texture;previous.dispose();generator.dispose();
-  },update(time,position,day) { material.uniforms.uPhotoReady.value=material.uniforms.uPhoto.value.userData.loaded?1:0; material.uniforms.uTime.value = time;if(day){SUN_DIRECTION.set(day.direction.x,day.direction.y,day.direction.z).normalize();material.uniforms.uHorizon.value.set(day.horizon);material.uniforms.uZenith.value.set(day.zenith);material.uniforms.uDaylight.value=day.daylight;material.uniforms.uWarm.value=day.warm;scene.environmentIntensity=.2+day.daylight*.6;}if(position)dome.position.copy(position); }, dispose() { environment.dispose(); } };
+  },update(time,position,day) { material.uniforms.uPhotoReady.value=material.uniforms.uPhoto.value.userData.loaded?1:0; material.uniforms.uTime.value = time;if(day){SUN_DIRECTION.set(day.direction.x,day.direction.y,day.direction.z).normalize();material.uniforms.uHorizon.value.set(day.horizon);material.uniforms.uZenith.value.set(day.zenith);material.uniforms.uDaylight.value=day.daylight;material.uniforms.uWarm.value=day.warm;scene.environmentIntensity=.2+day.daylight*.85;}if(position)dome.position.copy(position); }, dispose() { environment.dispose(); } };
 }

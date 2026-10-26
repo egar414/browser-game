@@ -1,13 +1,15 @@
+import{coastalHeadGeometry,coastalCapGeometry}from'./coastal-character-detail.js';
 import * as THREE from'three';
 function fabric(a,b,shorts=false){
  const ca=new THREE.Color(a).convertLinearToSRGB(),cb=new THREE.Color(b).convertLinearToSRGB(),data=new Uint8Array(64*64*4);
- for(let y=0;y<64;y++)for(let x=0;x<64;x++){const stripe=shorts?((Math.floor(x/12)+Math.floor(y/16))%3===0):y>24&&y<37;const c=stripe?cb:ca,i=(y*64+x)*4,grain=.97+((x*13+y*7)%7)/210;data[i]=c.r*255*grain;data[i+1]=c.g*255*grain;data[i+2]=c.b*255*grain;data[i+3]=255;}
+ for(let y=0;y<64;y++)for(let x=0;x<64;x++){const stripe=shorts?(y>6&&y<10||y>51&&y<55||x<2):y>28&&y<32;const c=stripe?cb:ca,i=(y*64+x)*4,grain=.97+((x*13+y*7)%7)/210;data[i]=c.r*255*grain;data[i+1]=c.g*255*grain;data[i+2]=c.b*255*grain;data[i+3]=255;}
  const texture=new THREE.DataTexture(data,64,64);texture.colorSpace=THREE.SRGBColorSpace;texture.magFilter=THREE.LinearFilter;texture.needsUpdate=true;return texture;
 }
 export const beachWear={
  skin:new THREE.MeshStandardMaterial({color:'#c79373',roughness:.7}),
+ vest:new THREE.MeshStandardMaterial({map:fabric('#243642','#458a8e',true),roughness:.8}),
  shirt:new THREE.MeshStandardMaterial({map:fabric('#38a6a2','#f3dcaa'),roughness:.85}),
- shorts:new THREE.MeshStandardMaterial({map:fabric('#183e53','#e9aa69',true),roughness:.87}),
+ shorts:new THREE.MeshStandardMaterial({map:fabric('#183747','#c6aa74',true),roughness:.87}),
  dark:new THREE.MeshStandardMaterial({color:'#1c2934',roughness:.65}),
 };
 export function makeDeckCharacter(){
@@ -23,6 +25,7 @@ export function makeDeckCharacter(){
   shape('arm'+side,[.075,.25,.075],[side*.32,.99,.01],beachWear.skin);
   shape('hand'+side,[.08,.09,.075],[side*.32,.75,.01],beachWear.skin);
  }
+ parts.head.geometry.dispose();parts.head.geometry=coastalHeadGeometry();parts.hair.geometry.dispose();parts.hair.geometry=coastalCapGeometry();
  const eye=new THREE.Object3D();eye.position.set(0,1.74,.15);root.add(eye);root.userData.eye=eye;root.userData.faceParts=[parts.head,parts.hair,parts['eye1'],parts['eye-1']];
  root.userData.bodyParts=[parts.shirt,...[-1,1].flatMap(s=>[parts['shorts'+s],parts['leg'+s],parts['foot'+s]])];
  root.userData.animate=(time,moving,fishing,seated=false)=>{for(const side of [-1,1]){const swing=Math.sin(time*9+side*Math.PI/2)*.22*moving;parts['shorts'+side].position.y=seated?.93:.69;parts['shorts'+side].rotation.x=seated?-1:0;parts['leg'+side].position.set(side*.14,seated?.7:.29,seated?.27:0);parts['leg'+side].scale.y=seated?.17:.25;parts['foot'+side].position.y=seated?.55:.055;parts['foot'+side].position.z=seated?.35:.07+swing;parts['leg'+side].rotation.x=swing;parts['arm'+side].rotation.x=fishing?-.75:-swing;parts['hand'+side].position.set(side*.32,fishing?1.07:.75,fishing?.38:.01-swing*.2);}parts.shirt.position.y=1.12+Math.sin(time*3)*.012;};

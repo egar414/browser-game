@@ -78,14 +78,15 @@ ${SURF_GLSL}
           vec3 r1=texture2D(uRipples,p*.055+vec2(uTime*.013,-uTime*.009)).rgb;
           vec3 r2=texture2D(uRipples,p*.16+vec2(-uTime*.019,uTime*.011)).rgb;
           float micro=1.-smoothstep(25.,210.,distanceToEye);
-          vec2 ripples=(r1.rg*2.-1.)*.095+(r2.rg*2.-1.)*.045*micro;
+          vec3 r3=texture2D(uRipples,p*.63+vec2(uTime*.027,uTime*.017)).rgb;
+          vec2 ripples=(r1.rg*2.-1.)*.13+(r2.rg*2.-1.)*.055*micro+(r3.rg*2.-1.)*.028*micro;
           if(!gl_FrontFacing){gl_FragColor=vec4(mix(vec3(.16,.43,.48),vec3(.53,.8,.77),pow(max(0.,dot(normalize(vNormal),normalize(-view))),4.)),1.);return;}
           vec3 n=normalize(vNormal+vec3(ripples.x,0.,ripples.y));
           float ndv=max(dot(n,view),0.);float fresnel=.025+.975*pow(1.-ndv,5.);
           float shore=texture2D(uShore,vec2((p.x-uMapBounds.x)/uMapBounds.z,1.-(p.y-uMapBounds.y)/uMapBounds.w)).r;
           float bed=.82+.18*sin(p.x*.13+sin(p.y*.16))*sin(p.y*.18);
           vec3 deep=mix(${glslColour(ART.waterDeep)},${glslColour(ART.waterShallow)}*bed,smoothstep(.01,.78,shore));
-          float bank=vBank;deep=mix(deep,vec3(.13,.37,.27)*bed,bank*.63);
+          float bank=vBank;deep=mix(deep,vec3(.055,.30,.34)*bed,bank*.63);
           // Two slow, opposing flows break up the photograph's repetition.
           // Geometry and buoyancy still use the shared analytic wave field.
           vec3 photoA=texture2D(uSurface,p*.038+vec2(uTime*.006,-uTime*.003)+ripples*.06).rgb;
@@ -94,23 +95,23 @@ ${SURF_GLSL}
           deep*=mix(1.,surfaceGrain,.38*uSurfaceReady*(.35+.65*micro));
           vec3 reflected=reflect(-view,n);
           vec3 sky=mix(uSkyHorizon,uSkyZenith,pow(max(reflected.y,0.),.42));
-          if(uSkyReady>.5){vec3 photoSky=coastalSky(uSkyPhoto,reflected);sky=mix(sky,mix(uSkyHorizon*.65,photoSky,uDaylight)*(.12+.88*uDaylight),.85*smoothstep(.05,.4,uDaylight));}
+          if(uSkyReady>.5){vec3 photoSky=coastalSky(uSkyPhoto,reflected);sky=mix(sky,mix(uSkyHorizon*.65,photoSky,uDaylight)*(.12+.88*uDaylight),.58*smoothstep(.05,.4,uDaylight));}
           vec3 reflection=sky;
           if(uReflect>.5){
             vec2 uv=vReflection.xy/vReflection.w+ripples*.065+vNormal.xz*.028;
             vec3 planar=texture2D(uReflection,clamp(uv,vec2(.002),vec2(.998))).rgb;
             reflection=mix(sky,planar,.78);
           }
-          vec3 colour=mix(deep*(.2+uDaylight*.8),reflection,.12+fresnel*.77);
+          vec3 colour=mix(deep*(.2+uDaylight*.8),reflection,.065+fresnel*.79);
           float crest=smoothstep(.15,.9,vWorld.y)*.07;
           colour+=vec3(.08,.31,.26)*crest;
           // Small texture reflections read as ripples, never as a white foam sheet.
           float photoGlint=smoothstep(.22,.65,max(photoA.r,max(photoA.g,photoA.b)));
-          colour+=vec3(.12,.15,.14)*photoGlint*uSurfaceReady*micro*uDaylight;
+          colour+=vec3(.035,.065,.085)*photoGlint*uSurfaceReady*micro*uDaylight;
           vec3 halfVector=normalize(view+uSun);
-          float spec=pow(max(dot(n,halfVector),0.),350.);
+          float spec=pow(max(dot(n,halfVector),0.),420.);
           float sheen=pow(max(dot(n,halfVector),0.),45.);
-          colour+=vec3(1.55,1.25,.76)*(spec*.72+sheen*.035)*smoothstep(-.05,.12,uSun.y);
+          colour+=vec3(1.55,1.25,.76)*(spec*.95+sheen*.025)*smoothstep(-.05,.12,uSun.y);
           float caustic=pow(max(0.,sin(p.x*1.7+r1.b*3.)*sin(p.y*1.3-r2.b*2.)),7.);
           colour+=vec3(.12,.22,.13)*caustic*shore*micro*.35;
           float foam=smoothstep(.23,.43,shore)*(1.-smoothstep(.53,.82,shore));

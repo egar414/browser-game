@@ -1,3 +1,4 @@
+import{marineAlloyMaterial,hullUV}from'./marine-finish.js';
 import * as THREE from 'three';
 
 const material=(color,metalness=0,roughness=.65)=>new THREE.MeshStandardMaterial({color,metalness,roughness,side:THREE.DoubleSide});
@@ -14,18 +15,19 @@ function marking(root,text,w,h,x,y,z,rotation){
 // The horsepower label and propulsion tuning are a gameplay specification.
 export function buildTender(colour='#bdc9cc',design='classic',options={}){
   const root=new THREE.Group();root.name=options.racing?'Super Skua 370':options.hp===50?'Dingi 200':'Tender 225';
-  const alloy=material(colour,.78,.39),ribs=material('#8a999b',.72,.49),rubber=material('#202a2c',.02,.86),red=material('#c93b30',.1,.42),motorPaint=material('#202c36',.3,.27);
+  const alloy=marineAlloyMaterial(colour),ribs=material('#8a999b',.72,.49),rubber=material('#202a2c',.02,.86),red=material('#c93b30',.1,.42),motorPaint=material('#202c36',.3,.27);
   const sections=[[-1.08,.52,.39,-.23],[-.82,.59,.43,-.27],[.12,.58,.47,-.23],[.68,.42,.51,-.10],[1.09,.14,.55,.08],[1.17,.015,.56,.18]];
   const vertices=[],indices=[];
   for(const [z,w,top,bottom]of sections)vertices.push(-w,top,z,-w*.76,bottom+.06,z,0,bottom,z,w*.76,bottom+.06,z,w,top,z);
   for(let i=0;i<sections.length-1;i++)for(let j=0;j<4;j++){const a=i*5+j,b=a+5;indices.push(a,a+1,b,a+1,b+1,b);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);
-  const flat=g.toNonIndexed();flat.computeVertexNormals();mesh(root,flat,alloy);g.dispose();
+  const flat=g.toNonIndexed();flat.computeVertexNormals();hullUV(flat);mesh(root,flat,alloy);g.dispose();
   const transom=new THREE.Shape([new THREE.Vector2(-.52,.39),new THREE.Vector2(.52,.39),new THREE.Vector2(.4,-.17),new THREE.Vector2(0,-.23),new THREE.Vector2(-.4,-.17)]);
   mesh(root,new THREE.ShapeGeometry(transom),alloy,0,0,-1.08);
   for(const side of [-1,1]){
     rail(root,sections.map(([z,w,y])=>[side*w,y,z]),.024,alloy);
     rail(root,sections.map(([z,w,y,b])=>[side*w*.9,(y+b)*.5,z]),.012,ribs);
+    for(const level of[.28,.49,.70])rail(root,sections.slice(0,-1).map(([z,w,y,b])=>[side*w*(.78+level*.22),b+(y-b)*level,z]),.009,alloy);
     for(let z=-.85;z<.75;z+=.24){const w=z>.2?.5-(z-.2)*.37:.54;rail(root,[[side*w,.37,z],[side*w*.75,-.12,z],[0,-.16,z]],.012,ribs);}
     // Rows of small raised rivets catch the light along the gunwale.
     for(let i=0;i<sections.length-1;i++){

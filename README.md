@@ -1393,3 +1393,17 @@ The rider has its own fixed-step position, velocity, elastic rope constraint, la
 Tune line length, elasticity, break limits, edging and wake shape together in `src/systems/tow-physics.js` (`TOW`). Session cleanup and attach checks live in `src/systems/towing.js`; multiplayer roles in `src/systems/tow-protocol.js`; board, rope and wake rendering in `src/systems/tow-view.js`. Run `node --test tests/towing.test.js` and `npx playwright test tests/towing.spec.js`.
 
 Validation for towing: 277 unit/database checks passed. The two-account Chromium acceptance test passed after the camera changes, covering wakeboard movement and carving, remote rider/rope visibility, emergency recovery, bodyboard reattachment and the driver's drop-rope action. Cloud Chromium uses SwiftShader software rendering; these checks are not a measurement of physical laptop or phone performance.
+
+### Sunlit coastal adventure graphics
+
+The supplied boating image is a colour, lighting and material reference. This update moves the original game toward that bright coastal adventure style; it does not reproduce its characters, assets or cinematic detail. The mapped estuary and handling remain intact.
+
+- Richer blue water, turquoise shallows, finer wind ripples and more restrained cloud glare; shared wave/buoyancy functions are unchanged.
+- Brushed alloy and micro-roughness maps generated locally at 256², UVs on tender hulls, and additional pressed strakes. All three alloy hull sizes retain their existing proportions, horsepower and tuning.
+- Caps with brims, ears and noses inside the existing head meshes, cleaner boardshort patterns and darker rider lifejackets. Head detail adds triangles, without extra head draw calls.
+- Rounded, gently moving crowns on Medium/High; Low keeps its 100-triangle source crown. Shore grass uses one instanced draw. Nearby house walls gain distance-filtered cladding detail.
+- Medium/High retain soft sun shadows and planar water reflections; Low keeps the direct, lighter rendering path.
+
+Tune the palette in `src/systems/art-direction.js`, lighting in `src/systems/day-cycle.js`, water in `src/systems/water.js`, and scenery shading in `src/systems/scenery-lighting.js`. Brushed metal is in `src/vehicles/marine-finish.js`; crown and grass geometry live in `src/systems/foliage.js` and `src/systems/coastal-understory.js`.
+
+Validation: `npm test` and `npx playwright test tests/reference-coast.spec.js`. The reference-art browser check covers startup, driving, turn spray, Medium/Low/High, sunset, resize and shader errors. Tests run in Chromium SwiftShader software rendering on a cloud AMD EPYC environment with five exposed CPUs. This is a software-rendering check, not a physical laptop GPU benchmark; no laptop/phone frame rate is promised.

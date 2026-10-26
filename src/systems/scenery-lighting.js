@@ -54,3 +54,23 @@ export function configureSunShadow(sun,quality){
  const camera=sun.shadow.camera;camera.left=camera.bottom=-extent;camera.right=camera.top=extent;camera.near=1;camera.far=700;camera.updateProjectionMatrix();
  sun.shadow.bias=-.00018;sun.shadow.normalBias=.045;sun.shadow.needsUpdate=true;
 }
+
+// Distance-filtered cladding detail survives batching without extra textures.
+export function finishFacadeMaterial(material){
+ if(!material.userData.coastalFacade)return;
+ material.onBeforeCompile=shader=>{
+  shader.vertexShader='varying vec3 vFacadeWorld;\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>','vFacadeWorld=(modelMatrix*vec4(transformed,1.)).xyz;\n#include <project_vertex>');
+  shader.fragmentShader='varying vec3 vFacadeWorld;\n'+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+   float wallDistance=length(cameraPosition-vFacadeWorld);
+   float wallDetail=1.-smoothstep(18.,110.,wallDistance);
+   float courses=vFacadeWorld.y*5.5;
+   float width=max(fwidth(courses)*1.4,.025);
+   float seam=1.-smoothstep(0.,width,min(fract(courses),1.-fract(courses)));
+   float grain=fract(sin(dot(floor(vFacadeWorld.xz*25.),vec2(12.9898,78.233)))*43758.5453);
+   diffuseColor.rgb*=1.-seam*.12*wallDetail+(grain-.5)*.035*wallDetail;
+  `);
+ };
+ material.customProgramCacheKey=()=> 'coastal-weatherboard-finish-v1';
+}

@@ -24,8 +24,9 @@ export class JetPlume {
       if(alpha<.004)discard;
       float grain=texture2D(uNoise,vUv*9.7+vSeed*19.).r;
       float light=smoothstep(.18,.8,n*.36+detail*.34+grain*.3);
-      vec3 colour=mix(vec3(.50,.67,.69),vec3(1.08,1.08,1.02),light)*(.84+.16*(1.-radial));
-      gl_FragColor=vec4(colour,alpha);
+      vec3 colour=mix(vec3(.52,.71,.84),vec3(1.16,1.15,1.08),light)*(.84+.16*(1.-radial));
+      float droplets=mix(.72,1.,smoothstep(.12,.45,grain));
+      gl_FragColor=vec4(colour,alpha*droplets);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
       }`});
