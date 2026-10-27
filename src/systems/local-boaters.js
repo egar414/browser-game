@@ -1,3 +1,4 @@
+import{constrainHullWater}from'../vehicles/shafting.js';
 import{distantBoats}from'./boat-lod.js';
 import * as THREE from'three';
 import{mergeGeometries}from'three/addons/utils/BufferGeometryUtils.js';
@@ -40,10 +41,11 @@ export class LocalBoaters extends LocalTraffic{
    const show=this.enabled&&visible.has(b)&&b.flood.sinking<.98;b.model.visible=b.effects.visible=show;
    if(!show){if(b.visible)b.spray.clear();b.visible=false;continue;}b.visible=true;this.visibleCount++;
    const v=b.v,p=v.previous,a=playing?alpha:1,render={...v,x:THREE.MathUtils.lerp(p.x,v.x,a),y:THREE.MathUtils.lerp(p.y,v.y,a),z:THREE.MathUtils.lerp(p.z,v.z,a),heading:THREE.MathUtils.lerp(p.heading,v.heading,a),pitch:THREE.MathUtils.lerp(p.pitch,v.pitch,a),roll:THREE.MathUtils.lerp(p.roll,v.roll,a)};
+   if(!b.flood.sinking)constrainHullWater(render,time);
    b.model.position.set(render.x,render.y-b.flood.sinking*2.8,render.z);b.model.rotation.set(-render.pitch,render.heading,render.roll+b.flood.sinking*.35,'YXZ');
    const parts=b.model.userData;parts.motor.rotation.set(v.drive.trimAngle,-v.drive.steeringAngle,0,'YXZ');if(parts.propeller)parts.propeller.rotation.z+=v.drive.rpm/60*Math.PI*2*dt;
    parts.rider.userData.update(v,dt,parts);parts.passenger?.userData.update(v,dt);const fill=b.flood.water/55;b.water.visible=fill>.015;b.water.position.y=b.type==='cat'?.30+fill*.12:-.14+fill*.48;
-   b.spray.update(playing?dt:0,render,time,playing&&!b.flood.resetIn,b.controls);b.spray.resize(height,fov,pixelRatio);
+   b.spray.update(playing?dt:0,render,time,playing&&!b.flood.resetIn,{...b.controls,contactEffects:true});b.spray.resize(height,fov,pixelRatio);
   }
  }
 }

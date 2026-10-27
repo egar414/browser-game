@@ -1,8 +1,6 @@
+import{sampleHullContacts,hullWaterlineContacts,HULL_CONTACT_LIMIT}from'./hull-support.js';
 import {WOMP} from './womping.js';
 import {isTinny,canWomp} from '../config.js';
-import{waveHeight}from'../config.js';
-import{bodyPoint}from'./propulsion.js';
-import{clearancePoints}from'./shafting.js';
 export const TINNY_BOUNCE={frequency:1.05,shaftLift:.25,shaftPitch:.17,contactClearance:.035,contactCooldown:.28};
 const clamp=x=>Math.max(0,Math.min(1,x));
 // Bounded planing-pressure oscillation drives actual heave/pitch springs.
@@ -19,16 +17,20 @@ export function tinnyBounce(v,dt){
  return{lift:pulse*v.bounceLoad*(cat?.72:1)*(Math.max(TINNY_BOUNCE.shaftLift,(v.wompLoad||0)*WOMP.lift)),pitch:pulse*v.bounceLoad*(cat?.7:1)*(Math.max(TINNY_BOUNCE.shaftPitch,(v.wompLoad||0)*WOMP.pitch))};
 }
 export function hullContactSplash(v,dt,time){
- if(!canWomp(v.type))return;
- const hull=clearancePoints(v);v.contactCooldowns=Array.from({length:hull.length},(_,i)=>Math.max(0,(v.contactCooldowns?.[i]||0)-dt));
- if(v.airborne||v.wipeout||v.speed<3||Math.max(v.shaftLoad||0,v.wompLoad||0)<.2){v.contactDepths=null;return;}
- const points=hull.map(local=>{const p=bodyPoint(v,local);return{...p,depth:p.y-waveHeight(p.x,p.z,time)};});
- const contacts=[];
- points.forEach((p,i)=>{const old=v.contactDepths?.[i],closing=old===undefined?0:(old-p.depth)/dt;
-  if(old!==undefined&&p.depth<=TINNY_BOUNCE.contactClearance&&closing>.25&&!v.contactCooldowns[i]){
-   contacts.push({x:p.x,z:p.z,impact:Math.min(4,closing)});v.contactCooldowns[i]=TINNY_BOUNCE.contactCooldown;
-  }
- });
+ if(!(dt>0))return;
+ v.hullSplashCooldown=Math.max(0,(v.hullSplashCooldown||0)-dt);
+ if(v.airborne||v.wipeout||v.type==='sled'){v.contactDepths=null;return;}
+ const rows=sampleHullContacts(v,time),points=rows.flatMap(row=>row.points),impacts=new Map(),stance=Math.max(v.shaftLoad||0,v.wompLoad||0),threshold=stance>.2?.25:.70;
+ v.contactCooldowns=Array.from({length:points.length},(_,i)=>Math.max(0,(v.contactCooldowns?.[i]||0)-dt));
+ let index=0;
+ for(const row of rows)for(const p of row.points){const old=v.contactDepths?.[index],closing=old===undefined?0:(old-p.depth)/dt;
+  if(old!==undefined&&p.depth<=TINNY_BOUNCE.contactClearance&&closing>threshold&&!v.contactCooldowns[index]){
+   impacts.set(row.section.id,Math.max(impacts.get(row.section.id)||0,Math.min(4,closing)));v.contactCooldowns[index]=TINNY_BOUNCE.contactCooldown;
+  }index++;
+ }
  v.contactDepths=points.map(p=>p.depth);
- if(contacts.length){const impact=contacts.reduce((a,b)=>a.impact>b.impact?a:b);v.hullHits=(v.hullHits||0)+contacts.length;v.lastHullHit={x:impact.x,z:impact.z,time,count:contacts.length};v.onEvent({type:'splash',contact:true,...impact,contacts});}
+ if(!impacts.size||v.hullSplashCooldown)return;
+ let contacts=hullWaterlineContacts(v,time,impacts,rows);
+ if(!contacts.length)contacts=rows.filter(row=>impacts.has(row.section.id)).slice(0,HULL_CONTACT_LIMIT).map(row=>{const p=row.points.reduce((a,b)=>Math.abs(a.depth)<Math.abs(b.depth)?a:b);return{...p,impact:impacts.get(row.section.id),hullContact:true,station:row.section.id};});
+ if(contacts.length){const impact=contacts.reduce((a,b)=>a.impact>b.impact?a:b);v.hullHits=(v.hullHits||0)+contacts.length;v.lastHullHit={x:impact.x,y:impact.y,z:impact.z,time,count:contacts.length};v.hullSplashCooldown=.10;v.onEvent?.({type:'splash',contact:true,...impact,time,contacts});}
 }

@@ -1,3 +1,4 @@
+import{hullContactSplash}from'./tinny-bounce.js';
 import{assistedYaw}from'./steering-assist.js';
 import{constrainHullWater}from'./shafting.js';
 import{WORLD,waveHeight,RIDE_MODES}from'../config.js';
@@ -21,7 +22,7 @@ export function updateRacer(v,dt,input,time){
  if(hit){v.vx=0;v.vz=0;v.speed=0;if(Math.abs(oldForward)>14){v.wipe('Racing hull collision');return;}if(v.trickCooldown<=0){v.onEvent({type:'bump',label:'Racing hull blocked'});v.trickCooldown=.6;}}else{v.x+=v.vx*dt;v.z+=v.vz*dt;}
  const samples=[-1,1].flatMap(side=>[-1,1].map(end=>waveHeight(v.x+fx*4.4*end+fz*1.35*side,v.z+fz*4.4*end-fx*1.35*side,time))),water=samples.reduce((a,b)=>a+b,0)/4;
  v.planing=damp(v.planing,clamp((v.speed-6)/13,0,1),3,dt);v.pitch=damp(v.pitch,Math.atan2((samples[1]+samples[3]-samples[0]-samples[2])/2,8.8)+.025*v.planing+v.trimDegrees*.002,5,dt);v.roll=damp(v.roll,clamp(Math.atan2((samples[2]+samples[3]-samples[0]-samples[1])/2,2.7)-v.yawRate*v.speed*.012,-.25,.25),4,dt);
- v.vy+=((water+c.rideHeight-v.y)*T.waterSpring-v.vy*T.waterDamping*(v.workshop?.damping||1))*dt;v.y+=v.vy*dt;v.y=Math.max(v.y,water-.18);v.airborne=false;constrainHullWater(v,time);v.wettedFraction=1-v.planing*.65;v.riderAft=0;
+ v.vy+=((water+c.rideHeight-v.y)*T.waterSpring-v.vy*T.waterDamping*(v.workshop?.damping||1))*dt;v.y+=v.vy*dt;v.y=Math.max(v.y,water-.18);v.airborne=false;hullContactSplash(v,dt,time);constrainHullWater(v,time,dt);v.wettedFraction=1-v.planing*.65;v.riderAft=0;
  const origin=bodyPoint(v,[0,-.18,-6.28]);v.drive={...v.propulsion.empty(),kind:'surface-propeller',rpm:850+Math.abs(v.throttle)*6150,rpmFraction:.12+Math.abs(v.throttle)*.88,wetness:1,ventilation:0,flow:Math.abs(v.throttle)*6,neutral:Math.abs(v.throttle)<.04,reverse:forward<0?1:0,braking,origin,trimAngle:v.trimDegrees*Math.PI/180,steeringAngle:v.steer*.25,exitSpeed:34,dischargeLocal:[0,.15,-1]};
  v.boundary=v.x<WORLD.minX+T.boundaryMargin||v.x>WORLD.maxX-T.boundaryMargin||v.z<WORLD.minZ+T.boundaryMargin||v.z>WORLD.maxZ-T.boundaryMargin;
  if(v.x<WORLD.minX||v.x>WORLD.maxX||v.z<WORLD.minZ||v.z>WORLD.maxZ){v.recover(true);v.onEvent({type:'boundary',label:'Back inside the offshore course'});return;}

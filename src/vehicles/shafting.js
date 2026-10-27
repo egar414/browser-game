@@ -1,3 +1,4 @@
+import{hullSupportCorrection,hullDraftAllowance,raiseHullSamples,hullSupportVelocity}from'./hull-support.js';
 import {isTinny} from '../config.js';
 import{sportfisherZ}from'./sportfisher-shape.js';
 import{waveHeight}from'../config.js';
@@ -51,10 +52,11 @@ export function minimumHullClearance(v,time){
 }
 // A water-contact constraint in physics, shared with visible wave sampling.
 // High bow rides pivot around the transom, leaving the propeller immersed.
-export function constrainHullWater(v,time){
- v.hullCorrection=0;if(v.airborne||!v.config?.diveBoat&&!isTinny(v.type)&&!['cat','cruiser','racer','hyper'].includes(v.type))return;
- const bow=clamp((v.pitch-.45)/.7),dry=(isTinny(v.type)?clamp((v.pitch-.40)/.40):bow)*(v.shaftLoad||0)*clamp(1-Math.abs(v.steer||0)/.5),allow=v.type==='hyper'?.23:v.type==='racer'?.27:v.type==='cruiser'?.1:v.type==='cat'?.22:.30*(1-dry)-(SHAFTING.hullClearance-.18*(v.bounceCompression||0))*dry;
- if(!v.config?.diveBoat&&!['cruiser','racer','hyper'].includes(v.type)&&bow<.05)return;
- let correction=0;for(const point of clearancePoints(v)){const p=bodyPoint(v,point);correction=Math.max(correction,waveHeight(p.x,p.z,time)-allow-p.y);}
- if(correction>0){v.y+=correction;v.vy=Math.max(0,v.vy||0);v.hullCorrection=correction;}
+export function constrainHullWater(v,time,dt=0){
+ v.hullCorrection=0;if(v.airborne||v.type==='sled')return;
+ const bow=clamp((v.pitch-.45)/.7),dry=isTinny(v.type)?clamp((v.pitch-.40)/.40)*(v.shaftLoad||0)*clamp(1-Math.abs(v.steer||0)/.5):0;
+ const allow=hullDraftAllowance(v)*(1-dry)-(SHAFTING.hullClearance-.18*(v.bounceCompression||0))*dry;
+ let correction=hullSupportCorrection(v,time,allow);
+ if(v.type==='hyper'||v.type==='racer')for(const local of clearancePoints(v)){const p=bodyPoint(v,local);correction=Math.max(correction,waveHeight(p.x,p.z,time)-(v.type==='hyper'?.23:.27)-p.y);}
+ if(correction>0){const up=hullSupportVelocity(v,time,dt);v.y+=correction;v.vy=Math.max(up,v.vy||0);v.hullCorrection=correction;raiseHullSamples(v,correction);if(v.contactDepths)v.contactDepths=v.contactDepths.map(d=>d+correction);}
 }

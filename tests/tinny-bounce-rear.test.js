@@ -22,10 +22,11 @@ test('held rear view reverses camera direction and restores chase/first person i
 test('sportfisher rear chase camera stays outside the longer bow',()=>{
  const camera=new THREE.PerspectiveCamera(),chase=new ChaseCamera(camera),v={type:'cruiser',x:1040,y:1,z:-1770,heading:0,speed:10},input={orbit:0,held:()=>true};chase.update(1/60,v,input,0);assert(camera.position.z-v.z>12);assert(camera.position.y-v.y>=10);
 });
-test('shaft touchdown reports every contacting hull sample, with separate cooldowns',async()=>{
- const {hullContactSplash}=await import('../src/vehicles/tinny-bounce.js'),{clearancePoints}=await import('../src/vehicles/shafting.js'),{bodyPoint}=await import('../src/vehicles/propulsion.js'),{waveHeight}=await import('../src/config.js');setSeaState('calm',0,true);
- const events=[],v={type:'tinny',x:-200,z:-1000,y:.12,pitch:0,roll:0,heading:0,speed:10,shaftLoad:1,contactDepths:Array(18).fill(.5),onEvent:e=>events.push(e)};
- const expected=clearancePoints(v).map(p=>bodyPoint(v,p)).filter(p=>p.y-waveHeight(p.x,p.z,0)<=.035);
- hullContactSplash(v,1/60,0);assert.equal(events.length,1);assert.equal(events[0].contacts.length,expected.length);assert(expected.length>3);for(const p of expected)assert(events[0].contacts.some(q=>q.x===p.x&&q.z===p.z));
+test('shaft touchdown sprays from the real waterline intersections with bounded origins and separate cooldowns',async()=>{
+ const {hullContactSplash}=await import('../src/vehicles/tinny-bounce.js'),{sampleHullContacts,hullWaterlineContacts,HULL_CONTACT_LIMIT}=await import('../src/vehicles/hull-support.js'),{waveHeight}=await import('../src/config.js');setSeaState('calm',0,true);
+ const events=[],v={type:'tinny',x:-200,z:-1000,y:.12,pitch:0,roll:0,heading:0,speed:10,shaftLoad:1,onEvent:e=>events.push(e)};
+ v.contactDepths=sampleHullContacts(v,0).flatMap(row=>row.points.map(()=>.5));const expected=hullWaterlineContacts(v,0);
+ hullContactSplash(v,1/60,0);assert.equal(events.length,1);assert.equal(events[0].contacts.length,expected.length);assert(expected.length>3&&expected.length<=HULL_CONTACT_LIMIT);
+ for(const p of expected){assert(events[0].contacts.some(q=>q.x===p.x&&q.z===p.z));assert(Math.abs(p.y-waveHeight(p.x,p.z,0))<.001);assert(Number.isFinite(p.nx)&&Number.isFinite(p.nz));}
  hullContactSplash(v,1/60,0);assert.equal(events.length,1,'held contact does not emit repeatedly while stationary');
 });

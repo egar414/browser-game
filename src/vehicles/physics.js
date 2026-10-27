@@ -4,6 +4,8 @@ import {maxTrimSpray,MAX_TRIM_SPRAY} from './trim-spray.js';
 import {updateWomp} from './womping.js';
 import {isTinny} from '../config.js';
 import{updateRacer}from'./racing-physics.js';
+import{tinnyRestTrim}from'./tinny-loading.js';
+import{hullWaterlineContacts,lowestHullDepth}from'./hull-support.js';
 import{tinnyBounce,hullContactSplash}from'./tinny-bounce.js';
 import{SHAFTING,updatePassenger,shaftPitch,shaftRoll,updateShaftStatus,constrainHullWater}from'./shafting.js';
 import{isJet}from'../config.js';
@@ -37,8 +39,9 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      wompLoad:0,wompEnergy:0,wompReady:false,womp:null,bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      wompLoad:0,wompEnergy:0,wompReady:false,womp:null,bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullSplashCooldown:0,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
+    if(isTinny(this.type)){const rest=tinnyRestTrim(this);this.pitch=rest.pitch;this.roll=rest.roll;}
     this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;if(this.type==='sled')resetSled(this);
   }
@@ -187,12 +190,13 @@ export class VehiclePhysics {
       // Angular inertia and damping retain a landing/chop response instead of
       // instantly following a prescribed orientation.
       const shaft=shaftPitch(this,input,surfacePitch,dt);
+      const staticTrim=tinnyRestTrim(this);
       const resting=isTinny(this.type)?Math.max(0,1-this.speed/4)*(1-this.riderAft):0;
-      let pitchTarget=(shaft===null?surfacePitch+lift+plane+trim+sprayTurn.pitch+(c.restPitch||0)*resting:shaft+sprayTurn.pitch*.4)+bounce.pitch;
+      let pitchTarget=(shaft===null?surfacePitch+lift+plane+trim+sprayTurn.pitch+(staticTrim.pitch||0)*resting:shaft+sprayTurn.pitch*.4)+bounce.pitch;
       if(this.type==='hyper')pitchTarget=Math.min(APEX_HANDLING.bowTargetLimit,pitchTarget);
       this.pitchRate+=((pitchTarget-this.pitch)*hydro.pitchSpring-this.pitchRate*hydro.pitchDamping)*dt;
       this.pitch+=this.pitchRate*dt;
-      const rollTarget=surfaceRoll+(c.restRoll||0)*resting-this.yawRate*clamp(this.speed/20,0,1)*(isJet(this.type)?.48:.24)+sprayTurn.roll+shaftRoll(this);
+      const rollTarget=surfaceRoll+(staticTrim.roll||0)*resting-this.yawRate*clamp(this.speed/20,0,1)*(isJet(this.type)?.48:.24)+sprayTurn.roll+shaftRoll(this);
       this.rollRate+=((rollTarget-this.roll)*hydro.rollSpring-this.rollRate*hydro.rollDamping)*dt;this.roll+=this.rollRate*dt;
       const verticalReaction=clamp(this.drive.force.y/driveConfig.effectiveMass,-3,3);
       // As the bow rises, support moves toward the stern. Raise the body origin
@@ -205,7 +209,7 @@ export class VehiclePhysics {
       const reserve=clamp(Math.max(0,supportError-(hydro.reserveDepth||Infinity))**2*(hydro.reserveBuoyancy||0),0,hydro.maxReserve||0);
       const supportAcceleration=supportError*c.spring-this.vy*sprayTurn.damping*(this.workshop?.damping||1)+verticalReaction+followingWater+reserve;
       this.vy+=supportAcceleration*dt;
-      this.y += this.vy * dt;constrainHullWater(this,time);hullContactSplash(this,dt,time);
+      this.y += this.vy * dt;hullContactSplash(this,dt,time);constrainHullWater(this,time,dt);
       if (this.pitch > c.wipeoutAngle && this.speed > 6) this.wipe(isTinny(this.type)?'Looped the tinny':'Over the balance point');
       let onRamp=false;
       for (const ramp of ramps) {
@@ -235,18 +239,20 @@ export class VehiclePhysics {
       } else this.driftTime = 0;
     } else {
       this.y += this.vy * dt;
-      if (this.y <= water && this.vy < 0) {
+      const hullDepth=lowestHullDepth(this,time);
+      if ((hullDepth<=.015||this.y<=water) && this.vy < 0) {
         const impact = -this.vy, lateralImpact = Math.abs(this.slip);
-        this.y = water; this.airborne = false;this.pitchRate=-this.pitch*impact*.15;this.rollRate=-this.roll*impact*.12;
-        this.onEvent({ type: 'splash', impact });
+        this.y = Math.max(water,this.y+Math.max(0,-hullDepth-.035)); this.airborne = false;this.pitchRate=-this.pitch*impact*.15;this.rollRate=-this.roll*impact*.12;
+        this.onEvent({ type: 'splash', impact,contacts:hullWaterlineContacts(this,time) });
+        constrainHullWater(this,time,dt);
         if (Math.abs(this.pitch) > (this.type==='hyper'?APEX_HANDLING.landingPitchLimit:.85) || lateralImpact > (this.type==='hyper'?30:21) || impact > 13) this.wipe('Rough landing');
         else {
           const landedPoses=this.airTricks.land(true),trickMultiplier=this.type==='hyper'?APEX_HANDLING.trickMultiplier:1;
           const spins = Math.floor((Math.abs(this.spin) + 0.35) / (2 * Math.PI));
           const halfspin = Math.abs(this.spin) > Math.PI - 0.3;
-          if (this.airTime > 0.45) this.onEvent({ type: 'score', label: spins ? `${spins * 360}° spin · landed` : halfspin ? '180° · landed' : this.waveLaunch?'Wave hop · landed':'Clean air', points: Math.round((this.airTime * 80 + (spins ? spins * 400 : halfspin ? 180 : 0))*trickMultiplier) });
+          if (this.airTime > (this.waveLaunch?.25:.45)) this.onEvent({ type: 'score', label: spins ? `${spins * 360}° spin · landed` : halfspin ? '180° · landed' : this.waveLaunch?'Wave hop · landed':'Clean air', points: Math.round((this.airTime * 80 + (spins ? spins * 400 : halfspin ? 180 : 0))*trickMultiplier) });
           for(const event of landedPoses)this.onEvent({...event,points:Math.round(event.points*trickMultiplier)});
-          const loss = clamp(1 - impact * 0.025 - lateralImpact * 0.012, 0.4, 0.95);
+          const loss = clamp(1 - impact * 0.025 - lateralImpact * 0.012, 0.4, this.waveLaunch?.995:.95);
           this.vx *= loss; this.vz *= loss; this.vy = -impact * 0.08;
         }
         this.airTime = 0; this.spin = 0;
@@ -258,5 +264,5 @@ export class VehiclePhysics {
     if (!this.airborne && !hit && this.speed < 12 && Math.abs(this.pitch) < 0.4 && !this.boundary) this.safe = { x: this.x, z: this.z, heading: this.heading };
     if (![this.x,this.y,this.z,this.heading,this.pitch,this.roll,this.vx,this.vy,this.vz].every(Number.isFinite) || this.y < waveHeight(this.x,this.z,time)-6) this.recover();
   }
-  launch(velocity, pitch, wave=false) { if (this.airborne) return; this.airTricks.reset();this.airborne = true;this.waveLaunch=wave; this.vy = velocity; this.pitch = pitch; this.airTime = 0; this.spin = 0; }
+  launch(velocity, pitch, wave=false) { if (this.airborne) return; this.airTricks.reset();this.airborne = true;this.contactDepths=null;this.contactCooldowns=null;this.hullSplashCooldown=0;this.waveLaunch=wave; this.vy = velocity; this.pitch = pitch; this.airTime = 0; this.spin = 0; }
 }

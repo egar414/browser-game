@@ -1,3 +1,4 @@
+import{hullContactSplash}from'../vehicles/tinny-bounce.js';
 import {maxTrimSpray,MAX_TRIM_SPRAY} from '../vehicles/trim-spray.js';
 import {remoteSpray} from './network-spray.js';
 import{isJet}from'../config.js';
@@ -138,23 +139,25 @@ export class Spray {
     this.stream=new PumpStream(scene);this.plume=new JetPlume(scene,this.texture,quality.plumeCapacity??Math.min(3200,Math.round(1600+quality.particles*.8)),quality.plumeDensity??.65);
     this.wake=new FoamWake(scene,this.texture,quality.wakeSamples);
     this.fans=[]; // Removed flat spray sheets; retain falling droplets and rear plume.
-    this.state={left:0,right:0,rate:0};this.time=0;this.waterImpacts=0;this.impactBudget=0;
+    this.state={left:0,right:0,rate:0};this.contactBody={};this.time=0;this.waterImpacts=0;this.impactBudget=0;
   }
-  clear(){for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.current=null;fan.mesh.visible=false;}}
+  clear(){this.contactBody={};for(const p of this.particles)p.life=0;this.alphas.fill(0);this.stream.mesh.visible=false;this.plume.clear();this.wake.clear();this.accumulator=0;this.jetAccumulator=0;this.brakeAccumulator=0;for(const fan of this.fans){fan.strength=0;fan.history.length=0;fan.current=null;fan.mesh.visible=false;}}
   emit(p,kind=0){const target=this.particles[this.next++%this.count],life=p.lifetime??(kind===2?1.5:kind===0?.55+Math.random()*.5:1.25);Object.assign(target,{birthStep:null,secondary:false,opacity:1,diameter:kind===0?.0015+Math.random()*.003:.0004},p,{life,max:life,size:SPRAY_VISUAL_SCALE*(kind===2?.035+Math.random()*.065:kind===0?.025+Math.random()*.045:.7+Math.random()*.65),kind});}
   impact(x,z,strength){
     if(this.impactBudget<=0)return;this.impactBudget--;this.waterImpacts++;
     this.wake.returns.push({x,z,time:this.time,strength:clamp(strength,.25,.8)});
     for(let j=0;j<3;j++){const a=j*Math.PI*2/3+Math.random(),s=.7+Math.random()*1.1;this.emit({x,y:waveHeight(x,z,this.time)+.035,z,vx:Math.sin(a)*s,vy:.7+Math.random()*.9,vz:Math.cos(a)*s,lifetime:.35+Math.random()*.15,secondary:true},2);}
   }
-  splash(v,impact,contacts=null) {
-    this.plume.burst(contacts?.length?contacts:[v],v,impact,this.time);
+  splash(v,impact,contacts=null,emissionTime=this.time) {
+    this.plume.burst(contacts?.length?contacts:[v],v,impact,emissionTime);
     const count=contacts?.length?Math.max(contacts.length,Math.min(this.count*.25,contacts.length*3)):Math.min(this.count*.4,40+impact*13);
-    for(let i=0;i<count;i++){const point=contacts?.[i%contacts.length]||v,angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:point.x,y:waveHeight(point.x,point.z,this.time)+.1,z:point.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},!contacts&&i%8===0?1:0);}
+    for(let i=0;i<count;i++){const point=contacts?.[i%contacts.length]||v,angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:point.x,y:Math.max(waveHeight(point.x,point.z,this.time)+.025,Number.isFinite(point.y)?point.y:waveHeight(point.x,point.z,this.time)+.1),z:point.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},!contacts&&i%8===0?1:0);}
     for(const point of contacts||[v])this.wake.splash(point,impact,this.time);
   }
   update(dt,v,time,active=true,controls={}) {
-    this.time=time;this.impactBudget=dt>0?6:0;this.state=sprayState(v,false,time);
+    this.time=time;this.impactBudget=dt>0?6:0;
+    if(controls.remote||controls.contactEffects){const history={contactDepths:this.contactBody.contactDepths,contactCooldowns:this.contactBody.contactCooldowns,hullSplashCooldown:this.contactBody.hullSplashCooldown};Object.assign(this.contactBody,v,history,{onEvent:e=>this.splash(v,e.impact,e.contacts,time)});if(active)hullContactSplash(this.contactBody,dt,time);else this.contactBody.contactDepths=null;}
+    this.state=sprayState(v,false,time);
     const received=controls.remote?remoteSpray(v):null;
     if(received){const left=received.find(p=>p.kind==='left'),right=received.find(p=>p.kind==='right');this.state={...this.state,left:left?.power||0,right:right?.power||0,rate:((left?.power||0)+(right?.power||0))*100,contacts:[left||{x:v.x,y:v.y,z:v.z,wet:0},right||{x:v.x,y:v.y,z:v.z,wet:0}]};}
     if(!active)this.state={...this.state,rate:0,left:0,right:0,jet:0};

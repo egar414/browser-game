@@ -72,7 +72,7 @@ export class LocalTraffic{
  meetPosition(player){
   const boats=[...this.boats].filter(b=>!b.flood.resetIn).sort((a,b)=>Math.hypot(a.v.x-player.x,a.v.z-player.z)-Math.hypot(b.v.x-player.x,b.v.z-player.z));
   for(const b of boats)for(const side of [-1,1])for(const aft of [16,24,32]){
-   const h=b.v.heading,lateral=player.type==='cat'?10:player.type==='ski'?8:6,x=b.v.x-Math.sin(h)*aft+Math.cos(h)*side*lateral,z=b.v.z-Math.cos(h)*aft-Math.sin(h)*side*lateral;
+   const h=b.v.heading,lateral=player.type==='cat'?10:8,x=b.v.x-Math.sin(h)*aft+Math.cos(h)*side*lateral,z=b.v.z-Math.cos(h)*aft-Math.sin(h)*side*lateral;
    if(!this.world(x,z,3,0)&&Array.from({length:5},(_,i)=>i*2).every(d=>!this.world(x+Math.sin(h)*d,z+Math.cos(h)*d,2,0)))return{x,z,heading:h};
   }
   return null;

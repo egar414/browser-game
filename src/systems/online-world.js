@@ -1,3 +1,4 @@
+import{constrainHullWater}from'../vehicles/shafting.js';
 import{decodeTow,towDriver}from'./tow-protocol.js';
 import{makeTowActor,animateTowActor,TowLine}from'./tow-view.js';
 import{decodeSledPose}from'./sled-protocol.js';
@@ -72,6 +73,7 @@ export class OnlineWorld{
    if(model.userData.handlebars)model.userData.handlebars.rotation.y=-p.steer*.43;
    for(const part of [model.userData.motor,model.userData.nozzle])if(part)part.rotation.set(p.trimAngle,-p.steeringAngle,0,'YXZ');
    const v={...p,config:VEHICLES[p.type],slip:p.vx*Math.cos(p.heading)-p.vz*Math.sin(p.heading),yawRate:p.steer*.8,trimDegrees:p.trim,animationTime:now/1000,drive:{rpm:p.rpm,neutral:p.throttle<.08,flow:(isJet(p.type)?.16:1.2)*Math.max(0,p.throttle),exitSpeed:isJet(p.type)?24:8,wetness:1,reverse:p.throttle<0?1:0,trimAngle:p.trimAngle,steeringAngle:p.steeringAngle},airTricks:{pose:p.pose,blend:p.pose?1:0}};
+   if(!sink){constrainHullWater(v,localView.time??this.effectTime);model.position.y=v.y;}
    // Legacy backends strip source arrays. Reconstruct a visual-only fallback
    // until the owner installs the exact-source/shared-hit SQL update.
    if(!Array.isArray(v.spray))v.spray=packSpray(v,localView.time??now/1000,p.active&&!sink);

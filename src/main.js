@@ -1,3 +1,4 @@
+import{constrainHullWater}from'./vehicles/shafting.js';
 import{Towing}from'./systems/towing.js';
 import{TowView}from'./systems/tow-view.js';
 import{towRiders,closeTow}from'./systems/tow-protocol.js';
@@ -80,7 +81,7 @@ const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,6500);
 const chase=new ChaseCamera(camera),audio=new GameAudio(settings);
 const vehicle=new VehiclePhysics(settings.vehicle,collision,event=>{
   activities?.event(event);
-  if(event.type==='splash'){spray?.splash(event.contact?{...vehicle,x:event.x,z:event.z}:vehicle,event.impact,event.contacts);audio.splash(event.impact);}
+  if(event.type==='splash'){spray?.splash(vehicle,event.impact,event.contacts,event.time??simulationTime);audio.splash(event.impact);}
   if(event.type==='wipeout')spray?.splash(vehicle,8);
   if(event.type==='bump'||event.type==='boundary')ui?.toast(event.label);
 });
@@ -379,6 +380,7 @@ try {
     if(crew.active&&crew.pose)Object.assign(render,crew.pose,{type:'tinny',config:VEHICLES.tinny});
     if(tow.active)Object.assign(render,tow.render(alpha),{type:'character',towRider:true,config:{length:1.5,width:.6},hullHeading:tow.driverPose?.heading});
     if(state==='workshop')render.y+=dryWharf.lift*DRY_WHARF.lift;
+    if(!onlineSinking&&!battle.sinking&&!tow.active&&!crew.active&&!surf.active)constrainHullWater(render,simulationTime);
     model.position.set(render.x,render.y-(onlineSinking?onlineSinkDrop(vehicle.type,onlineSinking):battle.sinking?(4-battle.sinking)*.6:0),render.z);model.rotation.set(-render.pitch,render.heading,render.roll+(battle.sinking?.5:0),'YXZ');
     model.visible=!tow.active&&!surf.active&&!crew.active;
     if(model.userData.handlebars)model.userData.handlebars.rotation.y=-vehicle.steer*.43;
