@@ -1,4 +1,4 @@
-name: Publish Estuary Rats
+name: Publish Sunco Hoons
 on:
   push:
     branches: [main]

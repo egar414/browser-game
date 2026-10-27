@@ -32,7 +32,7 @@ export class BarGuide {
     this.active=false;this.index=1;this.buoys=[];
     if(!scene)return;
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;
-    const c=canvas.getContext('2d');c.fillStyle='#ec8b3f';c.fillRect(0,0,512,256);c.fillStyle='#153b40';c.textAlign='center';c.font='bold 72px Arial';c.fillText('BAR WAVES',256,110);c.font='26px Arial';c.fillText('ESTUARY RATS · PLAY ZONE',256,180);
+    const c=canvas.getContext('2d');c.fillStyle='#ec8b3f';c.fillRect(0,0,512,256);c.fillStyle='#153b40';c.textAlign='center';c.font='bold 72px Arial';c.fillText('BAR WAVES',256,110);c.font='26px Arial';c.fillText('SUNCO HOONS · PLAY ZONE',256,180);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
     const orange=new THREE.MeshStandardMaterial({color:'#ed8b3e',roughness:.6}),white=new THREE.MeshStandardMaterial({color:'#eee9d5',roughness:.7});
     const board=new THREE.MeshStandardMaterial({map:texture,side:THREE.DoubleSide,roughness:.7});

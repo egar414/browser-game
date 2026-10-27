@@ -25,7 +25,7 @@ function nameplate(){
 function placeNameplate(plate,name,creator,anchor,camera){
  const point=anchor.clone().project(camera);
  plate.label.hidden=point.z>1||point.z< -1||Math.abs(point.x)>1.15||Math.abs(point.y)>1.15;
- plate.name.textContent=String(name||'Estuary Rat').slice(0,20);plate.title.hidden=!creator;
+ plate.name.textContent=String(name||'Sunco Hoon').slice(0,20);plate.title.hidden=!creator;
  plate.label.classList.toggle('is-creator',creator);
  plate.label.style.transform=`translate(-50%,-100%) translate(${(point.x*.5+.5)*innerWidth}px,${(-point.y*.5+.5)*innerHeight}px)`;
 }
@@ -41,7 +41,7 @@ export class OnlineWorld{
   this.effectTime=Math.max((this.effectTime??localView.time??now/1000)+dt,localView.time||0);this.localPlate.label.hidden=true;
   if(localView.playing&&!localView.firstPerson&&this.client.session){
    const me=this.client.room?.players?.find(p=>p.id===this.client.session.user.id);
-   const name=me?.name||this.client.status.playerName||document.getElementById('online-name')?.value||'Estuary Rat';
+   const name=me?.name||this.client.status.playerName||document.getElementById('online-name')?.value||'Sunco Hoon';
    const anchor=localView.eye?localView.eye.clone().add(new THREE.Vector3(0,.38,0)):new THREE.Vector3(viewer.x,viewer.y+2,viewer.z);
    placeNameplate(this.localPlate,name,this.client.creator,anchor,camera);
   }

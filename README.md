@@ -1,4 +1,6 @@
-# Estuary Rats
+# Sunco Hoons
+
+Formerly Estuary Rats. The game and website now use Sunco Hoons; existing save, authentication and account-name storage keys retain their original identifiers to preserve progress and sign-in.
 
 **Play:** https://egar414.github.io/browser-game/
 
@@ -336,7 +338,7 @@ and separate effective inertias. The latest handling update adds water-dependent
 
 The game page includes a descriptive title, canonical URL, social previews and
 VideoGame structured data. A readable no-JavaScript introduction and the linked
-[About Estuary Rats](https://egar414.github.io/browser-game/about.html) page explain
+[About Sunco Hoons](https://egar414.github.io/browser-game/about.html) page explain
 what the game is and how to play. The About page and structured data also include
 “Eastary Rats” as an alternate spelling. The sitemap lists the game and About page:
 <https://egar414.github.io/browser-game/sitemap.xml>.

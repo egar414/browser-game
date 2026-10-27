@@ -17,7 +17,7 @@ export class AccountSecurity{
   try{if(await o.rpc('er_security_version')!==1)throw Error('missing');}catch{throw Error('The owner database update is needed before setting up 2FA. Copy the owner database update below and run it in Supabase SQL Editor.');}
   if(this.enabled)throw Error('Authenticator 2FA is already enabled.');
   if(this.pending)return this.pending;
-  const data=unwrap(await o.client.auth.mfa.enroll({factorType:'totp',friendlyName:'Estuary Rats authenticator',issuer:'Estuary Rats'}));
+  const data=unwrap(await o.client.auth.mfa.enroll({factorType:'totp',friendlyName:'Sunco Hoons authenticator',issuer:'Sunco Hoons'}));
   this.pending={id:data.id,qr:data.totp.qr_code,secret:data.totp.secret};o.changed('Scan the QR with an authenticator app, then enter its six-digit code. Keep access to the app: it is needed for future sign-ins.');return this.pending;
  }
  async verify(code){

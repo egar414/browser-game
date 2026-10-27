@@ -1,6 +1,6 @@
 # Generated coastal surfaces
 
-Original image-generation assets created for Estuary Rats on 2026-10-19.
+Original image-generation assets created for Sunco Hoons on 2026-10-19.
 These are invented material/sky imagery, not photographs or surveyed imagery
 of Mooloolaba. No Google Earth screenshots, stock photographs or hotlinks.
 
