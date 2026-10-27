@@ -13,6 +13,9 @@ import {makeSpark} from './spark-model.js';
 import {makeStandardSpark} from './standard-spark.js';
 import { makeRider } from './rider.js';
 import { buildTender } from './tender.js';
+import {marineHullGeometry,marineStation,marineSaddleGeometry} from './marine-hull.js';
+import {makeAnglerOutboard} from './angler-outboard.js';
+import {deckFittings,marineSteel,roundedBlock,gelcoat} from './marine-details.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 const mat = (colour, roughness = 0.5) => new THREE.MeshStandardMaterial({ color: colour, roughness, metalness: 0.08 });
 // All current craft are generated locally; retain the async readiness interface.
@@ -32,20 +35,12 @@ function ellipsoid(parent, radius, x, y, z, sx, sy, sz, material) {
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 10), material);
   mesh.position.set(x, y, z); mesh.scale.set(sx, sy, sz); mesh.castShadow = true; parent.add(mesh); return mesh;
 }
-function hull(parent, sections, material) {
-  const verts = [], indices = [];
-  for (const [z, width, top, bottom] of sections) {
-    for (const [x, y] of [[-width, top], [width, top], [width * 0.72, bottom + 0.05], [0, bottom], [-width * 0.72, bottom + 0.05]]) verts.push(x, y, z);
-  }
-  for (let s = 0; s < sections.length - 1; s++) for (let j = 0; j < 5; j++) {
-    const a = s * 5 + j, b = s * 5 + (j + 1) % 5;
-    indices.push(a, b + 5, b, a, a + 5, b + 5);
-  }
-  for (let j = 1; j < 4; j++) { indices.push(0, j, j + 1); const n = (sections.length - 1) * 5; indices.push(n, n + j + 1, n + j); }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); g.setIndex(indices); g.computeVertexNormals();
-  const mesh = new THREE.Mesh(g, material); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+function hull(parent,sections,material){
+  const mesh=new THREE.Mesh(marineHullGeometry(sections,{closedTop:true,stations:32,panelSteps:2}),material);mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);return mesh;
 }
+
 function label(parent, text, width, height, x, y, z, rotation = 0) {
+  if(typeof document==='undefined')return;
   const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 128;
   const ctx = canvas.getContext('2d'); ctx.fillStyle = '#e6edec'; ctx.font = 'bold 86px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, 128, 66);
   const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
@@ -53,12 +48,13 @@ function label(parent, text, width, height, x, y, z, rotation = 0) {
   mesh.position.set(x, y, z); mesh.rotation.y = rotation; parent.add(mesh);
 }
 function inflatable(parent,material){
-  // Long racing tube with a continuous taper and an upswept, pointed bow.
-  const sections=[[-1.98,.07,.07,.12],[-1.76,.29,.28,.16],[-1.1,.31,.3,.18],[.55,.31,.3,.2],[1.25,.27,.28,.29],[1.72,.17,.2,.42],[2.07,.008,.015,.55]],vertices=[],indices=[],segments=20;
-  for(const [z,rx,ry,y] of sections)for(let i=0;i<=segments;i++){const a=i/segments*Math.PI*2;vertices.push(Math.sin(a)*rx,y+Math.cos(a)*ry,z);}
-  for(let j=0;j<sections.length-1;j++)for(let i=0;i<segments;i++){const a=j*(segments+1)+i,b=a+segments+1;indices.push(a,b,a+1,a+1,b,b+1);}
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.castShadow=m.receiveShadow=true;parent.add(m);
+  const sections=[[-1.98,.07,.07,.12],[-1.76,.29,.28,.16],[-1.1,.31,.3,.18],[.55,.31,.3,.2],[1.25,.27,.28,.29],[1.72,.17,.2,.42],[2.07,.008,.015,.55]],vertices=[],uv=[],indices=[],segments=20,N=40;
+  for(let j=0;j<=N;j++){const[z,rx,ry,y]=marineStation(sections,j/N);for(let i=0;i<=segments;i++){const a=i/segments*Math.PI*2;vertices.push(Math.sin(a)*rx,y+Math.cos(a)*ry,z);uv.push(i/segments,j/N*4);}}
+  for(let j=0;j<N;j++)for(let i=0;i<segments;i++){const a=j*(segments+1)+i,b=a+segments+1;indices.push(a,b,a+1,a+1,b,b+1);}
+  for(const j of[0,N]){const n=j*(segments+1);for(let i=1;i<segments-1;i++)j===0?indices.push(n,n+i,n+i+1):indices.push(n,n+i+1,n+i);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.name='Continuous shaped racing pontoon';m.castShadow=m.receiveShadow=true;parent.add(m);
 }
+
 export function makeVehicle(type, colour, design='classic',access={}) {
   const root=buildVehicle(type,colour,design,access);
   if(type!=='sled')root.userData.waterMaskType=type==='hyper'&&access.creator!==true?'ski':type;
@@ -70,17 +66,17 @@ function buildVehicle(type, colour, design='classic',access={}) {
   if(type==='ski')return access.creator===true?makeSpark(colour,design):makeStandardSpark(colour,design);
   if(type==='hyper')return access.creator===true?makeApex(colour):makeStandardSpark(colour,design);
   if(type==='racer')return makeRacingCat(colour);
-  if(type==='cruiser'){const root=makeSportfisher('Game Fishing Boat',colour,false),rider=makeDeckCharacter();rider.position.set(0,3.25,-.25);root.add(rider);rider.userData.update=(v,dt)=>rider.userData.animate(v.animationTime||0,0,false);root.userData={body:root,rider};return root;}
+  if(type==='cruiser'){const root=makeSportfisher('Game Fishing Boat',colour,false),rider=makeDeckCharacter();rider.position.set(0,3.25,-.25);root.add(rider);rider.userData.update=(v,dt)=>rider.userData.animate(v.animationTime||0,0,false);root.userData={...root.userData,body:root,rider};return root;}
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   const accent = new THREE.MeshPhysicalMaterial({color:colour,roughness:.3,metalness:.08,clearcoat:.8,clearcoatRoughness:.24});
   const pale = mat('#e0e9d7'), blue = new THREE.MeshPhysicalMaterial({color:'#344b61',roughness:.24,metalness:.25,clearcoat:.65});
   const silver = new THREE.MeshStandardMaterial({color:'#a8b9bd',roughness:.26,metalness:.8});
   let motor, person, passenger, nozzle, propeller, bucket, handlebars;
   if(type==='seago') {
-    const graphite=new THREE.MeshPhysicalMaterial({color:'#232a2e',roughness:.28,metalness:.18,clearcoat:.8}),saddle=mat('#454b4e',.85);
+    const graphite=gelcoat('#232a2e'),saddle=mat('#454b4e',.85);
     hull(body,[[-1.82,.40,.14,-.23],[-1.55,.58,.25,-.36],[-.8,.66,.32,-.4],[.3,.66,.43,-.34],[1.05,.55,.43,-.24],[1.6,.27,.33,-.10],[1.85,.01,.24,.02]],rubber);
     hull(body,[[-1.65,.40,.34,.18],[-.85,.49,.46,.24],[.15,.55,.55,.31],[.9,.50,.63,.34],[1.55,.28,.43,.24],[1.8,.01,.25,.15]],graphite);
-    hull(body,[[-1.47,.23,.53,.32],[-1.13,.27,.71,.37],[-.48,.23,.73,.38],[.03,.22,.65,.35],[.38,.16,.6,.42]],saddle);
+    const seatMesh=new THREE.Mesh(marineSaddleGeometry([[-1.47,.23,.53,.32],[-1.13,.27,.71,.37],[-.48,.23,.73,.38],[.03,.22,.65,.35],[.38,.16,.6,.42]]),saddle);seatMesh.castShadow=seatMesh.receiveShadow=true;body.add(seatMesh);
     hull(body,[[.12,.17,.67,.43],[.53,.32,.85,.43],[.95,.36,.76,.42],[1.45,.17,.49,.31],[1.74,.01,.28,.2]],graphite);
     for(const side of [-1,1]){
       box(body,.24,.06,1.6,side*.5,.32,-.56,rubber,true);
@@ -123,17 +119,13 @@ function buildVehicle(type, colour, design='classic',access={}) {
     box(body, 1.32, 0.49, 0.11, 0, 0.51, -1.38, dark);
     box(body, 1.34, 0.08, 0.16, 0, 0.79, -1.38, accent);
     for (let z = -0.9; z < 1; z += 0.38) box(body, 0.95, 0.025, 0.025, 0, 0.37, z, dark);
-    motor = new THREE.Group(); motor.position.set(0.18, 0.4, -1.65); body.add(motor);
-    box(motor, 0.48, 0.68, 0.56, 0, 0.42, 0, blue, true);
-    ellipsoid(motor, 1, 0, 0.74, 0, 0.24, 0.14, 0.28, blue);
-    box(motor, 0.32, 0.05, 0.6, 0, 0.46, 0, silver);
-    box(motor, 0.13, 0.8, 0.18, 0, -0.29, 0.02, blue);
-    ellipsoid(motor, 1, 0, -0.73, -0.01, 0.1, 0.1, 0.25, blue);
-    const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.035, 3), silver); prop.rotation.x = Math.PI / 2; prop.position.set(0, -0.72, -0.23); propeller=new THREE.Group();propeller.position.copy(prop.position);prop.position.set(0,0,0);propeller.add(prop);motor.add(propeller);
-    box(motor, 0.28, 0.035, 0.4, 0, -0.5, -0.05, dark);
-    tube(motor, [[0, 0.4, 0.16], [-0.12, 0.45, 0.45], [-0.25, 0.45, 0.65]], 0.035, dark);
-    label(motor, '50', 0.35, 0.25, 0, 0.53, -0.29, Math.PI);
-    label(motor, '50', 0.35, 0.25, 0.245, 0.53, 0, Math.PI / 2);
+    ({motor,propeller}=makeAnglerOutboard({hp:50,propellerPosition:PROPULSION.cat.propeller}));motor.position.fromArray(PROPULSION.cat.motorMount);body.add(motor);
+    const steel=marineSteel();deckFittings(body,{width:1.05,length:2.1,y:.39,z:-.05,material:steel});
+    for(const side of[-1,1]){
+      for(const z of[-1.1,.1,1.05]){const valve=new THREE.Mesh(new THREE.CylinderGeometry(.028,.028,.018,12),rubber);valve.position.set(side*.73,.492,z);body.add(valve);}
+      tube(body,[[side*.73,.50,-1.35],[side*.73,.57,-1.28],[side*.73,.57,-1.03],[side*.73,.50,-.96]],.018,rubber,14);
+      roundedBlock(body,.26,.018,.65,side*.37,.32,-.50,rubber,.008);
+    }
     label(body, 'AQUARIUS', 0.65, 0.24, 0, 0.81, -1.445, Math.PI);
     person = makeRider(body, type);
   }
@@ -141,8 +133,8 @@ function buildVehicle(type, colour, design='classic',access={}) {
     const stripe=mat(design==='race'?'#f2e6c4':'#eea851',.35);
     if(type==='cat')for(const side of [-1,1])tube(body,[[side*.94,.35,-1.5],[side*1.01,.4,0],[side*.92,.52,1.3]],design==='race'?.025:.045,stripe,16);
   }
-  root.userData = { ...root.userData,body, motor, nozzle, propeller, bucket, handlebars, passenger, rider: person };
+  root.userData = { ...root.userData,modelRevision:'fleet-craft-2',body, motor, nozzle, propeller, bucket, handlebars, passenger, rider: person };
   person.userData.update({riderAft:0,steer:0,surgeAcceleration:0,config:VEHICLES[type]},1,root.userData);
-  if(isTinny(type)){for(const part of [person,passenger,motor])if(part)part.userData.dynamic=true;if(propeller)propeller.userData.dynamic=true;batchRigidAssembly(body);batchRigidAssembly(motor);}
+  if(isTinny(type)||type==='cat'||type==='seago'){for(const part of [person,passenger,motor,nozzle,bucket,handlebars])if(part)part.userData.dynamic=true;if(propeller)propeller.userData.dynamic=true;batchRigidAssembly(body);if(motor)batchRigidAssembly(motor);}
   return root;
 }

@@ -1,74 +1,50 @@
-import{RoundedBoxGeometry}from'three/addons/geometries/RoundedBoxGeometry.js';
-import{marineAlloyMaterial,hullUV}from'./marine-finish.js';
 import * as THREE from 'three';
+import {batchRigidAssembly} from './rigid-model.js';
+import {makeAnglerOutboard} from './angler-outboard.js';
+import {marineHullGeometry,marineSurface,marineStation,marineRibGeometry} from './marine-hull.js';
+import {brushedAlloy,marineSteel,roundedBlock as block,detailTube as rail,deckFittings} from './marine-details.js';
 
-const material=(color,metalness=0,roughness=.65)=>new THREE.MeshStandardMaterial({color,metalness,roughness,side:THREE.DoubleSide});
-function mesh(root,geometry,mat,x=0,y=0,z=0){const m=new THREE.Mesh(geometry,mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;root.add(m);return m;}
-function block(root,w,h,d,x,y,z,mat){return mesh(root,new THREE.BoxGeometry(w,h,d),mat,x,y,z);}
-function rail(root,points,r,mat){return mesh(root,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),24,r,6,false),mat);}
-function marking(root,text,w,h,x,y,z,rotation){
-  if(typeof document==='undefined')return;
-  const c=document.createElement('canvas');c.width=256;c.height=128;const ctx=c.getContext('2d');ctx.fillStyle='#f5eee2';ctx.font='bold 86px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,128,68);
-  const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
-  const m=mesh(root,new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map,transparent:true,side:THREE.DoubleSide}),x,y,z);m.rotation.y=rotation;
+export const TENDER_SECTIONS=[[-1.08,.52,.39,-.23],[-.82,.59,.43,-.27],[.12,.58,.47,-.23],[.68,.42,.51,-.10],[1.09,.14,.55,.08],[1.17,.015,.56,.18]];
+const shape={ratio:.76,rise:.06};
+const material=(color,roughness=.65)=>new THREE.MeshStandardMaterial({color,roughness});
+function add(root,geometry,material,name){const m=new THREE.Mesh(geometry,material);m.name=name;m.castShadow=m.receiveShadow=true;root.add(m);return m;}
+function group(root,name){const g=new THREE.Group();g.name=name;g.userData.dynamic=true;root.add(g);return g;}
+function plate(root,points,y,material,thickness=.008){const s=new THREE.Shape(points.map(([x,z])=>new THREE.Vector2(x,-z))),g=new THREE.ExtrudeGeometry(s,{depth:thickness,bevelEnabled:true,bevelSize:.002,bevelThickness:.002,bevelSegments:1,steps:1});g.rotateX(-Math.PI/2);const m=add(root,g,material,'Formed plate');m.position.y=y-thickness;return m;}
+function marking(root,text,x,y,z,side){
+ if(typeof document==='undefined')return;const c=document.createElement('canvas');c.width=256;c.height=64;const ctx=c.getContext('2d');ctx.fillStyle='#e6c967';ctx.font='italic bold 44px sans-serif';ctx.textAlign='center';ctx.fillText(text,128,48);
+ const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;const m=add(root,new THREE.PlaneGeometry(.64,.16),new THREE.MeshStandardMaterial({map:texture,transparent:true,roughness:.4}),'Racing hull lettering');m.position.set(x,y,z);m.rotation.y=side*Math.PI/2;
 }
-// Original 2.25 m open alloy hull based on the supplied tender photograph.
-// The horsepower label and propulsion tuning are a gameplay specification.
+// Distinct short tender proportions retained; the Wasp's construction standard
+// is applied to its own curved plate hull, ribs, benches and motor assemblies.
 export function buildTender(colour='#bdc9cc',design='classic',options={}){
-  const root=new THREE.Group();root.name=options.racing?'Super Skua 370':options.hp===50?'Dingi 200':'Tender 225';
-  const alloy=marineAlloyMaterial(colour),ribs=material('#8a999b',.72,.49),rubber=material('#202a2c',.02,.86),red=material('#c93b30',.1,.42),motorPaint=material('#202c36',.3,.27);
-  const sections=[[-1.08,.52,.39,-.23],[-.82,.59,.43,-.27],[.12,.58,.47,-.23],[.68,.42,.51,-.10],[1.09,.14,.55,.08],[1.17,.015,.56,.18]];
-  const vertices=[],indices=[];
-  for(const [z,w,top,bottom]of sections)vertices.push(-w,top,z,-w*.76,bottom+.06,z,0,bottom,z,w*.76,bottom+.06,z,w,top,z);
-  for(let i=0;i<sections.length-1;i++)for(let j=0;j<4;j++){const a=i*5+j,b=a+5;indices.push(a,a+1,b,a+1,b+1,b);}
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);
-  const flat=g.toNonIndexed();flat.computeVertexNormals();hullUV(flat);mesh(root,flat,alloy);g.dispose();
-  const transom=new THREE.Shape([new THREE.Vector2(-.52,.39),new THREE.Vector2(.52,.39),new THREE.Vector2(.4,-.17),new THREE.Vector2(0,-.23),new THREE.Vector2(-.4,-.17)]);
-  mesh(root,new THREE.ShapeGeometry(transom),alloy,0,0,-1.08);
-  for(const side of [-1,1]){
-    rail(root,sections.map(([z,w,y])=>[side*w,y,z]),.034,alloy);
-    rail(root,sections.map(([z,w,y,b])=>[side*w*.9,(y+b)*.5,z]),.012,ribs);
-    for(const level of[.28,.49,.70])rail(root,sections.slice(0,-1).map(([z,w,y,b])=>[side*w*(.78+level*.22),b+(y-b)*level,z]),.009,alloy);
-    for(let z=-.85;z<.75;z+=.24){const w=z>.2?.5-(z-.2)*.37:.54;rail(root,[[side*w,.37,z],[side*w*.75,-.12,z],[0,-.16,z]],.012,ribs);}
-    // Rows of small raised rivets catch the light along the gunwale.
-    for(let i=0;i<sections.length-1;i++){
-      const a=sections[i],b=sections[i+1];for(let t=0;t<1;t+=.22){const z=THREE.MathUtils.lerp(a[0],b[0],t),w=THREE.MathUtils.lerp(a[1],b[1],t),y=THREE.MathUtils.lerp(a[2],b[2],t);mesh(root,new THREE.SphereGeometry(.008,5,4),ribs,side*(w+.004),y-.035,z);}
-    }
-    rail(root,[[side*.29,.54,.76],[side*.18,.61,.94],[side*.06,.57,1.08]],.013,alloy);
-    if(design!=='classic')rail(root,sections.slice(0,-1).map(([z,w,y])=>[side*(w+.003),y-.08,z]),design==='race'?.017:.025,red);
+ const root=new THREE.Group();root.name=options.racing?'Super Skua 370':options.hp===50?'Dingi 200':'Tender 225';root.userData.dynamic=true;
+ const moored=options.detail==='moored',N=moored?20:40,alloy=brushedAlloy(colour),formed=brushedAlloy(options.racing?'#6d7980':'#a8b3ba'),polished=marineSteel(),rubber=material('#20262a',.85),red=material('#bd3b29',.4),gold=material('#d7b356',.36);
+ const hull=group(root,'Curved aluminium hull'),structure=group(root,'Welded interior structure'),fittings=group(root,'Gunwales handles and fittings'),benches=[];
+ add(hull,marineHullGeometry(TENDER_SECTIONS,{...shape,stations:N,panelSteps:moored?2:3,thickness:.005}),alloy,'Five-millimetre alloy hull skin');
+ for(const side of[-1,1]){
+  const ps=Array.from({length:N+1},(_,i)=>marineSurface(TENDER_SECTIONS,i/N,side,shape));rail(fittings,ps,.022,polished,N).name='Rolled gunwale';
+  rail(hull,Array.from({length:N+1},(_,i)=>marineSurface(TENDER_SECTIONS,i/N,side*.78,shape)),.0065,formed,N);
+  for(const t of moored?[.18,.65]:[.1,.27,.45,.63,.79]){
+   const p=marineSurface(TENDER_SECTIONS,t,side*.985,shape);block(fittings,.018,.022,.03,p.x,p.y,p.z,polished,.004);
   }
-  block(root,.88,.045,1.36,0,-.09,-.22,ribs);
-  for(let i=0;i<10;i++)block(root,.012,.008,1.32,-.39+i*.087,-.063,-.22,alloy);
-  for(const [z,w]of [[-.61,1.05],[.32,.98]]){
-    mesh(root,new RoundedBoxGeometry(w,.1,.29,2,.018),alloy,0,.31,z);mesh(root,new RoundedBoxGeometry(w-.07,.024,.23,2,.009),rubber,0,.37,z);
-    for(const side of [-1,1])block(root,.04,.32,.23,side*w*.35,.12,z,ribs);
+  const stern=marineStation(TENDER_SECTIONS,.015);plate(fittings,[[side*(stern[1]-.01),-1.05],[side*(stern[1]-.01),-.88],[side*(stern[1]-.19),-1.05]],.385,alloy);
+  rail(fittings,[[side*.34,.30,-1.09],[side*.34,.24,-1.16],[side*.46,.24,-1.16],[side*.46,.30,-1.09]],.008,polished,12);
+  if(options.racing||design!=='classic'){
+   rail(fittings,Array.from({length:N},(_,i)=>marineSurface(TENDER_SECTIONS,i/N,side*.94,shape)),options.racing?.014:.01,options.racing?gold:red,N);
+   if(options.racing)marking(fittings,'SKUA',side*.589,.28,-.24,side);
   }
-  block(root,.91,.025,.12,0,.24,-.97,alloy);
-  // The inside transom, seat undersides and bilge remain darker than exposed
-  // gunwales even on Low, where real-time solar shadows are disabled.
-  const bilge=material('#40535b',.35,.82);
-  block(root,.83,.016,1.22,0,-.073,-.22,bilge);
-  for(const z of[-.61,.32])block(root,.75,.035,.26,0,.246,z,bilge);
-  for(const side of[-1,1])rail(root,[[side*.47,.32,-1.04],[side*.48,.02,-1.04],[side*.25,-.13,-1.04]],.018,ribs);
-  // Bow plate, fuel tank, hose, bailer and a folded orange flotation vest.
-  block(root,.20,.025,.15,0,.5,.91,alloy);
-  block(root,.31,.15,.22,.22,.02,-.87,red);block(root,.06,.025,.04,.22,.11,-.87,rubber);
-  rail(root,[[.22,.08,-.9],[.38,.14,-1.02],[.2,.32,-1.14]],.009,rubber);
-  block(root,.22,.07,.18,.17,-.005,-.02,material('#ed8630'));
-  block(root,.10,.09,.13,-.29,-.02,.03,red);
-  for(const x of [-.10,.10])block(root,.045,.18,.1,x,.35,-1.10,motorPaint);
-  const motor=new THREE.Group();motor.name=`${options.hp||25} hp outboard`;motor.position.set(.12,.27,-1.12);root.add(motor);
-  mesh(motor,new RoundedBoxGeometry(.36,.40,.39,3,.055),motorPaint,0,.25,-.015);
-  for(const side of[-1,1])for(let i=0;i<4;i++)block(motor,.008,.013,.10,side*.183,.37-i*.025,.045,rubber);
-  const hinge=mesh(motor,new THREE.CylinderGeometry(.025,.025,.25,10),alloy,0,.07,.13);hinge.rotation.z=Math.PI/2;
-  block(motor,.35,.035,.34,0,.22,-.01,red);
-  block(motor,.075,.57,.10,0,-.23,0,motorPaint);
-  mesh(motor,new THREE.SphereGeometry(1,12,8),motorPaint,0,-.63,-.02).scale.set(.07,.07,.19);
-  block(motor,.22,.023,.27,0,-.48,-.03,motorPaint);
-  rail(motor,[[0,.26,.14],[-.12,.27,.35],[-.32,.27,.54]],.019,rubber);
-  block(motor,.045,.065,.09,-.32,.27,.54,rubber);
-  const propeller=new THREE.Group();propeller.position.set(0,-.65,-.18);motor.add(propeller);
-  for(let i=0;i<3;i++){const blade=block(propeller,.055,.18,.025,Math.sin(i*Math.PI*2/3)*.07,Math.cos(i*Math.PI*2/3)*.07,0,alloy);blade.rotation.z=-i*Math.PI*2/3;blade.rotation.y=.35;}
-  marking(motor,String(options.hp||25),.24,.15,0,.32,-.215,Math.PI);marking(motor,String(options.hp||25),.24,.15,.179,.32,-.015,Math.PI/2);
-  if(options.racing){const gold=material('#e6ba46',.45,.36);for(const side of [-1,1]){rail(root,sections.slice(0,-1).map(([z,w,y])=>[side*(w+.008),y-.07,z]),.027,gold);rail(root,[[-.9*side*.6,.15,-.8],[-.25*side,.05,.05],[.20*side,.3,.55]],.018,gold);marking(root,'SKUA',.7,.17,side*.586,.24,-.2,side*Math.PI/2);}}root.scale.set((options.width||1.22)/1.22,1,(options.length||2.25)/2.25);root.userData={motor,propeller};return root;
+ }
+ for(const t of moored?[.18,.50,.74]:[.12,.30,.48,.65,.80])add(structure,marineRibGeometry(TENDER_SECTIONS,t,{width:.025,height:.017,shape}),formed,'Formed support rib');
+ for(const side of[-1,1])for(const lane of[.24,.47])rail(structure,Array.from({length:N},(_,i)=>marineSurface(TENDER_SECTIONS,.035+i/N*.76,side*lane,shape).add(new THREE.Vector3(0,.012,0))),.008,formed,N);
+ for(const[z,w]of[[-.61,1.05],[.32,.98]]){
+  const seat=group(root,z<0?'Aft bench':'Forward bench');block(seat,w,.042,.29,0,.31,z,alloy,.008);block(seat,w-.07,.018,.23,0,.342,z,rubber,.007);
+  for(const side of[-1,1]){block(seat,.045,.20,.22,side*(w*.39),.19,z,formed,.006);block(seat,.09,.018,.24,side*(w*.39),.086,z,formed,.005);}seat.userData.fullWidth=true;benches.push(seat);
+ }
+ const bow=group(root,'Bow seat and stem');plate(bow,[[-.24,.76],[.24,.76],[.008,1.16]],.51,alloy);rail(bow,[[-.025,.56,1.11],[-.025,.61,1.14],[.025,.61,1.14],[.025,.56,1.11]],.007,polished,12);
+ block(structure,.91,.028,.08,0,.235,-1.025,formed,.006);
+ const fuel=block(fittings,.28,.14,.21,.23,.025,-.87,red,.025);fuel.name='Fuel tank';block(fittings,.05,.02,.045,.23,.105,-.87,rubber,.008);rail(fittings,[[.23,.08,-.88],[.36,.13,-1.0],[.19,.30,-1.14]],.007,rubber,12);
+ if(!moored){deckFittings(fittings,{width:.98,length:1.25,y:.43,z:-.16,material:polished});block(fittings,.20,.045,.15,.18,-.01,-.08,material('#e89339'),.015);}
+ const{motor,propeller}=makeAnglerOutboard({hp:options.hp||25});motor.position.set(.12,.27,-1.12);motor.userData.dynamic=true;root.add(motor);
+ for(const part of[hull,structure,fittings,...benches,bow])batchRigidAssembly(part);
+ root.scale.set((options.width||1.22)/1.22,1,(options.length||2.25)/2.25);root.userData={dynamic:true,motor,propeller,hull,structure,fittings,benches,bow,modelRevision:'fleet-craft-2',plateThickness:.005};return root;
 }

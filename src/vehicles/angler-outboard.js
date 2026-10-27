@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 import {batchRigidAssembly} from './rigid-model.js';
 
 export const ANGLER_OUTBOARD={mount:[0,.2764864865,-1.55],propeller:[0,-.65,-.18],tiller:[-.32,.27,.54],hp:25};
@@ -13,17 +14,18 @@ function label(root,text,x,y,z,side){
  const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
  const m=add(root,new THREE.PlaneGeometry(.23,.11),new THREE.MeshStandardMaterial({map,transparent:true,roughness:.28,metalness:.2,polygonOffset:true,polygonOffsetFactor:-1}),[x,y,z]);m.rotation.y=side*Math.PI/2;
 }
-export function makeAnglerOutboard(){
- const motor=new THREE.Group();motor.name='25 hp outboard';motor.position.fromArray(ANGLER_OUTBOARD.mount);
+export function makeAnglerOutboard({hp=25,propellerPosition=ANGLER_OUTBOARD.propeller}={}){
+ const motor=new THREE.Group();motor.name=hp?`${hp} hp outboard`:'Outboard';motor.position.fromArray(ANGLER_OUTBOARD.mount);
  const black=new THREE.MeshPhysicalMaterial({color:'#111720',metalness:.26,roughness:.22,clearcoat:1,clearcoatRoughness:.12}),cast=new THREE.MeshStandardMaterial({color:'#252a30',metalness:.42,roughness:.38}),rubber=new THREE.MeshStandardMaterial({color:'#111417',roughness:.84}),silver=new THREE.MeshStandardMaterial({color:'#c4cbcf',metalness:.82,roughness:.29}),stripe=new THREE.MeshStandardMaterial({color:'#d46a35',metalness:.15,roughness:.32});
- const hood=box(motor,.38,.37,.46,black,[0,.24,-.06],.055);hood.name='Glossy cowling';
- const p=hood.geometry.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i),z=p.getZ(i);p.setXYZ(i,p.getX(i)*(1-Math.max(0,-y)*.3),y+Math.max(0,z)*.12,z-Math.max(0,y)*.13);}hood.geometry.computeVertexNormals();
- box(motor,.37,.035,.43,cast,[0,.07,-.06],.012);
+ const powerhead=hp===0||hp>=50,wide=powerhead?1.22:1,lift=powerhead?.105:0;
+ const hood=box(motor,.38*wide,.37+lift*1.9,.46*(powerhead?1.18:1),black,[0,.24+lift,-.06],.055);hood.name='Glossy cowling';
+ const p=hood.geometry.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i),z=p.getZ(i);p.setXYZ(i,p.getX(i)*(1-Math.max(0,-y)*.3),y+Math.max(0,z)*.12,z-Math.max(0,y)*.13);}hood.geometry.deleteAttribute('normal');hood.geometry.deleteAttribute('uv');const oldHood=hood.geometry;hood.geometry=mergeVertices(oldHood);oldHood.dispose();hood.geometry.computeVertexNormals();
+ box(motor,.37*wide,.035,.43*(powerhead?1.18:1),cast,[0,.07,-.06],.012);
  for(const side of[-1,1]){
-  tube(motor,[[side*.188,.18,-.22],[side*.193,.18,-.04],[side*.18,.20,.11]],.0035,stripe);
-  for(let i=0;i<4;i++)box(motor,.007,.013,.065,rubber,[side*.190,.30-i*.023,.077],.003);
-  label(motor,'25',side*.192,.24,-.07,side);
-  const latch=box(motor,.035,.058,.025,cast,[side*.12,.075,-.285],.005);latch.rotation.z=side*.12;
+  tube(motor,[[side*.188*wide,.18+lift*.4,-.22],[side*.193*wide,.18+lift*.4,-.04],[side*.18*wide,.20+lift*.4,.11]],.0035,stripe);
+  for(let i=0;i<4;i++)box(motor,.007,.013,.065,rubber,[side*.190*wide,.30+lift*1.5-i*.023,.077],.003);
+  if(hp)label(motor,String(hp),side*.192*wide,.24+lift,-.07,side);
+  const latch=box(motor,.035,.058,.025,cast,[side*.12*wide,.075,-.285],.005);latch.rotation.z=side*.12;
  }
  tube(motor,[[-.055,.30,.165],[-.055,.34,.185],[.055,.34,.185],[.055,.30,.165]],.009,rubber,14);
  // The clamp brackets wrap the transom. Cross-bolts, screw pads and the tilt
@@ -47,7 +49,7 @@ export function makeAnglerOutboard(){
  const grip=tube(motor,[[-.27,.27,.46],ANGLER_OUTBOARD.tiller],.023,rubber,8);grip.name='Tiller hand grip';
  for(let i=0;i<5;i++){const ring=add(motor,new THREE.TorusGeometry(.024,.0018,4,12),rubber,[-.27-i*.010,.27,.46+i*.016]);ring.rotation.y=-.55;}
  tube(motor,[[.075,.10,.13],[.09,-.02,.19],[.055,-.11,.20],[.04,-.17,.11]],.006,rubber);
- const propeller=new THREE.Group();propeller.name='Propeller';propeller.userData.dynamic=true;propeller.position.fromArray(ANGLER_OUTBOARD.propeller);motor.add(propeller);
+ const propeller=new THREE.Group();propeller.name='Propeller';propeller.userData.dynamic=true;propeller.position.fromArray(propellerPosition);motor.add(propeller);
  cylinder(propeller,.030,.09,silver,[0,0,.01],'z');
  for(let blade=0;blade<3;blade++){
   const positions=[],uv=[],ix=[],steps=8;

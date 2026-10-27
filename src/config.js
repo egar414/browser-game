@@ -126,7 +126,7 @@ for(const type of ['dinghy','skua']){
 
 // New multi-angle reference hull. Its 25 hp badge is visual; the requested
 // 50 hp-equivalent acceleration/speed use the Skua's explicit arcade tuning.
-VEHICLES.angler={...VEHICLES.skua,name:'310 Wasp',subtitle:'3.10 m fishing tinny · 25 hp / boosted',description:'A new silver fishing tinny with a smooth curved hull, two full-width aluminium benches and a small bow seat. Detailed 25 hp outboard; boosted to the 50 hp Skua’s 90 km/h game ceiling. I womps, Shift lifts and Q/E trims.',length:3.10,width:1.65*3.10/3.7,hp:25,model:'reference-tinny',riderHipHeight:.37,footHeight:-.14,restPitch:.075,restRoll:-.016,colours:['#c6ccce','#b4bfc2','#d4d3c8']};
+VEHICLES.angler={...VEHICLES.skua,name:'310 Wasp',subtitle:'3.10 m fishing tinny · 25 hp / boosted',description:'A new silver fishing tinny with a smooth curved hull, two full-width aluminium benches and a small bow seat. Detailed 25 hp outboard; boosted to the 50 hp Skua’s 90 km/h game ceiling. I womps, Shift lifts and Q/E trims.',length:3.10,width:1.65*3.10/3.7,hp:25,restLift:.08,model:'reference-tinny',riderHipHeight:.37,footHeight:-.14,restPitch:.075,restRoll:-.016,colours:['#c6ccce','#b4bfc2','#d4d3c8']};
 PROPULSION.angler={...PROPULSION.skua,motorMount:[0,.2764864865,-1.55],propeller:[0,-.65,-.18]};
 HYDRODYNAMICS.angler={...HYDRODYNAMICS.skua};
 

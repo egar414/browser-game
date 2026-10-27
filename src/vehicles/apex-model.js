@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import {marineHullGeometry,marineSaddleGeometry} from './marine-hull.js';
 import { makeRider } from './rider.js';
 
 // Original performance-PWC bodywork, shaped from the user's side-profile reference.
@@ -17,16 +18,11 @@ export function makeApex(colour='#b9b49b') {
   const add=(g,m,x=0,y=0,z=0,parent=body)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;parent.add(o);return o;};
   const box=(w,h,d,x,y,z,m,parent=body)=>add(new RoundedBoxGeometry(w,h,d,2,Math.min(w,h,d)*.16),m,x,y,z,parent);
   const tube=(points,r,m,parent=body,n=16)=>add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),n,r,6,false),m,0,0,0,parent);
-  const shape=(sections,m)=>{
-    const vertices=[],indices=[];
-    for(const[z,w,top,bottom]of sections)for(const[x,y]of[[-w,top],[w,top],[w*.72,bottom+.03],[0,bottom],[-w*.72,bottom+.03]])vertices.push(x,y,z);
-    for(let j=0;j<sections.length-1;j++)for(let k=0;k<5;k++){const a=j*5+k,b=j*5+(k+1)%5;indices.push(a,b+5,b,a,a+5,b+5);}
-    for(let k=1;k<4;k++){indices.push(0,k,k+1);const n=(sections.length-1)*5;indices.push(n,n+k+1,n+k);}
-    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();return add(g,m);
-  };
+  const shape=(sections,m)=>add(marineHullGeometry(sections,{closedTop:true,stations:32,panelSteps:2,rise:.03}),m);
+
   shape([[-1.79,.43,.16,-.22],[-1.55,.60,.25,-.34],[-.8,.65,.30,-.38],[.32,.64,.36,-.34],[1.02,.52,.39,-.23],[1.6,.27,.29,-.08],[1.83,.008,.18,.02]],shell);
   shape([[-1.72,.44,.32,.18],[-1.08,.53,.38,.23],[-.32,.55,.44,.27],[.53,.54,.49,.31],[1.2,.38,.42,.28],[1.75,.02,.25,.17]],black);
-  shape([[-1.36,.23,.61,.32],[-1.08,.26,.74,.36],[-.61,.25,.68,.38],[-.15,.23,.65,.40],[.34,.17,.60,.43]],seat);
+  add(marineSaddleGeometry([[-1.36,.23,.61,.32],[-1.08,.26,.74,.36],[-.61,.25,.68,.38],[-.15,.23,.65,.40],[.34,.17,.60,.43]]),seat);
   // Raised passenger saddle/back pad is visibly separate from the rear deck.
   const tail=box(.47,.26,.28,0,.81,-1.21,red);tail.rotation.x=-.28;
   box(.44,.04,.29,0,.96,-1.18,rubber);
@@ -64,5 +60,5 @@ export function makeApex(colour='#b9b49b') {
   body.updateMatrixWorld(true);const groups=new Map(),remove=[];
   body.traverse(o=>{if(!o.isMesh)return;for(let p=o.parent;p&&p!==body;p=p.parent)if(p.userData.dynamic)return;let g=o.geometry.clone();if(g.index)g=g.toNonIndexed();g.applyMatrix4(o.matrixWorld);if(!g.attributes.uv)g.setAttribute('uv',new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count*2),2));if(!groups.has(o.material))groups.set(o.material,[]);groups.get(o.material).push(g);remove.push(o);});
   for(const[m,gs]of groups){const mesh=new THREE.Mesh(mergeGeometries(gs),m);mesh.castShadow=mesh.receiveShadow=true;body.add(mesh);gs.forEach(g=>g.dispose());}for(const o of remove){o.removeFromParent();o.geometry.dispose();}
-  root.userData={body,rider,handlebars,nozzle,bucket,apex:true};return root;
+  root.userData={body,rider,handlebars,nozzle,bucket,apex:true,modelRevision:'fleet-craft-2'};return root;
 }

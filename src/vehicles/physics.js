@@ -63,7 +63,7 @@ export class VehiclePhysics {
     if(this.type==='sled'){this.recover();return;}
     this.safe={x:position.x,z:position.z,heading:position.heading};this.recover();
     if(this.collision(this.x,this.z,this.config.width*.5+.35,0))this.recover(true);
-    this.y=waveHeight(this.x,this.z,time)+this.config.rideHeight;this.previous=this.snapshot();
+    this.y=waveHeight(this.x,this.z,time)+this.config.rideHeight+(this.config.restLift||0);this.previous=this.snapshot();
   }
   wipe(reason) {
     if (this.wipeout) return;
@@ -168,7 +168,7 @@ export class VehiclePhysics {
     const samples = [-1, 1].map(side => [-1, 1].map(end => waveHeight(
       this.x + fx * half * end + fz * width * side,
       this.z + fz * half * end - fx * width * side, time)));
-    const water = samples.flat().reduce((a, b) => a + b) / 4 + c.rideHeight;
+    const water = samples.flat().reduce((a, b) => a + b) / 4 + c.rideHeight+(c.restLift||0)*Math.max(0,1-this.speed/4)*(1-this.riderAft);
     // Water-relative damping lets the cat follow a rising crest instead of
     // damping away the upward motion of its supporting water. Teleports and
     // recovery clear the history, so they cannot create a heave impulse.

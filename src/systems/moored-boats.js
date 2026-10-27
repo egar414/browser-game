@@ -6,7 +6,7 @@ import {VEHICLES,waveHeight} from '../config.js';
 import {MooringFlood,MOORING_FLOOD,floodCapacity} from './mooring-flood.js';
 
 function tenderParts(colour){
-  const root=buildTender(colour);root.updateMatrixWorld(true);const groups=new Map();
+  const root=buildTender(colour,'classic',{detail:'moored'});root.updateMatrixWorld(true);const groups=new Map();
   root.traverse(m=>{
     if(!m.isMesh)return;
     let g=m.geometry.clone();if(g.index)g=g.toNonIndexed();g.applyMatrix4(m.matrixWorld);

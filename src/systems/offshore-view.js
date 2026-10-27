@@ -1,3 +1,5 @@
+import{marineHullGeometry,marineStation}from'../vehicles/marine-hull.js';
+import{gelcoat,deckTeak,marineSteel,roundedBlock,deckFittings}from'../vehicles/marine-details.js';
 import{BIG_BOAT_FLOOD}from'./sportfishing-traffic.js';
 import{floodCapacity}from'./mooring-flood.js';
 import{sportfisherZ,SPORTFISHER_STERN,SPORTFISHER_DECK}from'../vehicles/sportfisher-shape.js';
@@ -7,23 +9,19 @@ import{mergeGeometries}from'three/addons/utils/BufferGeometryUtils.js';
 import{waveHeight}from'../config.js';
 import{FISHING_SPOTS}from'./fishing.js';
 const mat=(colour,roughness=.5)=>new THREE.MeshStandardMaterial({color:colour,roughness});
-function rod(group,a,b,material,r=.025){const d=new THREE.Vector3().subVectors(b,a),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),6),material);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());group.add(m);return m;}
-function label(text){const c=document.createElement('canvas');c.width=512;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,512,128);x.fillStyle='#f3e6cf';x.font='bold 48px sans-serif';x.textAlign='center';x.fillText(text.toUpperCase(),256,84);const t=new THREE.CanvasTexture(c);return new THREE.MeshBasicMaterial({map:t,transparent:true});}
+function rod(group,a,b,material,r=.025){const d=new THREE.Vector3().subVectors(b,a),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),10),material);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());group.add(m);return m;}
+function label(text){if(typeof document==='undefined')return new THREE.MeshBasicMaterial({color:'#f3e6cf'});const c=document.createElement('canvas');c.width=512;c.height=128;const x=c.getContext('2d');x.clearRect(0,0,512,128);x.fillStyle='#f3e6cf';x.font='bold 48px sans-serif';x.textAlign='center';x.fillText(text.toUpperCase(),256,84);const t=new THREE.CanvasTexture(c);return new THREE.MeshBasicMaterial({map:t,transparent:true});}
 export function makeSportfisher(name,colour,crew=true){
- const g=new THREE.Group(),white=mat('#e5ece7'),navy=mat(colour),glass=mat('#183f51',.15),chrome=mat('#bacbd0',.22),wood=mat('#a96736'),dark=mat('#1e303a'),skin=mat('#c99872'),shirt=mat('#edb05b');
- const box=(w,h,d,x,y,z,m)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);g.add(o);return o;};
+ const g=new THREE.Group(),white=gelcoat('#e5ece7'),navy=gelcoat(colour),glass=new THREE.MeshPhysicalMaterial({color:'#183f51',metalness:.22,roughness:.13,clearcoat:1}),chrome=marineSteel(),wood=deckTeak(),dark=mat('#1e303a'),skin=mat('#c99872'),shirt=mat('#edb05b');
+ const box=(w,h,d,x,y,z,m)=>roundedBlock(g,w,h,d,x,y,z,m);
  // Cross-sections taper into a pointed flared bow and a deep V keel.
- const sections=[[-5,1.72,.55],[-3.7,1.98,.72],[0,1.95,.95],[2.9,1.65,1.30],[4.7,.75,1.6],[5.65,.02,1.72]],positions=[],indices=[];
- sections.forEach(([z,w,h])=>positions.push(-w,h,z,-w*.82,-.22,z,0,-.75,z,w*.82,-.22,z,w,h,z));
- for(let i=0;i<sections.length-1;i++)for(let j=0;j<4;j++){const a=i*5+j,b=a+5;indices.push(a,b,a+1,a+1,b,b+1);}
- indices.push(0,1,2,0,2,4,2,3,4);
- // The section ring winds inward along +Z; reverse triangles for outward faces.
- for(let i=0;i<indices.length;i+=3)[indices[i+1],indices[i+2]]=[indices[i+2],indices[i+1]];
- const hull=new THREE.BufferGeometry();hull.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));hull.setIndex(indices);hull.computeVertexNormals();g.add(new THREE.Mesh(hull,white));
+ const sections=[[-5,1.72,.55],[-3.7,1.98,.72],[0,1.95,.95],[2.9,1.65,1.30],[4.7,.75,1.6],[5.65,.02,1.72]],rows=sections.map(r=>[...r,-.75]);
+ const hull=marineHullGeometry(rows,{ratio:.82,rise:.53,stations:48,panelSteps:3,thickness:.025});const shell=new THREE.Mesh(hull,white);shell.name='Continuous flared sportfisher hull';g.add(shell);
+ const curveSections=Array.from({length:49},(_,i)=>marineStation(rows,i/48));
  const stripePositions=[];
- for(const side of [-1,1])for(let i=0;i<sections.length-1;i++){
+ for(const side of [-1,1])for(let i=0;i<curveSections.length-1;i++){
   const point=(section,y)=>{const[z,w,h]=section;return[side*(w*(.82+.18*(y+.22)/(h+.22))+.009),y,z];};
-  const a=point(sections[i],.05),b=point(sections[i+1],.05),c=point(sections[i],.2),d=point(sections[i+1],.2);stripePositions.push(...a,...b,...c,...c,...b,...d);
+  const a=point(curveSections[i],.05),b=point(curveSections[i+1],.05),c=point(curveSections[i],.2),d=point(curveSections[i+1],.2);stripePositions.push(...a,...b,...c,...c,...b,...d);
  }
  const stripeGeo=new THREE.BufferGeometry();stripeGeo.setAttribute('position',new THREE.Float32BufferAttribute(stripePositions,3));stripeGeo.computeVertexNormals();navy.side=THREE.DoubleSide;g.add(new THREE.Mesh(stripeGeo,navy));
  const deck=new THREE.Shape();deck.moveTo(-1.65,2);deck.lineTo(-1.65,2.9);deck.lineTo(-.75,4.7);deck.lineTo(0,5.65);deck.lineTo(.75,4.7);deck.lineTo(1.65,2.9);deck.lineTo(1.65,2);deck.closePath();const bow=new THREE.Mesh(new THREE.ShapeGeometry(deck),white);bow.rotation.x=Math.PI/2;bow.position.y=1.5;bow.material=white.clone();bow.material.side=THREE.DoubleSide;g.add(bow);
@@ -62,12 +60,16 @@ export function makeSportfisher(name,colour,crew=true){
   rod(g,new THREE.Vector3(side*1.4,1.85,2.5),new THREE.Vector3(side*.7,1.85,4.5),chrome,.02);
  }
  box(.65,.15,.65,0,1.55,-3.1,white);rod(g,new THREE.Vector3(0,.95,-3.1),new THREE.Vector3(0,1.5,-3.1),chrome,.06);
+ deckFittings(g,{width:3.35,length:6.7,y:1.38,z:-1.5,material:chrome});
+ for(const z of[-3.8,-2.55]){box(1.25,.018,.75,0,1.0,z,dark);box(1.2,.025,.70,0,1.017,z,wood);box(.22,.018,.045,0,1.034,z-.22,chrome);}
+ for(const side of[-1,1]){const wheel=new THREE.Mesh(new THREE.TorusGeometry(.18,.018,6,24),chrome);wheel.position.set(side*.57,3.98,.48);wheel.rotation.x=.25;g.add(wheel);for(let i=0;i<3;i++){const a=i*Math.PI*2/3;rod(g,new THREE.Vector3(side*.57,3.98,.48),new THREE.Vector3(side*.57+Math.sin(a)*.16,3.98+Math.cos(a)*.16,.48),chrome,.009);}const reel=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.065,14),chrome);reel.rotation.z=Math.PI/2;reel.position.set(side*1.65,1.45,-3.55);g.add(reel);}
+ for(const x of[-.23,0,.23]){const gauge=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.016,16),dark);gauge.rotation.x=Math.PI/2;gauge.position.set(x,4.10,.54);g.add(gauge);}
  const person=(x,y,z,seated=false)=>{const person=makeDeckCharacter();person.userData.keepProportions=true;person.userData.animate(0,0,false,seated);person.scale.setScalar(.85);person.position.set(x,y,sportfisherZ(z));g.add(person);};if(crew){person(0,3.25,-.15,true);person(.8,1,-3.4);}
  const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.5,.62),label(name));sign.position.set(0,1.2,-5.035);sign.rotation.y=Math.PI;g.add(sign);
  // One draw per material keeps detailed fittings affordable for school laptops.
  g.updateMatrixWorld(true);const buckets=new Map(),old=[];
- g.traverse(o=>{if(!o.isMesh)return;let geo=o.geometry.clone();if(geo.index)geo=geo.toNonIndexed();geo.applyMatrix4(o.matrixWorld);let ancestor=o,crewPart=false;while(ancestor&&ancestor!==g){crewPart ||= !!ancestor.userData.keepProportions;ancestor=ancestor.parent;}if(!crewPart){const p=geo.attributes.position;for(let i=0;i<p.count;i++)p.setZ(i,sportfisherZ(p.getZ(i)));geo.computeVertexNormals();}if(!geo.attributes.uv)geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*2),2));if(!buckets.has(o.material))buckets.set(o.material,[]);buckets.get(o.material).push(geo);old.push(o);});
- old.forEach(o=>{o.removeFromParent();o.geometry.dispose();});for(const [m,geos]of buckets){const mesh=new THREE.Mesh(mergeGeometries(geos),m);mesh.receiveShadow=true;g.add(mesh);geos.forEach(v=>v.dispose());}g.name=`Sportfisher ${name}`;g.userData.waterMaskType='cruiser';return g;
+ g.traverse(o=>{if(!o.isMesh)return;let geo=o.geometry.clone();if(geo.index)geo=geo.toNonIndexed();geo.applyMatrix4(o.matrixWorld);let ancestor=o,crewPart=false;while(ancestor&&ancestor!==g){crewPart ||= !!ancestor.userData.keepProportions;ancestor=ancestor.parent;}if(!crewPart){const p=geo.attributes.position;for(let i=0;i<p.count;i++){const z=p.getZ(i),scale=(sportfisherZ(z+.0001)-sportfisherZ(z-.0001))/.0002;p.setZ(i,sportfisherZ(z));const n=geo.attributes.normal;if(n){const v=new THREE.Vector3(n.getX(i),n.getY(i),n.getZ(i)/scale).normalize();n.setXYZ(i,v.x,v.y,v.z);}}}if(!geo.attributes.uv)geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*2),2));if(!buckets.has(o.material))buckets.set(o.material,[]);buckets.get(o.material).push(geo);old.push(o);});
+ old.forEach(o=>{o.removeFromParent();o.geometry.dispose();});for(const [m,geos]of buckets){const mesh=new THREE.Mesh(mergeGeometries(geos),m);mesh.receiveShadow=true;g.add(mesh);geos.forEach(v=>v.dispose());}g.name=`Sportfisher ${name}`;g.userData.waterMaskType='cruiser';g.userData.modelRevision='fleet-craft-2';return g;
 }
 function fishGeometry(){
  const body=new THREE.SphereGeometry(1,10,6);body.scale(.18,.3,.78);
