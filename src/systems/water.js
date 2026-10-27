@@ -79,7 +79,13 @@ ${SURF_GLSL}
           vec3 r2=texture2D(uRipples,p*.16+vec2(-uTime*.019,uTime*.011)).rgb;
           float micro=1.-smoothstep(25.,210.,distanceToEye);
           vec3 r3=texture2D(uRipples,p*.63+vec2(uTime*.027,uTime*.017)).rgb;
-          vec2 ripples=(r1.rg*2.-1.)*.13+(r2.rg*2.-1.)*.055*micro+(r3.rg*2.-1.)*.028*micro;
+          vec2 ripples=(r1.rg*2.-1.)*.46+(r2.rg*2.-1.)*.32*micro+(r3.rg*2.-1.)*.16*micro;
+          // Wind-driven capillary detail breaks the large reflected clouds into
+          // narrow ribbons. Filter it out with distance and pixel footprint.
+          vec2 capillaryUV=vec2(p.x*.91+p.y*.42,-p.x*.38+p.y*.83);
+          float footprint=max(length(dFdx(capillaryUV)),length(dFdy(capillaryUV)));
+          float capillary=cos(capillaryUV.y*12.+r2.b*5.-uTime*3.1)*.065+cos(capillaryUV.y*23.+capillaryUV.x*2.7+r3.b*4.+uTime*4.7)*.035;
+          ripples+=vec2(-.38,.83)*capillary*micro*(1.-smoothstep(.06,.25,footprint));
           if(!gl_FrontFacing){gl_FragColor=vec4(mix(vec3(.16,.43,.48),vec3(.53,.8,.77),pow(max(0.,dot(normalize(vNormal),normalize(-view))),4.)),1.);return;}
           vec3 n=normalize(vNormal+vec3(ripples.x,0.,ripples.y));
           float ndv=max(dot(n,view),0.);float fresnel=.025+.975*pow(1.-ndv,5.);
@@ -92,7 +98,7 @@ ${SURF_GLSL}
           vec3 photoA=texture2D(uSurface,p*.038+vec2(uTime*.006,-uTime*.003)+ripples*.06).rgb;
           vec3 photoB=texture2D(uSurface,p*.071+vec2(-uTime*.004,uTime*.005)).rgb;
           float surfaceGrain=clamp(dot(mix(photoA,photoB,.35),vec3(.2126,.7152,.0722))*4.,.55,1.65);
-          deep*=mix(1.,surfaceGrain,.38*uSurfaceReady*(.35+.65*micro));
+          deep*=mix(1.,surfaceGrain,.17*uSurfaceReady*(.35+.65*micro));
           vec3 reflected=reflect(-view,n);
           vec3 sky=mix(uSkyHorizon,uSkyZenith,pow(max(reflected.y,0.),.42));
           if(uSkyReady>.5){vec3 photoSky=coastalSky(uSkyPhoto,reflected);sky=mix(sky,mix(uSkyHorizon*.65,photoSky,uDaylight)*(.12+.88*uDaylight),.58*smoothstep(.05,.4,uDaylight));}
@@ -100,7 +106,7 @@ ${SURF_GLSL}
           if(uReflect>.5){
             vec2 uv=vReflection.xy/vReflection.w+ripples*.065+vNormal.xz*.028;
             vec3 planar=texture2D(uReflection,clamp(uv,vec2(.002),vec2(.998))).rgb;
-            reflection=mix(sky,planar,.78);
+            reflection=mix(sky,planar,.72);
           }
           vec3 colour=mix(deep*(.2+uDaylight*.8),reflection,.065+fresnel*.79);
           float crest=smoothstep(.15,.9,vWorld.y)*.07;
@@ -109,9 +115,12 @@ ${SURF_GLSL}
           float photoGlint=smoothstep(.22,.65,max(photoA.r,max(photoA.g,photoA.b)));
           colour+=vec3(.035,.065,.085)*photoGlint*uSurfaceReady*micro*uDaylight;
           vec3 halfVector=normalize(view+uSun);
-          float spec=pow(max(dot(n,halfVector),0.),420.);
-          float sheen=pow(max(dot(n,halfVector),0.),45.);
-          colour+=vec3(1.55,1.25,.76)*(spec*.95+sheen*.025)*smoothstep(-.05,.12,uSun.y);
+          float sunAlignment=max(dot(n,halfVector),0.);
+          float spec=pow(sunAlignment,260.);
+          float sheen=pow(sunAlignment,42.);
+          // A broader glitter lobe survives the tiny normal facets at driving
+          // distances; a narrow centre keeps the nearest highlights crisp.
+          colour+=vec3(1.65,1.45,1.05)*(spec*1.35+sheen*.085)*smoothstep(-.05,.12,uSun.y);
           float caustic=pow(max(0.,sin(p.x*1.7+r1.b*3.)*sin(p.y*1.3-r2.b*2.)),7.);
           colour+=vec3(.12,.22,.13)*caustic*shore*micro*.35;
           float foam=smoothstep(.23,.43,shore)*(1.-smoothstep(.53,.82,shore));

@@ -24,12 +24,26 @@ export function coastalCanopy(simple=false){
  }
  const geometry=mergeGeometries(parts,false);parts.forEach(g=>g.dispose());geometry.computeBoundingSphere();
  const material=new THREE.MeshStandardMaterial({color:'#ffffff',vertexColors:true,roughness:.92,metalness:0});
- const wind={value:0};material.userData.wind=wind;material.onBeforeCompile=shader=>{shader.uniforms.uCoastalWind=wind;shader.vertexShader='uniform float uCoastalWind;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+ const wind={value:0};material.userData.wind=wind;material.onBeforeCompile=shader=>{shader.uniforms.uCoastalWind=wind;shader.vertexShader='uniform float uCoastalWind;varying vec3 vCanopyWorld;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
  float phase=0.;
  #ifdef USE_INSTANCING
  phase=instanceMatrix[3].x*.037+instanceMatrix[3].z*.021;
  #endif
  transformed.x+=sin(uCoastalWind*1.3+phase)*.035*smoothstep(-.7,.8,position.y);
- transformed.z+=cos(uCoastalWind*.9+phase)*.02*smoothstep(-.7,.8,position.y);`);};material.customProgramCacheKey=()=> 'coastal-rounded-crown-wind-v2';
+ transformed.z+=cos(uCoastalWind*.9+phase)*.02*smoothstep(-.7,.8,position.y);`);
+ shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>',`#include <project_vertex>
+ vec4 canopyPoint=vec4(transformed,1.);
+ #ifdef USE_INSTANCING
+ canopyPoint=instanceMatrix*canopyPoint;
+ #endif
+ vCanopyWorld=(modelMatrix*canopyPoint).xyz;`);
+ shader.fragmentShader='varying vec3 vCanopyWorld;\n'+shader.fragmentShader;
+ shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+ float canopyDistance=length(cameraPosition-vCanopyWorld);
+ vec3 leaves=vCanopyWorld*3.2;
+ float leafClusters=sin(leaves.x+sin(leaves.z))*sin(leaves.y+cos(leaves.x*.7))*.5+.5;
+ float leafDetail=1.-smoothstep(22.,160.,canopyDistance);
+ diffuseColor.rgb*=mix(.76,1.09,smoothstep(.18,.8,leafClusters))*leafDetail+(1.-leafDetail);`);
+ };material.customProgramCacheKey=()=> 'coastal-rounded-leafy-crown-v3';
  return{geometry,material};
 }

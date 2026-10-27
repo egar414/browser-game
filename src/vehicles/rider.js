@@ -4,7 +4,7 @@ import {isTinny} from '../config.js';
 import{beachWear}from'./wardrobe.js';
 import * as THREE from 'three';
 const Y=new THREE.Vector3(0,1,0);
-const skin=new THREE.MeshStandardMaterial({color:'#bc896b',roughness:.72});
+const skin=new THREE.MeshStandardMaterial({color:'#bc896b',roughness:.72,vertexColors:true});
 const suit=beachWear.shorts;
 const vest=beachWear.vest;
 const dark=new THREE.MeshStandardMaterial({color:'#14292e',roughness:.62});
@@ -36,6 +36,7 @@ export function makeRider(parent,type){
   ball(face,[0,.79,.14],[.16,.022,.1],dark);
   ball(face,[0,.71,.153],[.13,.036,.026],dark);
   const limbs=[-1,1].map(side=>({side,arm:[segment(root,.085,vest),segment(root,.064,skin)],leg:[segment(root,.105,suit),segment(root,.081,skin)],hand:ball(root,[0,0,0],[.064,.065,.065],skin),foot:ball(root,[0,0,0],[.083,.045,.16],dark)}));
+  root.traverse(o=>{if(o.isMesh&&o.material.vertexColors&&!o.geometry.attributes.color)o.geometry.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array(o.geometry.attributes.position.count*3).fill(1),3));});
   for(const limb of limbs){limb.hand.name=limb.side===1?'right-hand':'left-hand';limb.foot.name=limb.side===1?'right-foot':'left-foot';}
   root.userData.bodyParts=[...torso.children.filter(o=>o.isMesh),...limbs.flatMap(l=>[...l.leg,l.foot])];
   let aft=0,lean=0,bow=0;

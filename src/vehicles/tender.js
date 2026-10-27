@@ -40,10 +40,16 @@ export function buildTender(colour='#bdc9cc',design='classic',options={}){
   block(root,.88,.045,1.36,0,-.09,-.22,ribs);
   for(let i=0;i<10;i++)block(root,.012,.008,1.32,-.39+i*.087,-.063,-.22,alloy);
   for(const [z,w]of [[-.61,1.05],[.32,.98]]){
-    block(root,w,.1,.29,0,.31,z,alloy);block(root,w-.07,.016,.23,0,.37,z,rubber);
+    mesh(root,new RoundedBoxGeometry(w,.1,.29,2,.018),alloy,0,.31,z);mesh(root,new RoundedBoxGeometry(w-.07,.024,.23,2,.009),rubber,0,.37,z);
     for(const side of [-1,1])block(root,.04,.32,.23,side*w*.35,.12,z,ribs);
   }
   block(root,.91,.025,.12,0,.24,-.97,alloy);
+  // The inside transom, seat undersides and bilge remain darker than exposed
+  // gunwales even on Low, where real-time solar shadows are disabled.
+  const bilge=material('#40535b',.35,.82);
+  block(root,.83,.016,1.22,0,-.073,-.22,bilge);
+  for(const z of[-.61,.32])block(root,.75,.035,.26,0,.246,z,bilge);
+  for(const side of[-1,1])rail(root,[[side*.47,.32,-1.04],[side*.48,.02,-1.04],[side*.25,-.13,-1.04]],.018,ribs);
   // Bow plate, fuel tank, hose, bailer and a folded orange flotation vest.
   block(root,.20,.025,.15,0,.5,.91,alloy);
   block(root,.31,.15,.22,.22,.02,-.87,red);block(root,.06,.025,.04,.22,.11,-.87,rubber);

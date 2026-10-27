@@ -16,15 +16,32 @@ export class JetPlume {
     g.instanceCount=0;this.geometry=g;
     this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uNoise:{value:texture}},
       vertexShader:`attribute vec3 aCenter;attribute vec2 aSize;attribute float aAlpha;attribute float aSeed;attribute vec3 aVelocity;varying float vAlpha;varying float vSeed;varying float vDistance;varying vec2 vUv;
-      void main(){vAlpha=aAlpha;vSeed=aSeed;vUv=uv;vec4 p=modelViewMatrix*vec4(aCenter,1.);vDistance=length(p.xyz);vec2 motion=(modelViewMatrix*vec4(aVelocity,0.)).xy;float a=aSeed<${JET_PLUME.fineFraction}?aSeed*31.4:atan(motion.y,motion.x)-1.570796;mat2 r=mat2(cos(a),-sin(a),sin(a),cos(a));p.xy+=r*(position.xy*aSize);gl_Position=projectionMatrix*p;}`,
+      void main(){vAlpha=aAlpha;vSeed=aSeed;vUv=uv;vec4 p=modelViewMatrix*vec4(aCenter,1.);vDistance=length(p.xyz);vec2 motion=(modelViewMatrix*vec4(aVelocity,0.)).xy;float a=aSeed<${JET_PLUME.fineFraction}?aSeed*31.4:atan(motion.y,motion.x)-1.570796;mat2 r=mat2(cos(a),-sin(a),sin(a),cos(a));
+      // Cap individual projected packets, especially when looking back through
+      // the plume. Hundreds of metre-wide quads must not each cover the canvas.
+      float nearFade=smoothstep(.9,3.2,vDistance);
+      float coverage=min(1.,max(.0,-p.z)*.20/max(aSize.x,aSize.y));
+      p.xy+=r*(position.xy*aSize*coverage*nearFade);gl_Position=projectionMatrix*p;}`,
       fragmentShader:`uniform sampler2D uNoise;varying float vAlpha;varying float vSeed;varying float vDistance;varying vec2 vUv;
       void main(){vec2 q=(vUv-.5)*2.;float radial=length(q);if(vAlpha<.004||vDistance<.9||radial>.94)discard;
       float n=texture2D(uNoise,vUv*1.7+vSeed*8.).r;float detail=texture2D(uNoise,vUv*4.3-vSeed*3.).r;
-      float edge=1.-smoothstep(.43+n*.18,.94,radial);float density=vSeed<${JET_PLUME.fineFraction}?(.12+n*.58+detail*.3):(.66+n*.24+detail*.10);float alpha=min(.96,vAlpha*edge*density)*smoothstep(.9,3.2,vDistance);
+      float edge=1.-smoothstep(.26+n*.25,.94,radial);
+      // Filaments and separated droplets, rather than a stack of opaque round
+      // cloud sprites. Far-away subpixel holes blend back into light mist.
+      vec2 cells=vUv*vec2(19.,23.)+vSeed*31.;vec2 cell=floor(cells);
+      vec3 hash=fract(vec3(cell.x,cell.y,cell.x)*vec3(.1031,.1030,.0973)+vSeed);
+      hash+=dot(hash,hash.yzx+33.33);vec2 jitter=fract((hash.xx+hash.yz)*hash.zy);
+      float drop=length((fract(cells)-.2-jitter*.6)*vec2(1.,.65));
+      float aa=max(fwidth(drop),.025);float beads=1.-smoothstep(.095,.095+aa,drop);
+      float filament=smoothstep(.44,.66,detail*.6+n*.4);
+      float resolved=1.-smoothstep(.55,1.2,max(length(dFdx(cells)),length(dFdy(cells))));
+      float core=mix(.25+n*.24,.10+filament*.34+beads*.72,resolved);
+      float density=vSeed<${JET_PLUME.fineFraction}?(.08+n*.22+detail*.14):core;
+      float alpha=min(.94,vAlpha*edge*density)*smoothstep(.9,3.2,vDistance);
       if(alpha<.004)discard;
       float grain=texture2D(uNoise,vUv*9.7+vSeed*19.).r;
       float light=smoothstep(.18,.8,n*.36+detail*.34+grain*.3);
-      vec3 colour=mix(vec3(.52,.71,.84),vec3(1.16,1.15,1.08),light)*(.84+.16*(1.-radial));
+      vec3 colour=mix(vec3(.48,.68,.83),vec3(1.40,1.39,1.28),max(light,beads*.86))*(.84+.16*(1.-radial));
       float droplets=mix(.72,1.,smoothstep(.12,.45,grain));
       gl_FragColor=vec4(colour,alpha*droplets);
       #include <tonemapping_fragment>

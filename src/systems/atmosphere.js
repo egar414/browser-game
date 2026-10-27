@@ -56,12 +56,12 @@ export function createAtmosphere(scene, renderer) {
   environmentScene.add(new THREE.Mesh(dome.geometry, material));
   const pmrem = new THREE.PMREMGenerator(renderer);
   let environment = pmrem.fromScene(environmentScene, .06, .1, 2000, { size: 128 });
-  scene.environment = environment.texture; scene.environmentIntensity = 1.0;
+  scene.environment = environment.texture; scene.environmentIntensity = .78;
   pmrem.dispose();
   return {setUnderwater(value){dome.visible=!value;}, refreshEnvironment(){
     material.uniforms.uPhotoReady.value=material.uniforms.uPhoto.value.userData.loaded?1:0;
     const generator=new THREE.PMREMGenerator(renderer),previous=environment;
     environment=generator.fromScene(environmentScene,.06,.1,2000,{size:128});
     scene.environment=environment.texture;previous.dispose();generator.dispose();
-  },update(time,position,day) { material.uniforms.uPhotoReady.value=material.uniforms.uPhoto.value.userData.loaded?1:0; material.uniforms.uTime.value = time;if(day){SUN_DIRECTION.set(day.direction.x,day.direction.y,day.direction.z).normalize();material.uniforms.uHorizon.value.set(day.horizon);material.uniforms.uZenith.value.set(day.zenith);material.uniforms.uDaylight.value=day.daylight;material.uniforms.uWarm.value=day.warm;scene.environmentIntensity=.2+day.daylight*.85;}if(position)dome.position.copy(position); }, dispose() { environment.dispose(); } };
+  },update(time,position,day) { material.uniforms.uPhotoReady.value=material.uniforms.uPhoto.value.userData.loaded?1:0; material.uniforms.uTime.value = time;if(day){SUN_DIRECTION.set(day.direction.x,day.direction.y,day.direction.z).normalize();material.uniforms.uHorizon.value.set(day.horizon);material.uniforms.uZenith.value.set(day.zenith);material.uniforms.uDaylight.value=day.daylight;material.uniforms.uWarm.value=day.warm;scene.environmentIntensity=.16+day.daylight*.62;}if(position)dome.position.copy(position); }, dispose() { environment.dispose(); } };
 }

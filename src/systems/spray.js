@@ -126,7 +126,10 @@ export class Spray {
     this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uScale:{value:600},uNoise:{value:this.texture}},
       vertexShader:`attribute float aSize;attribute float aAlpha;attribute float aKind;varying float vAlpha;varying float vKind;varying float vSeed;uniform float uScale;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uScale/max(1.,-mv.z),1.,(aKind<.5||aKind>1.5)?52.:112.);vAlpha=aAlpha;vKind=aKind;vSeed=fract(position.x*.17+position.z*.137);}`,
       fragmentShader:`uniform sampler2D uNoise;varying float vAlpha;varying float vKind;varying float vSeed;void main(){vec2 q=gl_PointCoord-.5;float d=length(q*vec2((vKind<.5||vKind>1.5)?1.5:1.,1.));if(d>.5)discard;
-        float noise=texture2D(uNoise,gl_PointCoord*1.7+vSeed*8.).r;float alpha=(vKind<.5||vKind>1.5)?(1.-smoothstep(.2,.5,d)):(1.-smoothstep(.25,.5,d))*(.45+noise*.4);
+        float noise=texture2D(uNoise,gl_PointCoord*1.7+vSeed*8.).r;
+        float detail=texture2D(uNoise,gl_PointCoord*8.7-vSeed*3.).r;
+        float broken=smoothstep(.28,.67,detail*.7+noise*.3);
+        float alpha=(vKind<.5||vKind>1.5)?(1.-smoothstep(.14,.5,d)):(1.-smoothstep(.13+noise*.1,.5,d))*(.08+broken*.68);
         vec3 colour=vKind>.5&&vKind<1.5?mix(vec3(.50,.67,.69),vec3(1.04,1.04,.99),smoothstep(.15,.8,noise)):mix(vec3(.69,.88,.91),vec3(.98,1.,.95),1.-d);gl_FragColor=vec4(colour,alpha*vAlpha*(vKind>1.5?(.25+noise*.75):1.));
         #include <tonemapping_fragment>
         #include <colorspace_fragment>

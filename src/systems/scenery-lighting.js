@@ -52,7 +52,7 @@ export function configureSunShadow(sun,quality){
  const size=quality.shadowSize||1024,extent=quality.shadowExtent||64;
  if(sun.shadow.mapSize.x!==size){sun.shadow.map?.dispose();sun.shadow.map=null;sun.shadow.mapSize.set(size,size);}
  const camera=sun.shadow.camera;camera.left=camera.bottom=-extent;camera.right=camera.top=extent;camera.near=1;camera.far=700;camera.updateProjectionMatrix();
- sun.shadow.bias=-.00018;sun.shadow.normalBias=.045;sun.shadow.needsUpdate=true;
+ sun.shadow.bias=-.00012;sun.shadow.normalBias=.018;sun.shadow.needsUpdate=true;
 }
 
 // Distance-filtered cladding detail survives batching without extra textures.

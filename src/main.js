@@ -339,7 +339,10 @@ function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camer
 window.addEventListener('resize',resize);
 window.addEventListener('pagehide',persistTrim);
 try {
-  renderer=new THREE.WebGLRenderer({canvas:document.querySelector('#game'),antialias:false,powerPreference:'high-performance'});
+  // Canvas MSAA is fixed when its context is created. Medium/High launches
+  // smooth the rails and hull edges; Auto/Low retain the lighter backbuffer.
+  // Stay on the direct render path so quality changes keep opaque geometry.
+  renderer=new THREE.WebGLRenderer({canvas:document.querySelector('#game'),antialias:['Medium','High'].includes(settings.quality),powerPreference:'high-performance'});
   renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   const atmosphere=createAtmosphere(scene,renderer);
   hemi=new THREE.HemisphereLight('#c1dcff','#4c6950',.62);scene.add(hemi);
