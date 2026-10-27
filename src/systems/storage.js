@@ -21,7 +21,7 @@ export function loadSettings(storage) {
     result.trimRacer=Math.max(-7,Math.min(8,result.trimRacer));
     result.trimSled=Math.max(-7,Math.min(8,result.trimSled));
     result.trimSki=Math.max(-10,Math.min(19,result.trimSki));result.trimCat=Math.max(-7,Math.min(8,result.trimCat));result.trimTinny=Math.max(-7,Math.min(8,result.trimTinny));
-    if (!['ski', 'cat', 'tinny','dinghy','skua','cruiser','dive','rib','seago','racer','hyper','sled'].includes(result.vehicle)) result.vehicle = 'ski';
+    if (!['ski', 'cat', 'tinny','dinghy','skua','angler','cruiser','dive','rib','seago','racer','hyper','sled'].includes(result.vehicle)) result.vehicle = 'ski';
     if (!['Auto', 'Low', 'Medium', 'High'].includes(result.quality)) result.quality = 'Auto';
     for (const key of ['master', 'engine', 'water']) result[key] = Math.max(0, Math.min(1, result[key]));
     result.colour = Math.abs(Math.floor(result.colour)) % 3;

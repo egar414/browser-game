@@ -1,6 +1,7 @@
 import{decodeTow,towDriver}from'./tow-protocol.js';
 import{makeTowActor,animateTowActor,TowLine}from'./tow-view.js';
 import{decodeSledPose}from'./sled-protocol.js';
+import{decodeAnglerPose}from'./angler-protocol.js';
 import {isTenderPassenger,crewDriver,crewPassengers,tenderSeatPoint} from './tender-crew.js';
 import {makeCrewActor,animateCrewActor} from './tender-crew-view.js';
 import {BoardSpray} from '../surf/board-spray.js';
@@ -47,7 +48,7 @@ export class OnlineWorld{
   const states=this.client.remote;
   for(const id of this.models.keys())if(!states.players.has(id))this.remove(id);
   for(const [id,r]of states.players){
-   const p=decodeSledPose(states.sample(r,now));if(!p)continue;
+   const p=decodeAnglerPose(decodeSledPose(states.sample(r,now)));if(!p)continue;
    const passenger=isTenderPassenger(p),driver=passenger?crewDriver(this.client.room?.players||[],{id,pose:p}):null;
    if(passenger&&!driver){this.remove(id);continue;}
    const tow=decodeTow(p),towBoat=tow?towDriver(this.client.room?.players||[],{id,pose:p}):null;if(tow&&!towBoat){this.remove(id);continue;}

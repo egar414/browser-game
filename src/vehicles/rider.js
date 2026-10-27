@@ -44,7 +44,7 @@ export function makeRider(parent,type){
     const target=riderWeightTargets(v),blend=1-Math.exp(-dt*RIDER_WEIGHT.response);aft+=(target.aft-aft)*blend;lean+=(target.lean-lean)*blend;bow+=(target.bow-bow)*blend;
     const cat=type==='cat',tinny=isTinny(type),outboard=cat||tinny,load=THREE.MathUtils.clamp(v.surgeAcceleration||0,-6,6),soaked=THREE.MathUtils.clamp(v.sprayReaction||0,0,1);
     const hullScale=tinny?(v.config?.length||2.25)/2.25:1;
-    const hip=new THREE.Vector3((tinny?-.25:cat?-.42:0)+lean*(outboard?.85:1),tinny?.53+aft*.05-bow*.05:cat?.74-bow*.035:.75+aft*.15,(tinny?-.57*hullScale:cat?-.77:-.38)-aft*(tinny?.20:cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
+    const hip=new THREE.Vector3((tinny?-.25:cat?-.42:0)+lean*(outboard?.85:1),tinny?(v.config?.riderHipHeight??.53)+aft*.05-bow*.05:cat?.74-bow*.035:.75+aft*.15,(tinny?-.57*hullScale:cat?-.77:-.38)-aft*(tinny?.20:cat?.22:.24)-bow*RIDER_WEIGHT.bowShift);
     hip.y-=soaked*.10;
     const pose=v.airTricks?.pose,b=v.airTricks?.blend||0;
     if(pose==='hangman'){hip.x-=b*.24;hip.y+=b*.08;}
@@ -69,7 +69,7 @@ export function makeRider(parent,type){
       const elbow=joint(shoulder,hand,.36,.39,new THREE.Vector3(side,.1,-.2));
       placeSegment(l.arm[0],shoulder,elbow);placeSegment(l.arm[1],elbow,hand);l.hand.position.copy(hand);
       const legHip=hip.clone().add(new THREE.Vector3(side*.14,0,0));
-      const foot=new THREE.Vector3(tinny?-.20+side*.22:cat?-.42+side*.23:side*.44,tinny?.04:cat?.4:.32,(tinny?-.20*hullScale:cat?-.75:-.37)-aft*(outboard?.12:.48));
+      const foot=new THREE.Vector3(tinny?-.20+side*.22:cat?-.42+side*.23:side*.44,tinny?(v.config?.footHeight??.04):cat?.4:.32,(tinny?-.20*hullScale:cat?-.75:-.37)-aft*(outboard?.12:.48));
       if(pose==='hangman')foot.lerp(new THREE.Vector3(hip.x-.55,hip.y-.25,hip.z-.35+side*.15),b);
       if(pose==='heartattack')foot.lerp(new THREE.Vector3(hip.x+side*.20,hip.y+.65,hip.z-.45),b);
       if(pose==='superman')foot.lerp(new THREE.Vector3(hip.x+side*.18,hip.y+.12,hip.z-.82),b);

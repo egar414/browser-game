@@ -1,4 +1,5 @@
 import{isTowPose}from'./tow-protocol.js';
+import{encodeAnglerPose,isAnglerPose}from'./angler-protocol.js';
 import{isSledPose}from'./sled-protocol.js';
 import {isTenderPassenger} from './tender-crew.js';
 import {packSpray} from './network-spray.js';
@@ -14,7 +15,7 @@ export function packPose(v,settings,deck,active,time=0,emitting=active){
  const result={type:availableCraft(v.type,settings.creatorAccess),colour:settings.colour,design:settings.design,active:!!active,airborne:!!v.airborne,pose:v.airTricks?.pose||null,deck:!!deck.active};
  const values={...v,heading:wrapAngle(v.heading),roll:wrapAngle(v.roll),trim:v.trimDegrees,rpm:v.drive?.rpm,trimAngle:v.drive?.trimAngle,steeringAngle:v.drive?.steeringAngle,deckX:deck.x,deckZ:deck.z,deckHeading:wrapAngle(deck.heading)};
  for(const [key,[lo,hi]]of Object.entries(ranges))result[key]=clamp(values[key],lo,hi);
- result.spray=packSpray(v,time,emitting);return result;
+ result.spray=packSpray(v,time,emitting);return encodeAnglerPose(result);
 }
 export function validPose(p){return p&&ONLINE_TYPES.includes(p.type)&&Object.entries(ranges).every(([key,[lo,hi]])=>Number.isFinite(p[key])&&p[key]>=lo&&p[key]<=hi)&&[0,1,2].includes(p.colour);}
 export class RemoteStates{
@@ -40,6 +41,8 @@ export class RemoteStates{
   let a=h[0],b=h.at(-1);
   for(let i=1;i<h.length;i++)if(h[i].time>=target){a=h[i-1];b=h[i];break;}
   if(!a)return null;
+  if(h.length>1&&isAnglerPose(h.at(-1))!==isAnglerPose(h.at(-2)))return {...h.at(-1)};
+  if(isAnglerPose(a)!==isAnglerPose(b))return {...b};
   // Seat identity is discrete; never interpolate a passenger token or marker.
   if(isTowPose(a)!==isTowPose(b)||(isTowPose(b)&&a.rpm!==b.rpm))return {...b};
   if(isTenderPassenger(a)||isTenderPassenger(b)||isSledPose(a)!==isSledPose(b))return {...b};

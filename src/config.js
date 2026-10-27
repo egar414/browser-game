@@ -19,14 +19,14 @@ export const VEHICLES = {
     wheelieAngle: 0.92, wipeoutAngle: 1.22, colours: ['#1260f4', '#ff613d', '#86df9c'],
   },
   cat: {
-    name: 'Tunnel Rat 50', subtitle: 'Inflatable racing catamaran', description: 'Twin pontoons. One lively outboard. A 110 km/h gameplay speed ceiling, with wide, heavy spray through the bends.',
+    name: 'Aquarius Thundercat', subtitle: 'Inflatable racing catamaran', description: 'Twin pontoons. One lively outboard. A 110 km/h gameplay speed ceiling, with wide, heavy spray through the bends.',
     length: 4.1, width: 2.05, maxSpeed: 110 / 3.6,
     reverseMax: 3.3, lateralGrip: 2.6,
     slideGrip: 0.92, spring: 34, damping: 10, rideHeight: 0.16, airSteer: 0.83,
     wheelieAngle: 0.89, wipeoutAngle: 1.25, colours: ['#e7ece9', '#ef745b', '#83d4ca'],
   },
   tinny: {
-    name:'Tender Rat 225', subtitle:'2.25 m alloy tender · 25 hp',
+    name:'225 Tender', subtitle:'2.25 m alloy tender · 25 hp',
     description:'Open aluminium tender, bench seats and a lively 25 hp outboard. Carve, shift your weight aft and throw water off the chines.',
     length:2.25,width:1.22,maxSpeed:15.5,reverseMax:2.8,
     lateralGrip:3.05,slideGrip:.54,spring:46,damping:12,rideHeight:.12,airSteer:1.15,
@@ -88,19 +88,19 @@ export const PROPULSION = {
 };
 
 // Heavy twin-screw sportfisher; gameplay values, not manufacturer performance.
-VEHICLES.cruiser={...VEHICLES.cat,name:'Reef Runner 38',subtitle:'Flybridge sportfisher',description:'Drive a big fishing boat. Slow down, press J to leave the helm, walk the rear cockpit and cast beyond the bar.',length:SPORTFISHER_LENGTH,width:3.96,maxSpeed:15.5,reverseMax:2.6,rideHeight:.1,colours:['#254761','#2c7e85','#b0bbbe']};
+VEHICLES.cruiser={...VEHICLES.cat,name:'Game Fishing Boat',subtitle:'Flybridge sportfisher',description:'Drive a big fishing boat. Slow down, press J to leave the helm, walk the rear cockpit and cast beyond the bar.',length:SPORTFISHER_LENGTH,width:3.96,maxSpeed:15.5,reverseMax:2.6,rideHeight:.1,colours:['#254761','#2c7e85','#b0bbbe']};
 PROPULSION.cruiser={...PROPULSION.cat,effectiveMass:6500,motorMount:[0,.3,sportfisherZ(-4.5)],propeller:[0,-.8,-.4],maximumRpm:4000};
 HYDRODYNAMICS.cruiser={...HYDRODYNAMICS.cat};
 
 export const isJet=type=>type==='ski'||type==='seago'||type==='hyper';
 export const SPORTFISHER_HEIGHT=10.8;
 // Original long-hull performance PWC; 120 km/h is a game speed ceiling.
-VEHICLES.seago={...VEHICLES.ski,name:'Seago 120',subtitle:'Performance touring jet ski',description:'A longer, black performance hull with a 120 km/h game speed ceiling. Nine trim settings, powerful carving and a balanced bow ride.',length:3.65,width:1.32,maxSpeed:120/3.6,reverseMax:4,lateralGrip:5.1,steerResponse:11,slideGrip:1.2,spring:45,damping:12,airSteer:2.8,wheelieAngle:.82,wipeoutAngle:1.27,colours:['#b83836','#3a91ba','#b2bfc4']};
+VEHICLES.seago={...VEHICLES.ski,name:'Sea-Doo Touring PWC',subtitle:'Performance touring jet ski',description:'A longer, black performance hull with a 120 km/h game speed ceiling. Nine trim settings, powerful carving and a balanced bow ride.',length:3.65,width:1.32,maxSpeed:120/3.6,reverseMax:4,lateralGrip:5.1,steerResponse:11,slideGrip:1.2,spring:45,damping:12,airSteer:2.8,wheelieAngle:.82,wipeoutAngle:1.27,colours:['#b83836','#3a91ba','#b2bfc4']};
 PROPULSION.seago={...PROPULSION.ski,effectiveMass:420,hydraulicPower:128000,nozzleArea:.0065,nozzleMount:[0,-.06,-1.8],intake:[0,-.29,-1.2],linearResistance:23,quadraticResistance:2.15,steeringAngle:.49};
 HYDRODYNAMICS.seago={...HYDRODYNAMICS.ski,planingStart:5,planingEnd:16,yawInertia:430,yawSpeedDamping:.055,pitchSpring:21,pitchDamping:8};
 
 // Fictional offshore racing cat: the requested 500 km/h is arcade performance.
-VEHICLES.racer={...VEHICLES.cat,name:'Riptide 500',subtitle:'Twin-engine offshore racing cat',description:'A 12 m closed-cockpit racing cat with twin inboard bays and surface drives. Massive planing spray. 500 km/h is fictional arcade tuning. Launches on the offshore speed run.',length:12.4,width:4.4,maxSpeed:500/3.6,reverseMax:4.5,rideHeight:.18,wheelieAngle:.10,wipeoutAngle:1.5,colours:['#28a8c4','#f36545','#8ac9a7']};
+VEHICLES.racer={...VEHICLES.cat,name:'Maritimo #12',subtitle:'Twin-engine offshore racing cat',description:'A 12 m closed-cockpit racing cat with twin inboard bays and surface drives. Massive planing spray. 500 km/h is fictional arcade tuning. Launches on the offshore speed run.',length:12.4,width:4.4,maxSpeed:500/3.6,reverseMax:4.5,rideHeight:.18,wheelieAngle:.10,wipeoutAngle:1.5,colours:['#28a8c4','#f36545','#8ac9a7']};
 PROPULSION.racer={...PROPULSION.cat,effectiveMass:4000,maximumRpm:7000,motorMount:[0,.1,-5.7],propeller:[0,-.28,-.58],shaftPower:1_200_000};
 HYDRODYNAMICS.racer={...HYDRODYNAMICS.cat};
 
@@ -108,25 +108,32 @@ HYDRODYNAMICS.racer={...HYDRODYNAMICS.cat};
 export const APEX_TRIM_POSITIONS=[-12,-8,-4,0,4,8,12,17,22,28,36];
 export const jetTrimPositions=type=>type==='hyper'?APEX_TRIM_POSITIONS:SKI_TRIM_POSITIONS;
 export const APEX_HANDLING={steerResponse:10,yawLimit:2.8,turnSpeedScale:45,highSpeedStart:35,highSpeedEnd:83.333,highSpeedYawScale:.75,highSpeedGrip:2.3,highSpeedSteerResponse:10,highSpeedYawDamping:.7,airPitch:1.25,airPitchLimit:1.22,bowTargetLimit:1.36,landingPitchLimit:1.02,trickMultiplier:1.25,boundaryMargin:350};
-VEHICLES.hyper={...VEHICLES.seago,name:'Apex 300',subtitle:'Extreme performance freestyle jet ski',description:'Champagne hull, red shoulders and a sculpted black deck. 300 km/h arcade speed, eleven extended-trim positions, huge falling spray and the quickest aerial spins. Q trims up, Shift lifts; Y adds a Heart attack in the air. High trim trades speed for bow lift.',length:3.62,width:1.30,maxSpeed:300/3.6,reverseMax:5,lateralGrip:6.4,slideGrip:1.55,spring:62,damping:16,rideHeight:.16,airSteer:8.5,wheelieAngle:.88,wipeoutAngle:1.56,colours:['#b9b49b','#d0dce0','#414b53']};
+VEHICLES.hyper={...VEHICLES.seago,name:'Sea-Doo RXP-X 300',subtitle:'Extreme performance freestyle jet ski',description:'Champagne hull, red shoulders and a sculpted black deck. 300 km/h arcade speed, eleven extended-trim positions, huge falling spray and the quickest aerial spins. Q trims up, Shift lifts; Y adds a Heart attack in the air. High trim trades speed for bow lift.',length:3.62,width:1.30,maxSpeed:300/3.6,reverseMax:5,lateralGrip:6.4,slideGrip:1.55,spring:62,damping:16,rideHeight:.16,airSteer:8.5,wheelieAngle:.88,wipeoutAngle:1.56,colours:['#b9b49b','#d0dce0','#414b53']};
 PROPULSION.hyper={...PROPULSION.seago,effectiveMass:390,maximumRpm:9500,hydraulicPower:850000,nozzleArea:.0075,nozzleMount:[0,-.06,-1.81],intake:[0,-.34,-1.38],fullImmersion:.12,linearResistance:16,quadraticResistance:.65,steeringAngle:.42};
 HYDRODYNAMICS.hyper={...HYDRODYNAMICS.seago,planingStart:4,planingEnd:16,yawInertia:1100,yawDamping:3.8,yawSpeedDamping:.025,pitchSpring:24,pitchDamping:10,rollSpring:29,rollDamping:10,waterFollow:.75,reserveBuoyancy:80,reserveDepth:.2,maxReserve:12};
 
 
-export const TINNY_TYPES=['tinny','dinghy','skua'];
+export const TINNY_TYPES=['tinny','dinghy','skua','angler'];
 export const isTinny=type=>TINNY_TYPES.includes(type);
+export const canWomp=type=>isTinny(type)||type==='cat';
 VEHICLES.tinny.restPitch=.065;VEHICLES.tinny.restRoll=-.018;
-VEHICLES.dinghy={...VEHICLES.tinny,name:'Dingi 200 / 50',subtitle:'2.00 m alloy dinghy · 50 hp arcade',description:'Short silver alloy hull, oversized 50 hp outboard and a stern-heavy stance. I / WOMP builds the bounce; Shift carries it into a shaft or a sharp spray turn.',length:2,width:1.16,maxSpeed:22,lateralGrip:3.6,slideGrip:.65,restPitch:.14,restRoll:-.035,wompRequired:true,sprayScale:1.55,colours:['#c3c9c7','#d1d6d0','#aebdc1']};
+VEHICLES.dinghy={...VEHICLES.tinny,name:'Dinghy Derby 200',subtitle:'2.00 m alloy dinghy · 50 hp arcade',description:'Short silver alloy hull, oversized 50 hp outboard and a stern-heavy stance. I / WOMP builds the bounce; Shift carries it into a shaft or a sharp spray turn.',length:2,width:1.16,maxSpeed:22,lateralGrip:3.6,slideGrip:.65,restPitch:.14,restRoll:-.035,wompRequired:true,sprayScale:1.55,colours:['#c3c9c7','#d1d6d0','#aebdc1']};
 VEHICLES.skua={...VEHICLES.tinny,name:'Super Skua 370 / 50',subtitle:'3.70 m racing tinny · 50 hp arcade',description:'Longer black-and-gold racing alloy hull with two crew and a 50 hp outboard. Build a rhythm with I / WOMP, then lift into a shaft or carve a broad falling spray.',length:3.7,width:1.58,maxSpeed:25,lateralGrip:3.3,slideGrip:.7,spring:40,damping:12.5,restPitch:.095,restRoll:-.024,wompRequired:true,sprayScale:1.8,colours:['#252e34','#233f49','#4a3035']};
 for(const type of ['dinghy','skua']){
  const c=VEHICLES[type];PROPULSION[type]={...PROPULSION.tinny,effectiveMass:type==='dinghy'?220:310,shaftPower:37300,maximumRpm:5600,propellerArea:.052,motorMount:[.12,.4,-c.length*.498],propeller:[0,-.8125,-.225],linearResistance:15,quadraticResistance:type==='dinghy'?1.2:1.35};
  HYDRODYNAMICS[type]={...HYDRODYNAMICS.tinny,yawInertia:type==='dinghy'?150:280,pitchSpring:type==='dinghy'?18:14,pitchDamping:7.2,rollSpring:25,rollDamping:8};
 }
 
+// New multi-angle reference hull. Its 25 hp badge is visual; the requested
+// 50 hp-equivalent acceleration/speed use the Skua's explicit arcade tuning.
+VEHICLES.angler={...VEHICLES.skua,name:'310 Wasp',subtitle:'3.10 m fishing tinny · 25 hp / boosted',description:'A new silver fishing tinny with a smooth curved hull, two full-width aluminium benches and a small bow seat. Detailed 25 hp outboard; boosted to the 50 hp Skua’s 90 km/h game ceiling. I womps, Shift lifts and Q/E trims.',length:3.10,width:1.65*3.10/3.7,hp:25,model:'reference-tinny',riderHipHeight:.37,footHeight:-.14,restPitch:.075,restRoll:-.016,colours:['#c6ccce','#b4bfc2','#d4d3c8']};
+PROPULSION.angler={...PROPULSION.skua,motorMount:[0,.2764864865,-1.55],propeller:[0,-.65,-.18]};
+HYDRODYNAMICS.angler={...HYDRODYNAMICS.skua};
+
 // Original photo-inspired dive launches. Dimensions and handling are gameplay approximations.
 export const isDiveBoat=type=>type==='dive'||type==='rib';
 for(const [type,name,length,width,speed,height] of [
- ['dive','Reef Buddy 28',8.6,3.0,12.5,3.5],['rib','Reef Scout 22',6.8,2.65,19,2.9]]){
+ ['dive','Little Buddy',8.6,3.0,12.5,3.5],['rib','RIB',6.8,2.65,19,2.9]]){
  VEHICLES[type]={...VEHICLES.cruiser,name,subtitle:type==='dive'?'Cabin dive launch':'Centre-console dive RIB',description:type==='dive'?'White cabin launch with open dive deck, tank racks, stern platform and boarding ladder. Take it to Buddy Reef to snorkel, freedive and spearfish.':'Dark inflatable tubes, teak-style deck, shaded console and rear swim platforms. A nimble launch for reef diving and selling your catch.',length,width,maxSpeed:speed,rideHeight:.1,height,colours:type==='dive'?['#27758b','#2d719d','#59a49a']:['#3b4851','#536d62','#344d68'],diveBoat:true,cruiseHandling:{forwardSpeed:speed,turnRate:type==='rib'?.68:.46,powerResponse:type==='rib'?.45:.32}};
  PROPULSION[type]={...PROPULSION.cruiser,effectiveMass:type==='rib'?1200:3200,motorMount:[0,.35,-length*.46],propeller:[0,-.8,-.3]};
  HYDRODYNAMICS[type]={...HYDRODYNAMICS.cruiser};

@@ -2,6 +2,7 @@ import{makeSled}from'./sled-model.js';
 import {makeDiveBoat} from './dive-boats.js';
 import {batchRigidAssembly} from './rigid-model.js';
 import {isTinny,VEHICLES,PROPULSION} from '../config.js';
+import {makeAnglerShell} from './angler-model.js';
 import{makeApex}from'./apex-model.js';
 import{makeRacingCat}from'./racing-cat.js';
 import{makeTinnyPassenger}from'./tinny-passenger.js';
@@ -64,7 +65,7 @@ export function makeVehicle(type, colour, design='classic',access={}) {
   if(type==='ski')return access.creator===true?makeSpark(colour,design):makeStandardSpark(colour,design);
   if(type==='hyper')return access.creator===true?makeApex(colour):makeStandardSpark(colour,design);
   if(type==='racer')return makeRacingCat(colour);
-  if(type==='cruiser'){const root=makeSportfisher('Reef Runner',colour,false),rider=makeDeckCharacter();rider.position.set(0,3.25,-.25);root.add(rider);rider.userData.update=(v,dt)=>rider.userData.animate(v.animationTime||0,0,false);root.userData={body:root,rider};return root;}
+  if(type==='cruiser'){const root=makeSportfisher('Game Fishing Boat',colour,false),rider=makeDeckCharacter();rider.position.set(0,3.25,-.25);root.add(rider);rider.userData.update=(v,dt)=>rider.userData.animate(v.animationTime||0,0,false);root.userData={body:root,rider};return root;}
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   const accent = new THREE.MeshPhysicalMaterial({color:colour,roughness:.3,metalness:.08,clearcoat:.8,clearcoatRoughness:.24});
   const pale = mat('#e0e9d7'), blue = new THREE.MeshPhysicalMaterial({color:'#344b61',roughness:.24,metalness:.25,clearcoat:.65});
@@ -82,7 +83,7 @@ export function makeVehicle(type, colour, design='classic',access={}) {
       tube(body,[[side*.4,.35,-1.64],[side*.61,.39,-.85],[side*.63,.43,.28],[side*.51,.45,1.04],[side*.25,.34,1.61]],.026,accent,22);
       const shoulder=box(body,.14,.10,.68,side*.42,.64,.63,graphite,true);shoulder.rotation.y=-side*.3;
       for(let i=0;i<3;i++)box(body,.06,.045,.16,side*.44,.64-i*.035,.27+i*.11,rubber,true);
-      label(body,'SEAGO',.75,.17,side*.675,.3,-.66,side*Math.PI/2);
+      label(body,'SEA-DOO',.75,.17,side*.675,.3,-.66,side*Math.PI/2);
       tube(body,[[side*.18,.53,-1.43],[side*.23,.64,-1.33],[side*.25,.57,-1.15]],.035,rubber,8);
     }
     box(body,.89,.06,.38,0,.22,-1.59,rubber,true);box(body,.55,.09,.11,0,.44,-1.51,accent,true);
@@ -96,9 +97,10 @@ export function makeVehicle(type, colour, design='classic',access={}) {
     bucket=new THREE.Group();bucket.position.set(0,.1,-1.81);body.add(bucket);box(bucket,.4,.15,.18,0,0,-.09,graphite,true);
     person=makeRider(body,type);
   } else if(isTinny(type)) {
-    const tender=buildTender(colour,design,{length:VEHICLES[type].length,width:VEHICLES[type].width,hp:type==='tinny'?25:50,racing:type==='skua'});body.add(tender);({motor,propeller}=tender.userData);
+    const tender=type==='angler'?makeAnglerShell(colour,design):buildTender(colour,design,{length:VEHICLES[type].length,width:VEHICLES[type].width,hp:type==='tinny'?25:50,racing:type==='skua'});body.add(tender);({motor,propeller}=tender.userData);
     // Keep the motor attachment in body coordinates for the shared rider IK.
-    body.attach(motor);motor.position.fromArray(PROPULSION[type].motorMount);motor.scale.setScalar(type==='tinny'?1:1.25);person=makeRider(body,type);passenger=makeTinnyPassenger(body);
+    body.attach(motor);motor.position.fromArray(PROPULSION[type].motorMount);motor.scale.setScalar(type==='tinny'||type==='angler'?1:1.25);person=makeRider(body,type);passenger=makeTinnyPassenger(body,type==='angler'?{floorY:VEHICLES.angler.footHeight}:{});
+    if(type==='angler')root.userData.referenceHull=tender;
   } else {
     for (const side of [-1, 1]) {
       const x = side * 0.73;
@@ -127,14 +129,14 @@ export function makeVehicle(type, colour, design='classic',access={}) {
     tube(motor, [[0, 0.4, 0.16], [-0.12, 0.45, 0.45], [-0.25, 0.45, 0.65]], 0.035, dark);
     label(motor, '50', 0.35, 0.25, 0, 0.53, -0.29, Math.PI);
     label(motor, '50', 0.35, 0.25, 0.245, 0.53, 0, Math.PI / 2);
-    label(body, 'RATS', 0.65, 0.24, 0, 0.81, -1.445, Math.PI);
+    label(body, 'AQUARIUS', 0.65, 0.24, 0, 0.81, -1.445, Math.PI);
     person = makeRider(body, type);
   }
   if(design!=='classic'){
     const stripe=mat(design==='race'?'#f2e6c4':'#eea851',.35);
     if(type==='cat')for(const side of [-1,1])tube(body,[[side*.94,.35,-1.5],[side*1.01,.4,0],[side*.92,.52,1.3]],design==='race'?.025:.045,stripe,16);
   }
-  root.userData = { body, motor, nozzle, propeller, bucket, handlebars, passenger, rider: person };
+  root.userData = { ...root.userData,body, motor, nozzle, propeller, bucket, handlebars, passenger, rider: person };
   person.userData.update({riderAft:0,steer:0,surgeAcceleration:0,config:VEHICLES[type]},1,root.userData);
   if(isTinny(type)){for(const part of [person,passenger,motor])if(part)part.userData.dynamic=true;if(propeller)propeller.userData.dynamic=true;batchRigidAssembly(body);batchRigidAssembly(motor);}
   return root;

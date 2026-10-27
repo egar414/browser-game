@@ -56,7 +56,7 @@ export function makeApex(colour='#b9b49b') {
   const bucket=new THREE.Group();bucket.userData.dynamic=true;bucket.position.set(0,.1,-1.82);body.add(bucket);box(.40,.15,.17,0,0,-.09,black,bucket);
   const rider=makeRider(body,'hyper');rider.userData.dynamic=true;
   if(typeof document!=='undefined'){
-    const c=document.createElement('canvas');c.width=512;c.height=128;const ctx=c.getContext('2d');ctx.fillStyle='#192429';ctx.font='italic bold 76px sans-serif';ctx.textAlign='center';ctx.fillText('APEX 300',256,88);const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
+    const c=document.createElement('canvas');c.width=512;c.height=128;const ctx=c.getContext('2d');ctx.fillStyle='#192429';ctx.font='italic bold 76px sans-serif';ctx.textAlign='center';ctx.fillText('RXP-X 300',256,88);const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
     const m=new THREE.MeshBasicMaterial({map,transparent:true,depthWrite:false,side:THREE.DoubleSide});
     for(const side of[-1,1]){const label=add(new THREE.PlaneGeometry(.87,.22),m,side*.65,.11,-.30);label.rotation.y=side*Math.PI/2;}
   }
