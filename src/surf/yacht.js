@@ -16,5 +16,5 @@ export function makeSurfYacht(){const g=new THREE.Group(),white=new THREE.MeshPh
  box(g,2.8,.5,1.2,0,3.8,-2.8,white);box(g,2.7,.07,1.1,0,4.1,-2.8,wood);tube(g,[[0,5.3,-1],[0,6.7,-1]],.025,silver,4);
  for(let i=0;i<6;i++)box(g,1.05,.18,.42,1.7,1.25+i*.34,-6.6+i*.36,white);
  for(let i=0;i<10;i++)box(g,4.7,.012,.022,0,1.21,-7.9+i*.59,navy);
- batchRigidAssembly(g);const lift=new THREE.Group();box(lift,2.2,.14,2.0,0,0,0,white);box(lift,1.9,.04,1.8,0,.1,0,wood);lift.position.set(0,.75,-11.1);g.add(lift);g.userData.lift=lift;const captain=makeDeckCharacter();captain.position.set(-.6,3.7,.2);g.add(captain);captain.userData.animate(0,0,false,true);g.userData.captain=captain;return g;
+ batchRigidAssembly(g);const lift=new THREE.Group();box(lift,2.2,.14,2.0,0,0,0,white);box(lift,1.9,.04,1.8,0,.1,0,wood);lift.position.set(0,.75,-11.1);g.add(lift);g.userData.lift=lift;const captain=makeDeckCharacter();captain.position.set(-.6,3.7,.2);g.add(captain);captain.userData.animate(0,0,false,true);g.userData.captain=captain;g.userData.waterMaskType='yacht';return g;
 }

@@ -36,6 +36,8 @@ function makeRippleTexture() {
   return texture;
 }
 
+export const WATER_PATCH_DISCARD=`vec2 p=vWorld.xz;bool reefPatch=abs(p.x-${SURF_BREAK.x}.)<${SURF_SURFACE.width/2}.&&p.y>${SURF_BREAK.z+SURF_SURFACE.minZ}.&&p.y<${SURF_BREAK.z+SURF_SURFACE.maxZ}.;if((uSurfPatch<.5&&reefPatch)||(uSurfPatch>.5&&!reefPatch))discard;`;
+
 export class Water {
   constructor(scene, quality) {
     const canvas=document.createElement('canvas');canvas.width=canvas.height=1024;
@@ -73,7 +75,7 @@ ${SURF_GLSL}
         uniform sampler2D uReflection;uniform float uReflect;uniform vec4 uHull;uniform float uHeading;uniform float uContact;
         varying vec3 vWorld;varying vec3 vNormal;varying vec4 vReflection;varying float vOcean;varying float vBank;varying float vSurfShape;
         void main(){
-          vec2 p=vWorld.xz;bool reefPatch=abs(p.x-${SURF_BREAK.x}.)<${SURF_SURFACE.width/2}.&&p.y>${SURF_BREAK.z+SURF_SURFACE.minZ}.&&p.y<${SURF_BREAK.z+SURF_SURFACE.maxZ}.;if((uSurfPatch<.5&&reefPatch)||(uSurfPatch>.5&&!reefPatch))discard;float distanceToEye=length(cameraPosition-vWorld);
+          ${WATER_PATCH_DISCARD}float distanceToEye=length(cameraPosition-vWorld);
           vec3 view=normalize(cameraPosition-vWorld);
           vec3 r1=texture2D(uRipples,p*.055+vec2(uTime*.013,-uTime*.009)).rgb;
           vec3 r2=texture2D(uRipples,p*.16+vec2(-uTime*.019,uTime*.011)).rgb;

@@ -1,0 +1,31 @@
+<!doctype html><html><head><title>Hull water regression review</title><link rel="icon" href="data:,"><style>body{margin:0;background:#17222b}canvas{display:block}</style></head><body><script type="module">
+import * as THREE from 'three';
+import {HullWaterMask} from '../src/systems/hull-water-mask.js';
+import {HULL_WATER_PROFILES,hullWaterVertices,hullWaterIndices} from '../src/systems/hull-water-profiles.js';
+import {makeVehicle} from '../src/vehicles/models.js';
+const renderer=new THREE.WebGLRenderer({stencil:true,antialias:false,preserveDrawingBuffer:true});renderer.setSize(640,640);document.body.append(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0,0,0);scene.add(new THREE.HemisphereLight(0xffffff,0x667788,3));
+const camera=new THREE.PerspectiveCamera(45,1,.01,80),mask=new HullWaterMask(),ray=new THREE.Raycaster(),pixel=new Uint8Array(4);scene.add(camera);
+const mat=new THREE.ShaderMaterial({side:THREE.DoubleSide,uniforms:{uSurfPatch:{value:0}},vertexShader:'varying vec3 vWorld;void main(){vWorld=position;gl_Position=projectionMatrix*viewMatrix*vec4(position,1.);}',fragmentShader:'varying vec3 vWorld;void main(){gl_FragColor=vec4(1.);}'});
+const geo=new THREE.PlaneGeometry(60,60);geo.rotateX(-Math.PI/2);const mesh=new THREE.Mesh(geo,mat);scene.add(mesh);const water={mesh};let boats=[],volumes=[],flood;
+function setup(type,pose={},instanced=false){
+ for(const m of boats)scene.remove(m);for(const m of volumes)m.geometry.dispose();boats=[];volumes=[];if(flood)scene.remove(flood);flood=null;
+ const root=new THREE.Group();root.position.fromArray(pose.position||[0,0,0]);root.rotation.set(...(pose.rotation||[0,0,0]),'YXZ');root.scale.fromArray(pose.scale||[1,1,1]);root.updateMatrixWorld();
+ let tagged=root;if(instanced){tagged=new THREE.InstancedMesh(new THREE.BoxGeometry(.01,.01,.01),new THREE.MeshBasicMaterial(),1);tagged.setMatrixAt(0,root.matrixWorld);tagged.userData.waterMaskType=type;scene.add(tagged);boats.push(tagged);}else{root.userData.waterMaskType=type;scene.add(root);boats.push(root);}
+ for(const p of HULL_WATER_PROFILES[type]){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(hullWaterVertices(p),3));geometry.setIndex(hullWaterIndices());const m=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({side:THREE.DoubleSide}));m.matrixAutoUpdate=false;m.matrixWorld.copy(root.matrixWorld);volumes.push(m);}
+ camera.position.set(0,type==='yacht'?24:type==='cruiser'||type==='racer'?17:8,.001);camera.lookAt(0,0,0);camera.updateMatrixWorld();
+}
+function point(x,z){const projected=new THREE.Vector3(x,0,z).project(camera);renderer.getContext().readPixels(Math.floor((projected.x*.5+.5)*640),Math.floor((projected.y*.5+.5)*640),1,1,renderer.getContext().RGBA,renderer.getContext().UNSIGNED_BYTE,pixel);return [...pixel];}
+function check(){
+ mask.render(renderer,scene,camera,water);let inside=0,outside=0,mismatches=0;const examples=[];
+ for(let i=0;i<21;i++)for(let j=0;j<21;j++){
+  const extent=camera.position.y*.35,x=(i/20-.5)*extent*2+.0037,z=(j/20-.5)*extent*2+.0071;
+  ray.set(new THREE.Vector3(x,0,z),new THREE.Vector3(.013,.007,1).normalize());const expected=volumes.some(m=>ray.intersectObject(m,false).filter(h=>h.distance>1e-5).length%2===1);if(expected)inside++;else outside++;
+  const p=point(x,z),actual=p[0]<128;if(actual!==expected){mismatches++;if(examples.length<5)examples.push({x,z,expected,p});}
+ }
+ return{inside,outside,mismatches,examples,count:mask.count,stencil:renderer.getContext().getContextAttributes().stencil,flags:[renderer.autoClear,renderer.autoClearColor,renderer.autoClearDepth,renderer.autoClearStencil]};
+}
+function addFlood(){flood=new THREE.Mesh(new THREE.PlaneGeometry(.35,.6),new THREE.MeshBasicMaterial({color:0x00ff00,side:THREE.DoubleSide}));flood.rotation.x=-Math.PI/2;flood.position.y=.05;scene.add(flood);mask.render(renderer,scene,camera,water);return point(0,0);}
+function showBoat(type){setup(type);boats[0].add(makeVehicle(type,'#a8b8bc','classic',{creator:true}));camera.position.set(3,3,-4);camera.lookAt(0,0,0);mesh.material.fragmentShader='void main(){gl_FragColor=vec4(.02,.26,.42,1.);}';mesh.material.needsUpdate=true;mask.render(renderer,scene,camera,water);}
+window.hullReview={setup,check,addFlood,showBoat,mask,renderer,scene,camera,water};setup('angler');check();
+</script></body></html>

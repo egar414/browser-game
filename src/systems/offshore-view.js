@@ -67,7 +67,7 @@ export function makeSportfisher(name,colour,crew=true){
  // One draw per material keeps detailed fittings affordable for school laptops.
  g.updateMatrixWorld(true);const buckets=new Map(),old=[];
  g.traverse(o=>{if(!o.isMesh)return;let geo=o.geometry.clone();if(geo.index)geo=geo.toNonIndexed();geo.applyMatrix4(o.matrixWorld);let ancestor=o,crewPart=false;while(ancestor&&ancestor!==g){crewPart ||= !!ancestor.userData.keepProportions;ancestor=ancestor.parent;}if(!crewPart){const p=geo.attributes.position;for(let i=0;i<p.count;i++)p.setZ(i,sportfisherZ(p.getZ(i)));geo.computeVertexNormals();}if(!geo.attributes.uv)geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*2),2));if(!buckets.has(o.material))buckets.set(o.material,[]);buckets.get(o.material).push(geo);old.push(o);});
- old.forEach(o=>{o.removeFromParent();o.geometry.dispose();});for(const [m,geos]of buckets){const mesh=new THREE.Mesh(mergeGeometries(geos),m);mesh.receiveShadow=true;g.add(mesh);geos.forEach(v=>v.dispose());}g.name=`Sportfisher ${name}`;return g;
+ old.forEach(o=>{o.removeFromParent();o.geometry.dispose();});for(const [m,geos]of buckets){const mesh=new THREE.Mesh(mergeGeometries(geos),m);mesh.receiveShadow=true;g.add(mesh);geos.forEach(v=>v.dispose());}g.name=`Sportfisher ${name}`;g.userData.waterMaskType='cruiser';return g;
 }
 function fishGeometry(){
  const body=new THREE.SphereGeometry(1,10,6);body.scale(.18,.3,.78);

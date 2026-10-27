@@ -60,6 +60,11 @@ function inflatable(parent,material){
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.castShadow=m.receiveShadow=true;parent.add(m);
 }
 export function makeVehicle(type, colour, design='classic',access={}) {
+  const root=buildVehicle(type,colour,design,access);
+  if(type!=='sled')root.userData.waterMaskType=type==='hyper'&&access.creator!==true?'ski':type;
+  return root;
+}
+function buildVehicle(type, colour, design='classic',access={}) {
   if(type==='sled')return makeSled(colour);
   if(VEHICLES[type]?.diveBoat)return makeDiveBoat(type,colour);
   if(type==='ski')return access.creator===true?makeSpark(colour,design):makeStandardSpark(colour,design);

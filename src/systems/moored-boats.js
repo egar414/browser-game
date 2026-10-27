@@ -20,8 +20,9 @@ export function createMooredTinnies(root,sites,onEvent,drawDistance=400){
   const fleet=new MooringFlood(sites,onEvent),batches=[],matrix=new THREE.Matrix4(),q=new THREE.Quaternion(),euler=new THREE.Euler(0,0,0,'YXZ'),position=new THREE.Vector3(),scale=new THREE.Vector3(1,1,1);
   for(let variant=0;variant<3;variant++){
     const group=fleet.boats.filter((s,i)=>i%3===variant&&s.visual!=='cabin');if(!group.length)continue;
+    let maskMarked=false;
     for(const part of tenderParts(['#bdc9cc','#c7d8ca','#d8d0b9'][variant])){
-      const mesh=new THREE.InstancedMesh(part.geometry,part.material,group.length);mesh.userData.dynamic=true;mesh.castShadow=mesh.receiveShadow=true;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);root.add(mesh);batches.push({mesh,sites:group});
+      const mesh=new THREE.InstancedMesh(part.geometry,part.material,group.length);mesh.userData.dynamic=true;if(!maskMarked){mesh.userData.waterMaskType='tinny';maskMarked=true;}mesh.castShadow=mesh.receiveShadow=true;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);root.add(mesh);batches.push({mesh,sites:group});
     }
   }
   const outline=new THREE.Shape([new THREE.Vector2(-.43,-.95),new THREE.Vector2(.43,-.95),new THREE.Vector2(.48,.15),new THREE.Vector2(.28,.72),new THREE.Vector2(0,.96),new THREE.Vector2(-.28,.72),new THREE.Vector2(-.48,.15)]);
