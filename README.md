@@ -341,6 +341,10 @@ what the game is and how to play. The About page and structured data also includ
 “Eastary Rats” as an alternate spelling. The sitemap lists the game and About page:
 <https://egar414.github.io/browser-game/sitemap.xml>.
 
+The discovery pages describe the current solo/online game, fishing, surfing,
+towing, upgrades and the 310 Wasp, with an actual gameplay image. The static About
+page works without JavaScript. Validate it with `npx playwright test tests/website.spec.js`.
+
 These changes help discovery but do not confirm search-engine indexing or a
 ranking. To request a Google crawl, the owner can add the URL-prefix property
 `https://egar414.github.io/browser-game/` in Google Search Console, verify ownership
