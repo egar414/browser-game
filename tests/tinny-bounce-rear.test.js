@@ -5,8 +5,8 @@ test('tinny stays steady cruising, bounces only shafting with hull splashes, and
  for(const freestyle of [false,true])for(const hz of [30,60,120]){
  const events=[],v=new VehiclePhysics('tinny',()=>null,e=>events.push({...e,boatX:v.x,boatZ:v.z}));v.x=-200;v.z=-1000;v.heading=0;let low=Infinity,high=-Infinity,clear=Infinity;
  for(let i=0;i<hz*12;i++){v.update(1/hz,{throttle:1,steer:0,trim:0,freestyle},i/hz);assert(!v.wipeout&&!v.airborne);if(i>hz*5){low=Math.min(low,v.pitch);high=Math.max(high,v.pitch);clear=Math.min(clear,minimumHullClearance(v,i/hz));}}
- if(freestyle)assert(high-low>.07);else{assert(high-low<.025);assert.equal(v.bounceLoad,0);assert.equal(v.hullHits,0);}if(freestyle)assert(clear>-.07&&clear<.04,'stern touches without phasing the hull under waves');
- const contacts=events.filter(e=>e.contact);if(freestyle)assert(contacts.length>4&&contacts.length<180);else assert.equal(contacts.length,0);assert(contacts.every(e=>Math.hypot(e.x-e.boatX,e.z-e.boatZ)<1.5&&e.impact>.25&&e.impact<=4));
+ if(freestyle)assert(high-low>.07);else{assert(high-low<.025);assert.equal(v.bounceLoad,0);assert.equal(v.hullHits,0);}if(freestyle)assert(clear>-.31&&clear<.04,'immersed lower hull remains supported');
+ const contacts=events.filter(e=>e.contact&&!e.wash);if(freestyle)assert(contacts.length>4&&contacts.length<180);else assert.equal(contacts.length,0);assert(contacts.every(e=>Math.hypot(e.x-e.boatX,e.z-e.boatZ)<1.5&&e.impact>.25&&e.impact<=4));
  for(let i=0;i<hz*5;i++)v.update(1/hz,{throttle:0,steer:0,trim:0,freestyle:false},12+i/hz);assert(v.bounceLoad<.02);v.recover();assert.equal(v.hullHits,0);assert.equal(v.contactDepths,null);
  }
 });

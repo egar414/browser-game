@@ -8,6 +8,17 @@ import {constrainHullWater} from '../src/vehicles/shafting.js';
 import {hullSections,sampleHullContacts,lowestHullDepth,hullDraftAllowance,HULL_CONTACT_LIMIT} from '../src/vehicles/hull-support.js';
 import {JetPlume,plumeTrajectory} from '../src/systems/jet-plume.js';
 const neutral={throttle:0,steer:0,trim:0,freestyle:false};
+test('moving tinnies peel water off both wetted sides at a bounded rate, without an idle spray ring',()=>{
+ setSeaState('calm',0,true);
+ for(const type of['tinny','dinghy','skua','angler']){
+  const wash=[],v=new VehiclePhysics(type,()=>null,e=>{if(e.wash)wash.push({points:e.contacts,pose:v.snapshot()});});v.x=-200;v.z=-1000;
+  for(let i=0;i<180;i++)v.update(1/60,neutral,i/60);assert.equal(wash.length,0);
+  for(let i=0;i<600;i++)v.update(1/60,{...neutral,throttle:1},3+i/60);
+  assert(wash.length>10&&wash.length<60,type+' bounded hull wash');
+  assert(wash.some(hit=>{const xs=hit.points.map(p=>localPoint(p,hit.pose).x);return Math.min(...xs)<-.05&&Math.max(...xs)>.05;}),type+' both hull sides');
+  for(const hit of wash){assert(hit.points.length<=HULL_CONTACT_LIMIT);for(const p of hit.points)assert(onSection(localPoint(p,hit.pose),hullSections(type)[p.station])<1e-5);}
+ }
+});
 test('resting trim follows engine weight, hull length and passenger position rather than a single fixed angle',()=>{
  const trim=(type,loading={},aft=.35)=>tinnyRestTrim({type,config:VEHICLES[type],loading,passengerAft:aft});
  assert.ok(trim('dinghy').pitch>trim('tinny').pitch);assert.ok(trim('tinny').pitch>trim('angler').pitch);assert.ok(trim('skua').pitch<trim('dinghy').pitch*.5);

@@ -24,7 +24,7 @@ test('stern weight is visible at rest and the new hulls need deliberate wet womp
   for(let i=0;i<3*hz;i++)v.update(1/hz,neutral,i/hz);assert(v.pitch>.07&&Math.abs(v.roll)<.12);
   for(let i=0;i<5*hz;i++)v.update(1/hz,{...neutral,throttle:1,freestyle:true},3+i/hz);assert(v.pitch<.5);assert.equal(v.shaftLoad,0);
   for(let i=0;i<3*hz;i++)v.update(1/hz,{...neutral,throttle:1,freestyle:true,womp:true},8+i/hz);assert(v.womp.ready);assert(v.shaftLoad>.8);assert(v.hullHits>0);
-  for(let i=0;i<6*hz;i++){v.update(1/hz,{...neutral,throttle:1,freestyle:true},11+i/hz);assert(!v.wipeout);assert(!v.airborne);if(i>hz){assert(v.pitch>.75&&v.pitch<1.2);assert(minimumHullClearance(v,11+i/hz)>-.08);}}
+  let held=0,power=1;for(let i=0;i<6*hz;i++){if(i%Math.max(1,Math.round(hz/5))===0){if(v.shaft?.cue==='EASE THROTTLE')power=0;else if(v.shaft?.cue==='MORE THROTTLE'||!v.shaft?.active)power=1;}v.update(1/hz,{...neutral,throttle:power,freestyle:true},11+i/hz);assert(!v.wipeout);assert(!v.airborne);if(v.pitch>.65){held+=1/hz;assert(v.pitch<1.2);assert(minimumHullClearance(v,11+i/hz)>-.31);}}assert(held>3);
   for(let i=0;i<3*hz;i++)v.update(1/hz,{...neutral,throttle:.3},17+i/hz);assert(v.pitch<.3);assert(v.wompLoad<.01);
  }
 });

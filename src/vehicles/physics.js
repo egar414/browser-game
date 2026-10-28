@@ -39,7 +39,7 @@ export class VehiclePhysics {
       }
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
-      wompLoad:0,wompEnergy:0,wompReady:false,womp:null,bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullSplashCooldown:0,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
+      wompLoad:0,wompEnergy:0,wompReady:false,womp:null,bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullSplashCooldown:0,hullWashCooldown:0,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,shaftStrain:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
       wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     if(isTinny(this.type)){const rest=tinnyRestTrim(this);this.pitch=rest.pitch;this.roll=rest.roll;}
     this.airTricks.reset();this.previous = this.snapshot();
@@ -201,7 +201,7 @@ export class VehiclePhysics {
       const verticalReaction=clamp(this.drive.force.y/driveConfig.effectiveMass,-3,3);
       // As the bow rises, support moves toward the stern. Raise the body origin
       // around that support instead of submerging the transom a metre deep.
-      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*(isTinny(this.type)?c.length*TINNY_HANDLING.sternSupport+(c.length*.489-c.length*TINNY_HANDLING.sternSupport)*(this.shaftLoad||0)*clamp(1-Math.abs(this.steer)/.5,0,1):c.length*(handling?.sternSupport??.29))*clamp((this.pitch-.18)/.4,0,1);
+      const sternSupportLift=Math.sin(Math.max(0,this.pitch))*(isTinny(this.type)?c.length*TINNY_HANDLING.sternSupport+(c.length*.44-c.length*TINNY_HANDLING.sternSupport)*(this.shaftLoad||0)*clamp(1-Math.abs(this.steer)/.5,0,1):c.length*(handling?.sternSupport??.29))*clamp((this.pitch-.18)/.4,0,1);
       const supportError=water+sternSupportLift+sprayTurn.lift+bounce.lift-this.y;
       const followingWater=waterVelocity*sprayTurn.damping*(this.workshop?.damping||1)*(hydro.waterFollow||0);
       // Additional immersed volume supplies bounded reserve buoyancy as a crest

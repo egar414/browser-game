@@ -19,6 +19,7 @@ export function tinnyBounce(v,dt){
 export function hullContactSplash(v,dt,time){
  if(!(dt>0))return;
  v.hullSplashCooldown=Math.max(0,(v.hullSplashCooldown||0)-dt);
+ v.hullWashCooldown=Math.max(0,(v.hullWashCooldown||0)-dt);
  if(v.airborne||v.wipeout||v.type==='sled'){v.contactDepths=null;return;}
  const rows=sampleHullContacts(v,time),points=rows.flatMap(row=>row.points),impacts=new Map(),stance=Math.max(v.shaftLoad||0,v.wompLoad||0),threshold=stance>.2?.25:.70;
  v.contactCooldowns=Array.from({length:points.length},(_,i)=>Math.max(0,(v.contactCooldowns?.[i]||0)-dt));
@@ -29,7 +30,15 @@ export function hullContactSplash(v,dt,time){
   }index++;
  }
  v.contactDepths=points.map(p=>p.depth);
- if(!impacts.size||v.hullSplashCooldown)return;
+ if(!impacts.size||v.hullSplashCooldown){
+  // Moving water peels away along the whole immersed hull. At rest, and at
+  // raised dry bow sections, there is no invented ring of spray.
+  if(isTinny(v.type)&&v.speed>3&&v.throttle>.12&&!v.hullWashCooldown){
+   const contacts=hullWaterlineContacts(v,time,null,rows);
+   if(contacts.length){v.hullWashCooldown=.18;v.onEvent?.({type:'splash',contact:true,wash:true,x:v.x,y:v.y,z:v.z,impact:Math.min(1.1,v.speed*.07),time,contacts});}
+  }
+  return;
+ }
  let contacts=hullWaterlineContacts(v,time,impacts,rows);
  if(!contacts.length)contacts=rows.filter(row=>impacts.has(row.section.id)).slice(0,HULL_CONTACT_LIMIT).map(row=>{const p=row.points.reduce((a,b)=>Math.abs(a.depth)<Math.abs(b.depth)?a:b);return{...p,impact:impacts.get(row.section.id),hullContact:true,station:row.section.id};});
  if(contacts.length){const impact=contacts.reduce((a,b)=>a.impact>b.impact?a:b);v.hullHits=(v.hullHits||0)+contacts.length;v.lastHullHit={x:impact.x,y:impact.y,z:impact.z,time,count:contacts.length};v.hullSplashCooldown=.10;v.onEvent?.({type:'splash',contact:true,...impact,time,contacts});}

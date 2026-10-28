@@ -16,14 +16,18 @@ export function shaftPitch(v,input,surfacePitch,dt){
  if(!isTinny(v.type))return null;
  const entered=!v.config.wompRequired||v.wompReady||(v.shaftLoad||0)>.35;
  const wanted=entered&&input.freestyle&&!v.airborne&&!v.wipeout&&v.speed>SHAFTING.minimumSpeed&&v.throttle>.04&&Math.abs(v.steer)<.4;
+ // A held key no longer locks the bow at its balance point. Feathering the
+ // throttle clears the growing stern load before the bow drops off the shaft.
+ const effort=wanted&&(v.shaftLoad||0)>.35?Math.max(0,(v.throttle-.72)/.28):0;
+ v.shaftStrain=clamp((v.shaftStrain||0)+(effort>.01?effort*.24:-.65)*dt);
  v.shaftLoad=damp(v.shaftLoad||0,wanted?1:0,wanted?3.2:4,dt);
  // Deliberate over-trim while lifting can overpower the stable shaft stance.
- const overTrim=wanted&&v.pitch>.65&&v.throttle>.8&&input.trim>0&&v.trimDegrees>6;
+ const overTrim=wanted&&(v.pitch>.65||(v.shaftStrain||0)>.5)&&v.throttle>.8&&input.trim>0&&v.trimDegrees>6;
  v.loopLoad=clamp((v.loopLoad||0)+(overTrim?SHAFTING.loopBuildRate:-SHAFTING.loopDecay)*dt);
  if(v.shaftLoad<.01||Math.abs(v.steer)>.4)return null;
  const speedRise=clamp((v.speed-SHAFTING.minimumSpeed)/3.4),balance=SHAFTING.balancePitch+(v.throttle-SHAFTING.throttleBalance)*SHAFTING.throttleMoment+(v.speed-SHAFTING.speedTarget)*SHAFTING.speedMoment+v.trimDegrees*.004-Math.abs(v.steer)*.35;
  // Weight forward helps takeoff; the second rider then moves aft on the plane.
- return clamp(surfacePitch*.22+balance*speedRise-(1-(v.passengerAft??.35))*.08,0,SHAFTING.upperPitch)*v.shaftLoad+(v.loopLoad||0)*(SHAFTING.loopPitch-SHAFTING.upperPitch);
+ return clamp(surfacePitch*.22+balance*speedRise-(1-(v.passengerAft??.35))*.08-.50*clamp(((v.shaftStrain||0)-.5)/.5)*(1-clamp((v.loopLoad||0)/.25)),0,SHAFTING.upperPitch)*v.shaftLoad+(v.loopLoad||0)*(SHAFTING.loopPitch-SHAFTING.upperPitch);
 }
 // Prop torque and crew weight cant the raised hull onto one quarter.
 // This feeds the roll spring and water contacts, rather than tilting only the mesh.
@@ -34,7 +38,7 @@ export function shaftRoll(v){
 export function updateShaftStatus(v,dt){
  if(!isTinny(v.type))return;
  const active=!v.airborne&&!v.wipeout&&(v.shaftLoad||0)>.35&&v.pitch>.6&&Math.abs(v.steer)<.4,projected=v.pitch+(v.pitchRate||0)*.24,error=(projected-SHAFTING.balancePitch)/.24;
- const cue=(v.loopLoad||0)>.25?'LOOP RISK · RELEASE Q / TRIM UP':!active?'BUILD SPEED':v.throttle<.25?'MORE THROTTLE':'STABLE BOW RIDE';
+ const cue=(v.loopLoad||0)>.25?'LOOP RISK · RELEASE Q / TRIM UP':(v.shaftStrain||0)>.38?'EASE THROTTLE':!active?'BUILD SPEED':v.throttle<.30?'MORE THROTTLE':'STABLE BOW RIDE';
  v.shaft={active,pitch:v.pitch,error:clamp(error,-1,1),needle:clamp(.5+error*.5),cue,seconds:active&&v.pitch>SHAFTING.lowerPitch?(v.shaft?.seconds||0)+dt:0,risk:clamp((projected-SHAFTING.upperPitch)/.22),passengerAft:v.passengerAft??.35};
 }
 export function clearancePoints(v){
@@ -55,7 +59,7 @@ export function minimumHullClearance(v,time){
 export function constrainHullWater(v,time,dt=0){
  v.hullCorrection=0;if(v.airborne||v.type==='sled')return;
  const bow=clamp((v.pitch-.45)/.7),dry=isTinny(v.type)?clamp((v.pitch-.40)/.40)*(v.shaftLoad||0)*clamp(1-Math.abs(v.steer||0)/.5):0;
- const allow=hullDraftAllowance(v)*(1-dry)-(SHAFTING.hullClearance-.18*(v.bounceCompression||0))*dry;
+ const allow=hullDraftAllowance(v)*(1-dry)+(.06+.12*(v.bounceCompression||0))*dry;
  let correction=hullSupportCorrection(v,time,allow);
  if(v.type==='hyper'||v.type==='racer')for(const local of clearancePoints(v)){const p=bodyPoint(v,local);correction=Math.max(correction,waveHeight(p.x,p.z,time)-(v.type==='hyper'?.23:.27)-p.y);}
  if(correction>0){const up=hullSupportVelocity(v,time,dt);v.y+=correction;v.vy=Math.max(up,v.vy||0);v.hullCorrection=correction;raiseHullSamples(v,correction);if(v.contactDepths)v.contactDepths=v.contactDepths.map(d=>d+correction);}

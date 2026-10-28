@@ -1,7 +1,7 @@
 import{hullContactSplash}from'../vehicles/tinny-bounce.js';
 import {maxTrimSpray,MAX_TRIM_SPRAY} from '../vehicles/trim-spray.js';
 import {remoteSpray} from './network-spray.js';
-import{isJet}from'../config.js';
+import{isJet,isTinny}from'../config.js';
 import * as THREE from 'three';
 import { JetPlume } from './jet-plume.js';
 import { waveHeight } from '../config.js';
@@ -156,7 +156,7 @@ export class Spray {
   }
   update(dt,v,time,active=true,controls={}) {
     this.time=time;this.impactBudget=dt>0?6:0;
-    if(controls.remote||controls.contactEffects){const history={contactDepths:this.contactBody.contactDepths,contactCooldowns:this.contactBody.contactCooldowns,hullSplashCooldown:this.contactBody.hullSplashCooldown};Object.assign(this.contactBody,v,history,{onEvent:e=>this.splash(v,e.impact,e.contacts,time)});if(active)hullContactSplash(this.contactBody,dt,time);else this.contactBody.contactDepths=null;}
+    if(controls.remote||controls.contactEffects){const history={contactDepths:this.contactBody.contactDepths,contactCooldowns:this.contactBody.contactCooldowns,hullSplashCooldown:this.contactBody.hullSplashCooldown,hullWashCooldown:this.contactBody.hullWashCooldown};Object.assign(this.contactBody,v,history,{onEvent:e=>this.splash(v,e.impact,e.contacts,time)});if(active)hullContactSplash(this.contactBody,dt,time);else this.contactBody.contactDepths=null;}
     this.state=sprayState(v,false,time);
     const received=controls.remote?remoteSpray(v):null;
     if(received){const left=received.find(p=>p.kind==='left'),right=received.find(p=>p.kind==='right');this.state={...this.state,left:left?.power||0,right:right?.power||0,rate:((left?.power||0)+(right?.power||0))*100,contacts:[left||{x:v.x,y:v.y,z:v.z,wet:0},right||{x:v.x,y:v.y,z:v.z,wet:0}]};}
@@ -173,6 +173,7 @@ export class Spray {
         this.emit({...source,x:source.x+(Math.random()-.5)*.12,z:source.z+(Math.random()-.5)*.12,vx:source.vx+fz*lateral,vy:source.vy*(.85+Math.random()*.3),vz:source.vz-fx*lateral,lifetime:3.4,diameter:.005},i%5===0?1:0);
         const packet=this.particles[(this.next-1+this.count)%this.count];if(packet.kind===1){packet.size*=.28;packet.opacity=.38;}
       }else this.emit(launchSpray(v,this.state,side),i%3===0&&Math.max(this.state.left,this.state.right)>.8?1:0);
+      if(isTinny(v.type))this.particles[(this.next-1+this.count)%this.count].size*=1.18;
     }
     const discharge=active&&!received?pumpDischarge(v,time):null;this.stream.update(v,discharge);
     const rear=received?.find(p=>p.kind==='rear'),plume=received?(active&&rear?{origin:rear,velocity:{x:rear.vx,y:rear.vy,z:rear.vz},power:rear.power,loaded:v.riderAft||0,packetScale:(v.type==='hyper'?1.35:.85)*(1+maxTrimSpray(v)*(MAX_TRIM_SPRAY.packetScale-1))}:null):jetPlumeSource(v,discharge,time,this.state);

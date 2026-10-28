@@ -28,7 +28,21 @@ contact cooldowns and a 0.1 s global interval. Contact plume bursts use at most
 5% of their existing pool, capped at 96 packets. Airborne/recovered craft reset
 contact history to avoid stale splashes. Remote and local NPC visuals infer
 contacts from their rendered poses without a new network payload or SQL change.
-The shared spray visual scale increases from 2.0 to 2.2 without larger pools.
+The shared spray visual scale is 3.125; the restored jet-ski rear plume retains
+its previous 2.5 appearance. Tinny droplets and hull-contact packets are a
+further 18% larger, and their hull-normal launch spread is 25% wider. Pools,
+packet caps, gravity and the near-camera coverage limit remain bounded.
+
+Moving tinnies also peel water from all currently wetted hull intersections at
+most once every 0.18 s. Dry bow sections and stationary hulls do not emit this
+wash. It uses the contact pool, with no repeating impact sound or extra impact
+counter. Receivers infer the same wash from the received pose, without SQL.
+
+Shafting allows shallow lower-hull immersion while preserving open-gunwale
+freeboard. Sustained throttle above 72% builds strain over several seconds;
+feathering clears it. The meter says EASE THROTTLE before the bow falls off the
+balance point. Intentional trim-up loops remain available. Recovery resets
+strain and wash cooldowns; Thundercat and jet-ski balance are unchanged.
 
 Validation includes load/crew effects, all-fleet wave support, actual hull-bound
 spray origins, stern-only shaft impacts, first-contact landings, outward ballistic
