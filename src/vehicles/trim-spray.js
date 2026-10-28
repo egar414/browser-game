@@ -3,6 +3,12 @@ import {isJet,jetTrimPositions} from '../config.js';
 // This reduces hull yaw, not the hydraulic jet reaction or airborne controls.
 export const MAX_TRIM_SPRAY={yawScale:.38,yawDamping:.65,extraSweep:.09,maximumSweep:.56,
  lift:6.5,maximumLift:18,reachScale:1.12,packetScale:1.22};
+// Visual fan opens progressively as the real nozzle trims up. Local and
+// received craft use this same rule; steering assistance stays at max trim.
+export function trimSprayFan(v){
+ if(!isJet(v.type)||v.airborne||v.wipeout)return 0;
+ return Math.max(0,Math.min(1,(v.drive?.trimAngle||0)/.33));
+}
 export function maxTrimSpray(v){
  if(!isJet(v.type)||v.airborne||v.wipeout)return 0;
  const top=jetTrimPositions(v.type).at(-1);

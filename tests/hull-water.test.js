@@ -19,5 +19,5 @@ test('water exclusion covers the entire boat fleet with finite, closed, outward-
 });
 test('catamarans retain an unmasked gap, and the shared spray visual scale grows',()=>{
  for(const type of ['cat','racer']){assert.equal(HULL_WATER_PROFILES[type].length,2);for(const profile of HULL_WATER_PROFILES[type]){const xs=profile(.5).map(v=>v[0]);assert.ok(Math.max(...xs)<0||Math.min(...xs)>0);}}
- assert.equal(SPRAY_VISUAL_SCALE,2.5);
+ assert.equal(SPRAY_VISUAL_SCALE,3.125);
 });

@@ -1,6 +1,6 @@
 import {maxTrimSpray,MAX_TRIM_SPRAY} from '../vehicles/trim-spray.js';
 import {isTinny} from '../config.js';
-export const SPRAY_VISUAL_SCALE=2.5;
+export const SPRAY_VISUAL_SCALE=3.125;
 import{isJet}from'../config.js';
 import { waveHeight } from '../config.js';
 import { bodyPoint, bodyVector, propulsionPose, hullImmersion } from '../vehicles/propulsion.js';

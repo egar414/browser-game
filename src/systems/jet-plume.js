@@ -72,9 +72,12 @@ export class JetPlume {
       for(let i=0;i<count;i++){
         const fraction=(i+.5)/count,age=dt*(1-fraction),a=previous?.source||source,originIndex=this.next%(source.origins?.length||1),origin=source.origins?.[originIndex]||source.origin,oldOrigin=a.origins?.[originIndex]||a.origin;
         const mix=(x,y)=>x+(y-x)*fraction,p=this.packets[this.next++%this.packets.length],seed=Math.random(),fine=seed<JET_PLUME.fineFraction,loaded=source.loaded||0;
+        // A continuous fan leaves one nozzle, widening into a V in world space.
+        // Keep the middle filled and retain gravity instead of two rigid hoses.
+        const fan=clamp(source.trimFan||0),offset=(Math.random()*2-1)*(3+source.power*12)*.46*fan,heading=source.fanHeading||0;
         Object.assign(p,{active:true,birth:time-age,x:mix(oldOrigin.x,origin.x)+(Math.random()-.5)*.1,y:mix(oldOrigin.y,origin.y),z:mix(oldOrigin.z,origin.z)+(Math.random()-.5)*.1,
-          vx:mix(a.velocity.x,source.velocity.x)+(Math.random()-.5)*(1.8+loaded*2),vy:mix(a.velocity.y,source.velocity.y)*(.9+Math.random()*.2),vz:mix(a.velocity.z,source.velocity.z)+(Math.random()-.5)*(1.8+loaded*2),
-          lifetime:JET_PLUME.lifetime,drag:fine?.8:JET_PLUME.drag,seed,fine,power:source.power,size:.17+Math.random()*.12,loaded,packetScale:source.packetScale||1});
+          vx:mix(a.velocity.x,source.velocity.x)+Math.cos(heading)*offset+(Math.random()-.5)*(1.8+loaded*2),vy:mix(a.velocity.y,source.velocity.y)*(.9+Math.random()*.2),vz:mix(a.velocity.z,source.velocity.z)-Math.sin(heading)*offset+(Math.random()-.5)*(1.8+loaded*2),
+          lifetime:JET_PLUME.lifetime,drag:fine?.8:JET_PLUME.drag,seed,fine,power:source.power,size:.17+Math.random()*.12,loaded,packetScale:(source.packetScale||1)*(1+fan*.4)});
       }
     }
     if(dt>0){this.history.unshift({time,source});if(this.history.length>2)this.history.pop();}
