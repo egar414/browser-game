@@ -56,11 +56,11 @@ export class JetPlume {
     for(let i=0;i<count;i++){
       const point=points[i%points.length],sideOffset=(point.x-v.x)*fz-(point.z-v.z)*fx,side=Math.abs(sideOffset)>.04?Math.sign(sideOffset):(Math.random()<.5?-1:1);
       const normalLength=Math.hypot(point.nx||0,point.nz||0),nx=normalLength>.001?point.nx/normalLength:fz*side,nz=normalLength>.001?point.nz/normalLength:-fx*side;
-      const outward=(3+energy*2.4)*1.12*(isTinny(v.type)?1.25:1)*(.7+Math.random()*.6),aft=1.5+energy*.8,seed=Math.random(),fine=seed<JET_PLUME.fineFraction;
+      const washScale=point.sprayScale??1,outward=(3+energy*2.4)*1.12*(isTinny(v.type)?1.25:1)*washScale*(.7+Math.random()*.6),aft=1.5+energy*.8,seed=Math.random(),fine=seed<JET_PLUME.fineFraction;
       const p=this.packets[this.next++%this.packets.length];
       Object.assign(p,{active:true,birth:time,lifetime:2.6,x:point.x,y:Math.max(waveHeight(point.x,point.z,time)+.025,Number.isFinite(point.y)?point.y:waveHeight(point.x,point.z,time)+.055),z:point.z,
-        vx:(v.vx||0)*.45+nx*outward-fx*aft,vy:(2.5+energy*1.7)*1.12*(.8+Math.random()*.35),vz:(v.vz||0)*.45+nz*outward-fz*aft,
-        drag:fine?.8:.46,seed,fine,power:.85+clamp(impact/8)*.4,size:compact?.12+Math.random()*.10:.24+Math.random()*.13,loaded:compact?.15:.5,packetScale:(compact?.9:1)*(isTinny(v.type)?1.18:1),visualScale:1,contact:compact});
+        vx:(v.vx||0)*.45+nx*outward-fx*aft,vy:(2.5+energy*1.7)*1.12*washScale*(.8+Math.random()*.35),vz:(v.vz||0)*.45+nz*outward-fz*aft,
+        drag:fine?.8:.46,seed,fine,power:.85+clamp(impact/8)*.4,size:compact?.12+Math.random()*.10:.24+Math.random()*.13,loaded:compact?.15:.5,packetScale:(compact?.9:1)*(isTinny(v.type)?1.18:1)*washScale,visualScale:1,contact:compact});
     }
   }
   update(dt,source,time){

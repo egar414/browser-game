@@ -34,7 +34,8 @@ export function hullContactSplash(v,dt,time){
   // Moving water peels away along the whole immersed hull. At rest, and at
   // raised dry bow sections, there is no invented ring of spray.
   if(isTinny(v.type)&&v.speed>3&&v.throttle>.12&&!v.hullWashCooldown){
-   const contacts=hullWaterlineContacts(v,time,null,rows);
+   const cruising=stance<.2&&Math.abs(v.steer||0)<.25&&Math.abs(v.yawRate||0)<.3;
+   const contacts=hullWaterlineContacts(v,time,null,rows).map(p=>({...p,sprayScale:cruising?.85:1}));
    if(contacts.length){v.hullWashCooldown=.18;v.onEvent?.({type:'splash',contact:true,wash:true,x:v.x,y:v.y,z:v.z,impact:Math.min(1.1,v.speed*.07),time,contacts});}
   }
   return;

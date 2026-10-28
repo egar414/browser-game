@@ -151,7 +151,7 @@ export class Spray {
   splash(v,impact,contacts=null,emissionTime=this.time) {
     this.plume.burst(contacts?.length?contacts:[v],v,impact,emissionTime);
     const count=contacts?.length?Math.max(contacts.length,Math.min(this.count*.25,contacts.length*3)):Math.min(this.count*.4,40+impact*13);
-    for(let i=0;i<count;i++){const point=contacts?.[i%contacts.length]||v,angle=Math.random()*Math.PI*2,s=2+Math.random()*impact*.65;this.emit({x:point.x,y:Math.max(waveHeight(point.x,point.z,this.time)+.025,Number.isFinite(point.y)?point.y:waveHeight(point.x,point.z,this.time)+.1),z:point.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:1.5+Math.random()*impact*.5,vz:Math.cos(angle)*s+(v.vz||0)*.2},!contacts&&i%8===0?1:0);}
+    for(let i=0;i<count;i++){const point=contacts?.[i%contacts.length]||v,scale=point.sprayScale??1,angle=Math.random()*Math.PI*2,s=(2+Math.random()*impact*.65)*scale;this.emit({x:point.x,y:Math.max(waveHeight(point.x,point.z,this.time)+.025,Number.isFinite(point.y)?point.y:waveHeight(point.x,point.z,this.time)+.1),z:point.z,vx:Math.sin(angle)*s+(v.vx||0)*.2,vy:(1.5+Math.random()*impact*.5)*scale,vz:Math.cos(angle)*s+(v.vz||0)*.2},!contacts&&i%8===0?1:0);this.particles[(this.next-1+this.count)%this.count].size*=scale;}
     for(const point of contacts||[v])this.wake.splash(point,impact,this.time);
   }
   update(dt,v,time,active=true,controls={}) {
