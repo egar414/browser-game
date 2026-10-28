@@ -35,7 +35,7 @@ export class JetPlume {
       float aa=max(fwidth(drop),.025);float beads=1.-smoothstep(.095,.095+aa,drop);
       float filament=smoothstep(.44,.66,detail*.6+n*.4);
       float resolved=1.-smoothstep(.55,1.2,max(length(dFdx(cells)),length(dFdy(cells))));
-      float core=mix(.25+n*.24,.10+filament*.34+beads*.72,resolved);
+      float core=mix(.29+n*.28,.14+filament*.44+beads*.72,resolved);
       float density=vSeed<${JET_PLUME.fineFraction}?(.08+n*.22+detail*.14):core;
       float alpha=min(.94,vAlpha*edge*density)*smoothstep(.9,3.2,vDistance);
       if(alpha<.004)discard;
@@ -86,7 +86,9 @@ export class JetPlume {
       }
       if(q.vy<0)this.falling++;
       const size=SPRAY_VISUAL_SCALE*(p.packetScale||1)*Math.min(p.fine?JET_PLUME.mistRadius:JET_PLUME.coreRadius,p.size+age*(p.contact?.20:p.fine?1.2:JET_PLUME.coreGrowth)*(1+p.loaded*.3)),fade=clamp(age/.025)*clamp((lifetime-age)/.3);
-      aCenter.setXYZ(n,q.x,q.y,q.z);aSize.setXY(n,p.seed>JET_PLUME.streakThreshold?.028+age*.02:size*(p.fine?2.8:2.05),p.seed>JET_PLUME.streakThreshold?.16+Math.abs(q.vy)*.03:size*(p.fine?2.3:2.65));
+      // Broader water packets fill the fan without adding particles. Retain a
+      // few motion streaks, but give those visible width rather than hairlines.
+      aCenter.setXYZ(n,q.x,q.y,q.z);aSize.setXY(n,p.seed>JET_PLUME.streakThreshold?SPRAY_VISUAL_SCALE*(.045+age*.032):size*(p.fine?2.8:2.65),p.seed>JET_PLUME.streakThreshold?.16+Math.abs(q.vy)*.03:size*(p.fine?2.3:2.65));
       aAlpha.setX(n,fade*p.power*(p.contact?.5:1)*(p.seed>JET_PLUME.streakThreshold?.9:p.fine?JET_PLUME.mistOpacity:JET_PLUME.coreOpacity)*clamp((q.y-water+.14)/.18));aSeed.setX(n,p.seed);aVelocity.setXYZ(n,q.vx,q.vy,q.vz);n++;
     }
     this.geometry.instanceCount=n;this.mesh.visible=n>0;
