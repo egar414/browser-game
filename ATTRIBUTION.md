@@ -6,6 +6,11 @@ to the game's crew and waterline, with the existing original 25 hp outboard.
 Its source hash, mesh budgets and conversion procedure are recorded in
 `docs/uploaded-225-tender.md` and `src/assets/tender225-mesh.json`.
 
+The Seago body is adapted from the project owner's uploaded
+`single_color_261030124659_AOMZ.stl` (30 October 2026), with a reshaped pointed
+bow and original animated steering/pump hardware. Provenance and conversion
+details are in `docs/uploaded-seago.md` and `src/assets/seago-mesh.json`.
+
 Other watercraft, riders, procedural building meshes, trees, ramps, UI graphics,
 textures and sounds are original procedural work created for the game, except
 for separately credited assets below. No manufacturer texture is used on the

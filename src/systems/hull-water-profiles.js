@@ -1,5 +1,6 @@
 import {marineProfile,marineStation} from '../vehicles/marine-hull.js';
 import {uploadedTenderProfile} from '../vehicles/uploaded-tender.js';
+import {uploadedSeagoProfile} from '../vehicles/uploaded-seago.js';
 import {VEHICLES} from '../config.js';
 import {anglerSurface,WASP_SCALE} from '../vehicles/angler-hull.js';
 import {sportfisherZ} from '../vehicles/sportfisher-shape.js';
@@ -30,7 +31,7 @@ export const HULL_WATER_PROFILES={
  skua:[chine(tender,{sx:VEHICLES.skua.width/1.22,sz:VEHICLES.skua.length/2.25,ratio:.76,rise:.06})],
  angler:[t=>{const ring=[-1,-.81,-.62,0,.62,.81,1].map(s=>anglerSurface(t,s).multiplyScalar(WASP_SCALE).toArray());ring.push([0,ring[0][1],ring[0][2]]);return ring;}],
  ski:[chine(spark,{ratio:.92,rise:.17,smooth:false})],
- seago:[chine([[-1.82,.4,.14,-.23],[-1.55,.58,.25,-.36],[-.8,.66,.32,-.4],[.3,.66,.43,-.34],[1.05,.55,.43,-.24],[1.6,.27,.33,-.10],[1.85,.01,.24,.02]])],
+ seago:[uploadedSeagoProfile],
  hyper:[chine([[-1.79,.43,.16,-.22],[-1.55,.6,.25,-.34],[-.8,.65,.3,-.38],[.32,.64,.36,-.34],[1.02,.52,.39,-.23],[1.6,.27,.29,-.08],[1.83,.008,.18,.02]],{rise:.03})],
  cat:[tube(pontoons,-.73),tube(pontoons,.73)],
  racer:[chine(racing,{x:-1.45,ratio:.66,rise:0}),chine(racing,{x:1.45,ratio:.66,rise:0})],
