@@ -4,7 +4,7 @@ import {VEHICLES} from '../config.js';
 export const TENDER_CREW={boardingDistance:8,boardingSpeed:2,exitSpeed:3,teleportDistance:150};
 export function crewToken(id){let h=0;for(const ch of String(id||''))h=(Math.imul(h,31)+ch.charCodeAt(0))>>>0;return 2000+h%12000;}
 export const isTenderPassenger=p=>p?.type==='tinny'&&p.deck===true&&p.deckX===-2&&p.deckZ===7&&p.trim===40;
-export const tenderDriver=p=>p?.type==='tinny'&&p.active&&!isTenderPassenger(p);
+export const tenderDriver=p=>p?.type==='tinny'&&p.active&&!isTenderPassenger(p)&&Math.abs(p.roll||0)<1.05&&Math.abs(p.pitch||0)<1.55;
 export function crewPassengers(players,driver){
  if(!players.some(p=>p.id===driver&&tenderDriver(p.pose)))return [];
  if(players.filter(p=>tenderDriver(p.pose)&&crewToken(p.id)===crewToken(driver)).length!==1)return [];

@@ -20,7 +20,7 @@ export function hullContactSplash(v,dt,time){
  if(!(dt>0))return;
  v.hullSplashCooldown=Math.max(0,(v.hullSplashCooldown||0)-dt);
  v.hullWashCooldown=Math.max(0,(v.hullWashCooldown||0)-dt);
- if(v.airborne||v.wipeout||v.type==='sled'){v.contactDepths=null;return;}
+ if(v.airborne||v.wipeout||v.type==='sled'||isTinny(v.type)&&(v.shaftLoad||0)>.8&&v.pitch>.8){v.contactDepths=null;return;}
  const rows=sampleHullContacts(v,time),points=rows.flatMap(row=>row.points),impacts=new Map(),stance=Math.max(v.shaftLoad||0,v.wompLoad||0),threshold=stance>.2?.25:.70;
  v.contactCooldowns=Array.from({length:points.length},(_,i)=>Math.max(0,(v.contactCooldowns?.[i]||0)-dt));
  let index=0;

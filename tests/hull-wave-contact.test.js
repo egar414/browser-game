@@ -43,10 +43,10 @@ test('ordinary straight driving produces wave-impact spray on the hull without a
   for(const hit of hits){assert.ok(hit.points.length<=HULL_CONTACT_LIMIT);for(const p of hit.points){assert.ok(onSection(localPoint(p,hit.pose),hullSections(type)[p.station])<1e-5,type+' source belongs to the hull');assert.ok(p.impact>.25&&p.impact<=4);}}
  }
 });
-test('shaft impacts come from wet stern sections rather than the raised bow',()=>{
- setSeaState('calm',0,true);const hits=[],v=new VehiclePhysics('tinny',()=>null,e=>{if(e.contact&&v.pitch>.8)hits.push({points:e.contacts,pose:v.snapshot()});});v.x=-200;v.z=-1000;v.heading=0;
- for(let i=0;i<900;i++)v.update(1/60,{...neutral,throttle:1,freestyle:true},i/60);
- assert.ok(hits.length>3);for(const hit of hits)for(const p of hit.points)assert.ok(localPoint(p,hit.pose).z<-.3,'raised forward hull emits no impact water');
+test('high shafts keep the hull dry and emit no invented hull-contact water',()=>{
+ setSeaState('calm',0,true);const hits=[],v=new VehiclePhysics('tinny',()=>null,e=>{if(e.contact&&v.pitch>.82)hits.push(e);});v.x=-200;v.z=-1000;let power=1,count=0;
+ for(let i=0;i<900;i++){if(i%12===0){if(v.shaft?.cue==='EASE THROTTLE')power=0;else if(v.shaft?.cue==='MORE THROTTLE'||!v.shaft?.active)power=1;}v.update(1/60,{...neutral,throttle:power,freestyle:true},i/60);if(v.pitch>.82){count++;assert(lowestHullDepth(v,i/60)>.05);}}
+ assert(count>500);assert.equal(hits.length,0);
 });
 test('airborne boats land when the hull touches, before their body origin sinks into the surface',()=>{
  setSeaState('calm',0,true);const events=[],v=new VehiclePhysics('tinny',()=>null,e=>events.push(e));v.x=-200;v.z=-1000;v.y=waveHeight(v.x,v.z,0)+1;v.vy=-3;v.pitch=v.roll=0;v.airborne=true;v.airTime=.5;

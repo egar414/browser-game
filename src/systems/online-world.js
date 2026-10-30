@@ -1,3 +1,5 @@
+import {CapsizeView} from './capsize-view.js';
+import {capsizedPose} from '../vehicles/capsize.js';
 import{constrainHullWater}from'../vehicles/shafting.js';
 import{decodeTow,towDriver}from'./tow-protocol.js';
 import{makeTowActor,animateTowActor,TowLine}from'./tow-view.js';
@@ -33,7 +35,7 @@ function placeNameplate(plate,name,creator,anchor,camera){
 
 export class OnlineWorld{
  constructor(scene,client){this.scene=scene;this.client=client;this.models=new Map();this.localPlate=nameplate();this.localPlate.label.id='local-player-name';}
- remove(id){const entry=this.models.get(id);if(!entry)return;entry.towLine?.dispose();entry.spray?.dispose();entry.boardSpray?.dispose();entry.effects?.removeFromParent();this.scene.remove(entry.model);entry.label.remove();
+ remove(id){const entry=this.models.get(id);if(!entry)return;entry.towLine?.dispose();entry.spray?.dispose();entry.boardSpray?.dispose();entry.capsizeView?.dispose();entry.effects?.removeFromParent();this.scene.remove(entry.model);entry.label.remove();
   // Several craft share source geometry/materials. Removing an online craft must
   // never dispose resources still used by the local player or AI boats.
   for(const resource of entry.resources)resource.dispose();this.models.delete(id);
@@ -65,14 +67,14 @@ export class OnlineWorld{
    const {model,label}=entry;
    if(passenger){const record=states.players.get(driver.id),pose=driver.id===this.client.session?.user.id?localView.craft:record?states.sample(record,now):driver.pose;if(!pose){model.visible=false;label.hidden=true;continue;}model.visible=!!p.active;model.position.set(pose.x,pose.y,pose.z);model.rotation.set(-pose.pitch,pose.heading,pose.roll,'YXZ');animateCrewActor(model,pose,dt);const seat=tenderSeatPoint(pose);if(Math.hypot(seat.x-viewer.x,seat.z-viewer.z)<220)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(seat.x,seat.y+1.3,seat.z),camera);else label.hidden=true;continue;}
    const distance=Math.hypot(p.x-viewer.x,p.z-viewer.z);model.visible=!!p.active&&distance<1000;
-   label.hidden=!model.visible||distance>220;if(!model.visible){if(entry.towLine)entry.towLine.group.visible=false;if(entry.boardSpray){entry.boardSpray.clear();entry.boardSpray.points.visible=false;}if(entry.spray){entry.spray.dispose();entry.spray=null;}continue;}
+   label.hidden=!model.visible||distance>220;if(!model.visible){if(entry.capsizeView)entry.capsizeView.group.visible=false;if(entry.towLine)entry.towLine.group.visible=false;if(entry.boardSpray){entry.boardSpray.clear();entry.boardSpray.points.visible=false;}if(entry.spray){entry.spray.dispose();entry.spray=null;}continue;}
    if(entry.previousPosition&&Math.hypot(p.x-entry.previousPosition.x,p.z-entry.previousPosition.z)>90)entry.spray?.clear();entry.previousPosition={x:p.x,z:p.z};
    const sink=Math.max(0,(r.combat?.sinking||0)-Math.max(0,(now-(r.combatAt??now))/1000));model.position.set(p.x,p.y-(sink?onlineSinkDrop(p.type,sink):0),p.z);model.rotation.set(-p.pitch,p.heading,p.roll,'YXZ');
    if(tow){const record=states.players.get(towBoat.id),driverPose=towBoat.id===this.client.session?.user.id?localView.craft:record?states.sample(record,now):towBoat.pose;if(!entry.towLine)entry.towLine=new TowLine(entry.effects);entry.towLine.update(tow,driverPose,localView.time||now/1000);animateTowActor(model,tow,localView.time||now/1000);if(!entry.boardSpray)entry.boardSpray=new BoardSpray(entry.effects,120);entry.boardSpray.update(localView.playing?dt:0,tow,localView.time||now/1000,camera);if(!label.hidden)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(p.x,p.y+2.1,p.z),camera);continue;}
    if(surf){if(['ride','paddle','wipeout'].includes(surf.mode)&&distance<160){if(!entry.boardSpray)entry.boardSpray=new BoardSpray(entry.effects,120);entry.boardSpray.update(localView.playing?dt:0,surf,localView.time||now/1000,camera);}else if(entry.boardSpray){entry.boardSpray.dispose();entry.boardSpray=null;}if(surf.mode==='ski'&&distance<240){if(!entry.spray)entry.spray=new Spray(entry.effects,{...QUALITY.Low,particles:160,wakeSamples:45,plumeCapacity:400});entry.spray.update(dt,{...p,config:VEHICLES.ski,drive:{rpm:p.rpm,wetness:1,neutral:false,flow:1,trimAngle:p.trimAngle,steeringAngle:p.steeringAngle}},this.effectTime,p.active&&!sink,{remote:true});entry.spray.resize(innerHeight,camera.fov,1);}animateSurfActor(model,surf,localView.time||now/1000);if(!label.hidden)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(p.x,p.y+2.1,p.z),camera);continue;}
    if(model.userData.handlebars)model.userData.handlebars.rotation.y=-p.steer*.43;
    for(const part of [model.userData.motor,model.userData.nozzle])if(part)part.rotation.set(p.trimAngle,-p.steeringAngle,0,'YXZ');
-   const v={...p,config:VEHICLES[p.type],slip:p.vx*Math.cos(p.heading)-p.vz*Math.sin(p.heading),yawRate:p.steer*.8,trimDegrees:p.trim,animationTime:now/1000,drive:{rpm:p.rpm,neutral:p.throttle<.08,flow:(isJet(p.type)?.16:1.2)*Math.max(0,p.throttle),exitSpeed:isJet(p.type)?24:8,wetness:1,reverse:p.throttle<0?1:0,trimAngle:p.trimAngle,steeringAngle:p.steeringAngle},airTricks:{pose:p.pose,blend:p.pose?1:0}};
+   const v={...p,capsized:capsizedPose(p),wipeout:capsizedPose(p)?1:0,config:VEHICLES[p.type],slip:p.vx*Math.cos(p.heading)-p.vz*Math.sin(p.heading),yawRate:p.steer*.8,trimDegrees:p.trim,animationTime:now/1000,drive:{rpm:p.rpm,neutral:p.throttle<.08,flow:(isJet(p.type)?.16:1.2)*Math.max(0,p.throttle),exitSpeed:isJet(p.type)?24:8,wetness:1,reverse:p.throttle<0?1:0,trimAngle:p.trimAngle,steeringAngle:p.steeringAngle},airTricks:{pose:p.pose,blend:p.pose?1:0}};
    if(!sink){constrainHullWater(v,localView.time??this.effectTime);model.position.y=v.y;}
    // Legacy backends strip source arrays. Reconstruct a visual-only fallback
    // until the owner installs the exact-source/shared-hit SQL update.
@@ -82,8 +84,9 @@ export class OnlineWorld{
    if(p.type==='cruiser'){rider.position.set(p.deck?p.deckX:0,p.deck?1.02:3.25,p.deck?p.deckZ:-.25);rider.rotation.y=p.deck?p.deckHeading:0;rider.userData.animate(now/1000,0,false,!p.deck);}
    else rider?.userData.update?.(v,dt,model.userData);
    model.userData.passenger?.userData.update(v,dt);if(model.userData.passenger)model.userData.passenger.visible=localView.crewDriverId!==id&&!crewPassengers(this.client.room?.players||[],id).length;
+   if(capsizedPose(v)||entry.capsizeView){if(!entry.capsizeView)entry.capsizeView=new CapsizeView(entry.effects);entry.capsizeView.update(model,v,localView.playing?dt:0,localView.time??this.effectTime);}
    for(const prop of [model.userData.propeller,...(model.userData.propellers||[])])if(prop)prop.rotation.z+=p.rpm/60*Math.PI*2*dt;
-   if(!label.hidden)placeNameplate(entry,r.name,r.creator,new THREE.Vector3(p.x,p.y+(p.type==='cruiser'?6:3),p.z),camera);
+   if(!label.hidden)placeNameplate(entry,r.name,r.creator,v.capsized&&entry.capsizeView?.actor?entry.capsizeView.actor.position.clone().add(new THREE.Vector3(0,.8,0)):new THREE.Vector3(p.x,p.y+(p.type==='cruiser'?6:3),p.z),camera);
   }
  }
 }

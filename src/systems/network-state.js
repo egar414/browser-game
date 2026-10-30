@@ -54,6 +54,7 @@ export class RemoteStates{
   if(isTowPose(b)){p.deck=true;p.deckX=-2;p.deckZ=8;p.trim=40;p.rpm=b.rpm;}
   if(isSledPose(b)){p.deckX=-1;p.deckZ=8;p.trim=40;p.deck=true;}
   p.heading=a.heading+wrapAngle(b.heading-a.heading)*t;
+  p.pitch=a.pitch+wrapAngle(b.pitch-a.pitch)*t;
   if(target>b.time&&b.active){const seconds=Math.min(.25,(target-b.time)/1000);p.x+=b.vx*seconds;p.z+=b.vz*seconds;}
   return p;
  }

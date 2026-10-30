@@ -38,11 +38,12 @@ most once every 0.18 s. Dry bow sections and stationary hulls do not emit this
 wash. It uses the contact pool, with no repeating impact sound or extra impact
 counter. Receivers infer the same wash from the received pose, without SQL.
 
-Shafting allows shallow lower-hull immersion while preserving open-gunwale
-freeboard. Sustained throttle above 72% builds strain over several seconds;
+Established shafting keeps the hull above the water while the outboard remains
+immersed. Sustained throttle above 72% builds strain over several seconds;
 feathering clears it. The meter says EASE THROTTLE before the bow falls off the
 balance point. Intentional trim-up loops remain available. Recovery resets
-strain and wash cooldowns; Thundercat and jet-ski balance are unchanged.
+strain and wash cooldowns. Extreme spray-turn capsize and manual righting are
+documented in `capsize-and-righting.md`.
 
 Validation includes load/crew effects, all-fleet wave support, actual hull-bound
 spray origins, stern-only shaft impacts, first-contact landings, outward ballistic

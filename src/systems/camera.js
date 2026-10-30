@@ -14,6 +14,12 @@ export class ChaseCamera {
     const fast=v.type==='racer'||v.type==='hyper',apex=v.type==='hyper',sled=v.type==='sled';
     const rearView=!menu&&!!input.held?.('KeyU');
     if(rearView!==!!this.rearView){this.initialized=false;this.rearView=rearView;}
+    if(v.capsized&&!menu){
+      const e=v.ejection||v,spread=Math.hypot(e.x-v.x,e.z-v.z),heading=v.heading+(input.orbit||0),distance=THREE.MathUtils.clamp(7+spread*.55,9,17),height=4+spread*.08;
+      const look=new THREE.Vector3((v.x+e.x)/2,Math.max(v.y,e.y)+.25,(v.z+e.z)/2),target=look.clone().add(new THREE.Vector3(-Math.sin(heading)*distance+Math.cos(heading)*2,height,-Math.cos(heading)*distance-Math.sin(heading)*2));
+      for(let t=.2;t<=1;t+=.2)if(collision(look.x+(target.x-look.x)*t,look.z+(target.z-look.z)*t,.5,target.y))target.y=Math.max(target.y,12);
+      if(!this.initialized){this.camera.position.copy(target);this.look.copy(look);this.initialized=true;}this.camera.position.lerp(target,1-Math.exp(-dt*5));this.look.lerp(look,1-Math.exp(-dt*6));this.camera.lookAt(this.look);this.camera.fov=74;this.camera.updateProjectionMatrix();return;
+    }
     if(!input.dragging)input.orbit*=Math.exp(-dt*.9);
     if(mode===2&&!menu){
       if(isJet(v.type)&&!aim){

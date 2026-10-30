@@ -1,4 +1,5 @@
 import{updateSled,resetSled,sledStart}from'./sled-physics.js';
+import{beginCapsize,checkSprayCapsize,updateCapsize}from'./capsize.js';
 import{assistedYaw}from'./steering-assist.js';
 import {maxTrimSpray,MAX_TRIM_SPRAY} from './trim-spray.js';
 import {updateWomp} from './womping.js';
@@ -40,7 +41,7 @@ export class VehiclePhysics {
     }
     Object.assign(this, { x: this.safe.x, z: this.safe.z, heading: this.safe.heading, vx: 0, vz: 0, vy: 0, y: 0.2,
       wompLoad:0,wompEnergy:0,wompReady:false,womp:null,bounceLoad:0,bouncePhase:0,bounceCompression:0,contactDepths:null,contactCooldowns:null,hullSplashCooldown:0,hullWashCooldown:0,hullHits:0,lastHullHit:null,passengerAft:.35,shaftLoad:0,shaftStrain:0,loopLoad:0,looping:false,shaft:null,hullCorrection:0,supportWater:null,pitch: 0, roll: 0, pitchRate:0,rollRate:0,sprayTurnLoad:0,sprayTurnPhase:0,planing:0,wettedFraction:1,surgeAcceleration:0,lateralAcceleration:0,riderAft:0,trimHeld:0,trimRepeat:0,yawRate: 0, throttle: 0, steer: 0, airborne: false, airTime: 0, spin: 0,
-      wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
+      capsized:false,capsizeAge:0,capsizeRisk:0,sprayEntrySpeed:0,rightProgress:0,ejection:null,wipeout: 0, wheelieTime: 0, donut: 0, driftTime: 0, trickCooldown: 0, speed: 0, slip: 0, boundary: false });
     if(isTinny(this.type)){const rest=tinnyRestTrim(this);this.pitch=rest.pitch;this.roll=rest.roll;}
     this.airTricks.reset();this.previous = this.snapshot();
     this.propulsion.reset();this.drive=this.propulsion.state;if(this.type==='sled')resetSled(this);
@@ -70,6 +71,7 @@ export class VehiclePhysics {
   }
   wipe(reason) {
     if (this.wipeout) return;
+    if(reason==='Looped the tinny'){beginCapsize(this,reason);return;}
     this.wipeoutReason=reason;
     this.looping=isTinny(this.type)&&reason==='Looped the tinny';this.airTricks.reset();this.shaftLoad=0;if(this.shaft)this.shaft={...this.shaft,active:false,cue:'WIPEOUT',seconds:0};this.wipeout = 1.6; this.vx *= 0.15; this.vz *= 0.15; this.onEvent({ type: 'wipeout', label: reason });
   }
@@ -78,6 +80,7 @@ export class VehiclePhysics {
     if(this.type==='racer')return updateRacer(this,dt,input,time);
     if(this.config.diveBoat||this.type==='cruiser')return updateCruiser(this,dt,input,time);
     this.previous = this.snapshot();
+    if(this.capsized){updateCapsize(this,dt,input,time);return;}
     if (this.wipeout > 0) { if(this.looping){this.pitch+=SHAFTING.loopRate*dt;this.y=waveHeight(this.x,this.z,time)+.65;this.roll*=Math.exp(-3*dt);} this.wipeout -= dt; if (this.wipeout <= 0) this.recover(true); return; }
     const c = this.config;
     const mode=RIDE_MODES[this.rideMode],driveConfig=PROPULSION[this.type],hydro=HYDRODYNAMICS[this.type];
@@ -105,6 +108,7 @@ export class VehiclePhysics {
     this.drive=this.propulsion.update(dt,this,input,time);
     updateWomp(this,input,dt);
     const sprayTurn=tenderTurn(this,input,dt),bounce=tinnyBounce(this,dt);
+    if(checkSprayCapsize(this,input,dt))return;
     if (!this.airborne) {
       let forceX=this.drive.force.x,forceZ=this.drive.force.z;
       const forwardForce=forceX*fx+forceZ*fz;

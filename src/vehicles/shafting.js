@@ -59,9 +59,9 @@ export function minimumHullClearance(v,time){
 // A water-contact constraint in physics, shared with visible wave sampling.
 // High bow rides pivot around the transom, leaving the propeller immersed.
 export function constrainHullWater(v,time,dt=0){
- v.hullCorrection=0;if(v.airborne||v.type==='sled')return;
- const bow=clamp((v.pitch-.45)/.7),dry=isTinny(v.type)?clamp((v.pitch-.40)/.40)*(v.shaftLoad||0)*clamp(1-Math.abs(v.steer||0)/.5):0;
- const allow=hullDraftAllowance(v)*(1-dry)+(.06+.12*(v.bounceCompression||0))*dry;
+ v.hullCorrection=0;if(v.airborne||v.capsized||v.type==='sled'||Math.abs(v.roll||0)>1.05)return;
+ const bow=clamp((v.pitch-.45)/.7),dry=isTinny(v.type)?clamp((v.pitch-.55)/.25)*(v.shaftLoad||0):0;
+ const allow=hullDraftAllowance(v)*(1-dry)-SHAFTING.hullClearance*dry;
  let correction=hullSupportCorrection(v,time,allow);
  if(v.type==='hyper'||v.type==='racer')for(const local of clearancePoints(v)){const p=bodyPoint(v,local);correction=Math.max(correction,waveHeight(p.x,p.z,time)-(v.type==='hyper'?.23:.27)-p.y);}
  if(correction>0){const up=hullSupportVelocity(v,time,dt);v.y+=correction;v.vy=Math.max(up,v.vy||0);v.hullCorrection=correction;raiseHullSamples(v,correction);if(v.contactDepths)v.contactDepths=v.contactDepths.map(d=>d+correction);}

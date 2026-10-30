@@ -1,6 +1,6 @@
 import{VEHICLES}from'../config.js';import{crewToken}from'./tender-crew.js';
 export const isTowPose=p=>p?.type==='ski'&&p.deck===true&&p.deckX===-2&&p.deckZ===8&&p.trim===40;
-export const canTow=p=>!!p&&!!VEHICLES[p.type]&&p.type!=='sled'&&p.active&&!p.deck&&!(p.deckX===1.75&&p.deckZ===-8);
+export const canTow=p=>!!p&&!!VEHICLES[p.type]&&p.type!=='sled'&&p.active&&!p.deck&&Math.abs(p.roll||0)<1.05&&Math.abs(p.pitch||0)<1.55&&!(p.deckX===1.75&&p.deckZ===-8);
 export const closeTow=(p,closed)=>closed?{...p,deckX:1.75,deckZ:-8}:p;
 export function towRiders(players,id){
  const drivers=players.filter(p=>canTow(p.pose)&&crewToken(p.id)===crewToken(id));if(drivers.length!==1||drivers[0].id!==id)return [];
