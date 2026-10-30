@@ -4,6 +4,7 @@ import{sportfisherZ}from'./sportfisher-shape.js';
 import{waveHeight}from'../config.js';
 import{bodyPoint}from'./propulsion.js';
 import{anglerClearancePoints}from'./angler-hull.js';
+import {uploadedTenderProfile} from './uploaded-tender.js';
 export const SHAFTING={balancePitch:.90,lowerPitch:.75,upperPitch:1.05,minimumSpeed:2.4,throttleBalance:.56,throttleMoment:.12,speedMoment:.004,speedTarget:7.2,sternPivot:1.10,hullClearance:.12,bankAngle:.20,passengerResponse:2.4,loopBuildRate:.65,loopDecay:1.8,loopPitch:1.85,loopRate:4.2};
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const damp=(a,b,k,dt)=>a+(b-a)*(1-Math.exp(-k*dt));
@@ -43,6 +44,7 @@ export function updateShaftStatus(v,dt){
 }
 export function clearancePoints(v){
  if(v.type==='angler')return anglerClearancePoints();
+ if(v.type==='tinny')return[0,1/32,.125,.375,.625,.875,1].flatMap(t=>uploadedTenderProfile(t).slice(1,6));
  if(v.config?.diveBoat)return[-1,1].flatMap(side=>[-.4,0,.33].map(z=>[side*v.config.width*.4,.42,z*v.config.length]));
  if(isTinny(v.type))return[[-1.08,.52,-.23],[-.82,.59,-.27],[.12,.58,-.23],[.68,.42,-.10],[1.09,.14,.08],[1.17,.015,.18]].flatMap(([z,w,bottom])=>[[0,bottom,z],[-w*.76,bottom+.06,z],[w*.76,bottom+.06,z]]).map(([x,y,z])=>[x*(v.config?.width||1.22)/1.22,y,z*(v.config?.length||2.25)/2.25]);
  if(v.type==='hyper')return[-1,1].flatMap(side=>[-1.4,-.3,1].map(z=>[side*.43,-.27,z]));

@@ -1,9 +1,15 @@
 # Asset provenance
 
-All watercraft, riders, procedural building meshes, trees, ramps, UI graphics,
-textures and sounds in this project are original procedural work created for Estuary Rats.
-There are no downloaded model packs, copied manufacturer marks, hotlinked
-textures, recorded music, or third-party sound samples.
+The 225 Tender hull is adapted from the project owner's uploaded
+`single_color_261030100313_WUGV.stl` (30 October 2026). It is decimated and fitted
+to the game's crew and waterline, with the existing original 25 hp outboard.
+Its source hash, mesh budgets and conversion procedure are recorded in
+`docs/uploaded-225-tender.md` and `src/assets/tender225-mesh.json`.
+
+Other watercraft, riders, procedural building meshes, trees, ramps, UI graphics,
+textures and sounds are original procedural work created for the game, except
+for separately credited assets below. No manufacturer texture is used on the
+uploaded single-colour STL; its aluminium material is generated locally.
 
 The compact freestyle personal watercraft and twin-pontoon racing inflatable
 are independent stylised designs. They are not licensed manufacturer models

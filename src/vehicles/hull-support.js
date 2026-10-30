@@ -7,7 +7,8 @@ const frames=new WeakMap();
 export const HULL_CONTACT_LIMIT=12;
 export function hullSections(type){
  if(cache.has(type))return cache.get(type);const profiles=HULL_WATER_PROFILES[type]||[],sections=[];
- for(let part=0;part<profiles.length;part++)for(let i=0;i<=8;i++)sections.push({id:sections.length,part,t:i/8,closed:type==='cat',points:profiles[part](i/8).slice(0,type==='cat'?8:7)});
+ const stations=type==='tinny'?[0,1/32,1/8,2/8,3/8,4/8,5/8,6/8,7/8,1]:Array.from({length:9},(_,i)=>i/8);
+ for(let part=0;part<profiles.length;part++)for(const t of stations)sections.push({id:sections.length,part,t,closed:type==='cat',points:profiles[part](t).slice(0,type==='cat'?8:7)});
  cache.set(type,sections);return sections;
 }
 export function sampleHullContacts(v,time){

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {buildUploadedTender} from './uploaded-tender.js';
 import {batchRigidAssembly} from './rigid-model.js';
 import {makeAnglerOutboard} from './angler-outboard.js';
 import {marineHullGeometry,marineSurface,marineStation,marineRibGeometry} from './marine-hull.js';
@@ -17,6 +18,7 @@ function marking(root,text,x,y,z,side){
 // Distinct short tender proportions retained; the Wasp's construction standard
 // is applied to its own curved plate hull, ribs, benches and motor assemblies.
 export function buildTender(colour='#bdc9cc',design='classic',options={}){
+ if(!options.racing&&(options.hp??25)===25)return buildUploadedTender(colour,options);
  const root=new THREE.Group();root.name=options.racing?'Super Skua 370':options.hp===50?'Dingi 200':'Tender 225';root.userData.dynamic=true;
  const moored=options.detail==='moored',N=moored?20:40,alloy=brushedAlloy(colour),formed=brushedAlloy(options.racing?'#6d7980':'#a8b3ba'),polished=marineSteel(),rubber=material('#20262a',.85),red=material('#bd3b29',.4),gold=material('#d7b356',.36);
  const hull=group(root,'Curved aluminium hull'),structure=group(root,'Welded interior structure'),fittings=group(root,'Gunwales handles and fittings'),benches=[];

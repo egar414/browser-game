@@ -101,7 +101,7 @@ function buildVehicle(type, colour, design='classic',access={}) {
     const tender=type==='angler'?makeAnglerShell(colour,design):buildTender(colour,design,{length:VEHICLES[type].length,width:VEHICLES[type].width,hp:type==='tinny'?25:50,racing:type==='skua'});body.add(tender);({motor,propeller}=tender.userData);
     // Keep the motor attachment in body coordinates for the shared rider IK.
     body.attach(motor);motor.position.fromArray(PROPULSION[type].motorMount);motor.scale.setScalar(type==='tinny'||type==='angler'?1:1.25);person=makeRider(body,type);passenger=makeTinnyPassenger(body,type==='angler'?{floorY:VEHICLES.angler.footHeight}:{});
-    if(type==='angler')root.userData.referenceHull=tender;
+    if(type==='angler'||type==='tinny')root.userData.referenceHull=tender;
   } else {
     for (const side of [-1, 1]) {
       const x = side * 0.73;

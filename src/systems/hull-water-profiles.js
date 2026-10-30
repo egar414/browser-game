@@ -1,4 +1,5 @@
 import {marineProfile,marineStation} from '../vehicles/marine-hull.js';
+import {uploadedTenderProfile} from '../vehicles/uploaded-tender.js';
 import {VEHICLES} from '../config.js';
 import {anglerSurface,WASP_SCALE} from '../vehicles/angler-hull.js';
 import {sportfisherZ} from '../vehicles/sportfisher-shape.js';
@@ -24,7 +25,7 @@ const pontoons=[[-1.98,.07,.07,.12],[-1.76,.29,.28,.16],[-1.1,.31,.3,.18],[.55,.
 const racing=[[-5.5,.62,.65,-.32],[-4.4,.73,.73,-.38],[-1.5,.75,.78,-.39],[1.9,.72,.91,-.28],[4.15,.48,.94,-.08],[5.8,.13,.79,.19],[6.2,.008,.58,.40]];
 const spark=[[-1.43,.52,.23,-.14],[-1.24,.575,.28,-.23],[-.83,.585,.32,-.285],[-.2,.59,.35,-.27],[.35,.565,.39,-.22],[.82,.47,.40,-.14],[1.13,.31,.36,-.04],[1.34,.13,.3,.1],[1.43,.012,.25,.22]];
 export const HULL_WATER_PROFILES={
- tinny:[chine(tender,{ratio:.76,rise:.06})],
+ tinny:[uploadedTenderProfile],
  dinghy:[chine(tender,{sx:VEHICLES.dinghy.width/1.22,sz:VEHICLES.dinghy.length/2.25,ratio:.76,rise:.06})],
  skua:[chine(tender,{sx:VEHICLES.skua.width/1.22,sz:VEHICLES.skua.length/2.25,ratio:.76,rise:.06})],
  angler:[t=>{const ring=[-1,-.81,-.62,0,.62,.81,1].map(s=>anglerSurface(t,s).multiplyScalar(WASP_SCALE).toArray());ring.push([0,ring[0][1],ring[0][2]]);return ring;}],
